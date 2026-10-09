@@ -1,0 +1,9 @@
+{
+  "name": "Nima",
+  "short_name": "Nima",
+  "description": "Your personal AI stylist. See yourself in every outfit.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FAF8F5",
+  "theme_color": "#5C2A33"
+}

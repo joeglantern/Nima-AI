@@ -14,6 +14,7 @@ import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 import { sessionRoutes } from './modules/session/routes.js';
 import { feedRoutes } from './modules/feed/routes.js';
 import { shopRoutes } from './modules/shop/routes.js';
+import { mediaRoutes } from './modules/media/routes.js';
 import { lookRoutes } from './modules/looks/routes.js';
 import { profileRoutes } from './modules/profile/routes.js';
 import { creditRoutes } from './modules/credits/routes.js';
@@ -27,6 +28,7 @@ export const registerRoutes: FastifyPluginAsync = async (app) => {
     sessionRoutes,
     feedRoutes,
     shopRoutes,
+    mediaRoutes,
     lookRoutes,
     profileRoutes,
     creditRoutes,

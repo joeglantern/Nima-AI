@@ -1,0 +1,38 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * Web only. Native gets these from the theme provider.
+ *
+ * The page background is painted here so the area outside the app shell,
+ * visible on a wide screen, is the brand ground rather than white.
+ */
+@layer base {
+  :root {
+    color-scheme: light dark;
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+    background-color: #faf8f5;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    html,
+    body,
+    #root {
+      background-color: #1a1614;
+    }
+  }
+
+  /* The app owns its own scrolling, so the document should not bounce. */
+  body {
+    overscroll-behavior: none;
+  }
+}

@@ -38,7 +38,19 @@ export default fp(
       },
       credentials: true,
       methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
-      allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'expo-origin'],
+      allowedHeaders: [
+        'Content-Type',
+        'Authorization',
+        'X-Requested-With',
+        // Better Auth's Expo client sends this.
+        'expo-origin',
+        // The app's own headers. A browser blocks the whole request when a
+        // header it sends is missing from this list, so they must be here.
+        'x-nima-anon-id',
+        'x-nima-platform',
+        'x-request-id',
+      ],
+      exposedHeaders: ['x-request-id'],
       maxAge: 86_400,
     });
 

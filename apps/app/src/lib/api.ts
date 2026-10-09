@@ -1,0 +1,261 @@
+/**
+ * The API client.
+ *
+ * A thin wrapper over fetch that does four things the app needs everywhere:
+ * sends the session, carries the guest id so a visitor still gets a
+ * personalised feed, turns the API's error shape into a typed error, and
+ * keeps the base URL in one place.
+ *
+ * Response types come from @nima/contracts, so the client cannot drift from
+ * the server.
+ */
+
+import { Platform } from 'react-native';
+import type {
+  cartSchema,
+  creditBalanceSchema,
+  feedItemSchema,
+  lookDetailSchema,
+  productCardSchema,
+  productDetailSchema,
+  publicProfileSchema,
+  sessionUserSchema,
+  startTryOnResponseSchema,
+  styleProfileSchema,
+  tryOnJobSchema,
+  userPhotoSchema,
+} from '@nima/contracts';
+import type { z } from 'zod';
+import { API_URL } from './config';
+import { getAnonId } from './anon-id';
+import { authClient } from './auth';
+
+export { API_URL };
+
+type Infer<T extends z.ZodTypeAny> = z.infer<T>;
+
+export type SessionUser = Infer<typeof sessionUserSchema>;
+export type FeedItem = Infer<typeof feedItemSchema>;
+export type ProductCard = Infer<typeof productCardSchema>;
+export type ProductDetail = Infer<typeof productDetailSchema>;
+export type LookDetail = Infer<typeof lookDetailSchema>;
+export type PublicProfile = Infer<typeof publicProfileSchema>;
+export type StyleProfile = Infer<typeof styleProfileSchema>;
+export type UserPhoto = Infer<typeof userPhotoSchema>;
+export type TryOnJob = Infer<typeof tryOnJobSchema>;
+export type CreditBalance = Infer<typeof creditBalanceSchema>;
+export type Cart = Infer<typeof cartSchema>;
+
+export interface Bootstrap {
+  user: SessionUser | null;
+  credits: { balance: number; freeWeeklyCredits: number; nextGrantAt: string | null };
+  costs: Record<string, number>;
+  features: {
+    checkout: boolean;
+    sellerDashboard: boolean;
+    directMessages: boolean;
+    ghostMannequin: boolean;
+    promotions: boolean;
+  };
+  fitNotice: { title: string; body: string };
+}
+
+export interface Page<T> {
+  items: T[];
+  nextCursor: string | null;
+}
+
+
+export class ApiError extends Error {
+  constructor(
+    readonly status: number,
+    readonly code: string,
+    message: string,
+    readonly fields?: Record<string, string[]>,
+    readonly requestId?: string,
+  ) {
+    super(message);
+    this.name = 'ApiError';
+  }
+
+  /** The caller is a guest and this needs a real account. */
+  get needsAccount(): boolean {
+    return this.code === 'account_required';
+  }
+
+  get needsCredits(): boolean {
+    return this.code === 'insufficient_credits';
+  }
+
+  get needsPhoto(): boolean {
+    return this.code === 'photo_required';
+  }
+}
+
+interface RequestOptions {
+  method?: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE';
+  body?: unknown;
+  query?: Record<string, string | number | boolean | undefined>;
+  signal?: AbortSignal;
+}
+
+function buildUrl(path: string, query?: RequestOptions['query']): string {
+  const url = new URL(path.startsWith('/') ? path : `/${path}`, API_URL);
+
+  if (query) {
+    for (const [key, value] of Object.entries(query)) {
+      if (value !== undefined && value !== '') url.searchParams.set(key, String(value));
+    }
+  }
+
+  return url.toString();
+}
+
+export async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
+  const headers: Record<string, string> = {
+    'content-type': 'application/json',
+    accept: 'application/json',
+    'x-nima-anon-id': await getAnonId(),
+    'x-nima-platform': Platform.OS,
+    // The browser sets Origin itself and blocks any attempt to set it from
+    // script. React Native does not set one at all, so it is added there.
+    ...(Platform.OS === 'web' ? {} : { origin: API_URL }),
+  };
+
+  // On native the session is a stored cookie the auth client hands over. In a
+  // browser the cookie travels on its own, and reading it from script throws.
+  if (Platform.OS !== 'web') {
+    try {
+      const cookie = await authClient.getCookie?.();
+      if (cookie) headers.cookie = cookie;
+    } catch {
+      // No stored session yet. The request goes out as a visitor.
+    }
+  }
+
+  const response = await fetch(buildUrl(path, options.query), {
+    method: options.method ?? 'GET',
+    headers,
+    credentials: 'include',
+    ...(options.body !== undefined ? { body: JSON.stringify(options.body) } : {}),
+    ...(options.signal ? { signal: options.signal } : {}),
+  });
+
+  if (response.status === 204) return undefined as T;
+
+  const text = await response.text();
+  const payload = text ? (JSON.parse(text) as unknown) : null;
+
+  if (!response.ok) {
+    const error = (payload as { error?: { code: string; message: string; fields?: Record<string, string[]>; requestId?: string } })?.error;
+
+    throw new ApiError(
+      response.status,
+      error?.code ?? 'unknown',
+      error?.message ?? 'Something went wrong',
+      error?.fields,
+      error?.requestId,
+    );
+  }
+
+  return payload as T;
+}
+
+/** Every call the app makes, named after what it does rather than its route. */
+export const api = {
+  bootstrap: () => request<Bootstrap>('/v1/session/bootstrap'),
+
+  feed: (params: { surface?: 'foryou' | 'explore' | 'following'; cursor?: string; limit?: number }) =>
+    request<Page<FeedItem>>('/v1/feed', { query: params }),
+
+  products: (params: {
+    q?: string;
+    category?: string;
+    cursor?: string;
+    limit?: number;
+    sort?: string;
+  }) => request<Page<ProductCard>>('/v1/products', { query: params }),
+
+  product: (id: string) => request<ProductDetail>(`/v1/products/${id}`),
+
+  look: (id: string) => request<LookDetail>(`/v1/looks/${id}`),
+
+  likeLook: (id: string) =>
+    request<{ liked: boolean; likeCount: number }>(`/v1/looks/${id}/like`, { method: 'POST' }),
+
+  saveLook: (id: string) =>
+    request<{ saved: boolean }>(`/v1/looks/${id}/save`, { method: 'POST' }),
+
+  dismissLook: (id: string, reason?: string) =>
+    request<{ ok: true }>(`/v1/looks/${id}/not-for-me`, {
+      method: 'POST',
+      body: { reason },
+    }),
+
+  shareLink: (id: string) =>
+    request<{ url: string; message: string }>(`/v1/looks/${id}/share-link`),
+
+  profile: (handle: string) => request<PublicProfile>(`/v1/profiles/${handle}`),
+
+  styleProfile: () => request<StyleProfile>('/v1/profile/style'),
+
+  saveStyleAnswers: (answers: Record<string, unknown>) =>
+    request<{ completion: number; completedSteps: string[] }>('/v1/profile/style', {
+      method: 'PATCH',
+      body: answers,
+    }),
+
+  photos: () => request<{ items: UserPhoto[] }>('/v1/profile/photos'),
+
+  createUpload: (body: { purpose: string; contentType: string; size: number }) =>
+    request<{ uploadUrl: string; storageKey: string; headers: Record<string, string> }>(
+      '/v1/uploads',
+      { method: 'POST', body },
+    ),
+
+  savePhoto: (body: {
+    storageKey: string;
+    kind: 'FULL_BODY' | 'UPPER_BODY';
+    width?: number;
+    height?: number;
+    makeDefault?: boolean;
+  }) => request<UserPhoto>('/v1/profile/photos', { method: 'POST', body }),
+
+  deletePhoto: (id: string) => request<void>(`/v1/profile/photos/${id}`, { method: 'DELETE' }),
+
+  startTryOn: (body: {
+    kind?: string;
+    items?: Array<{ slot: string; productId?: string; variantId?: string; wardrobeItemId?: string }>;
+    photoId?: string;
+    lookId?: string;
+    parentJobId?: string;
+    instruction?: string;
+  }) =>
+    request<Infer<typeof startTryOnResponseSchema>>('/v1/tryon', { method: 'POST', body }),
+
+  tryOn: (id: string) => request<TryOnJob>(`/v1/tryon/${id}`),
+
+  tryOns: (params: { cursor?: string; limit?: number } = {}) =>
+    request<Page<TryOnJob>>('/v1/tryon', { query: params }),
+
+  credits: () =>
+    request<{
+      balance: number;
+      freeWeeklyCredits: number;
+      nextGrantAt: string | null;
+      costs: Record<string, number>;
+    }>('/v1/credits'),
+
+  creditPacks: (platform: 'IOS' | 'ANDROID' | 'WEB') =>
+    request<{
+      packs: Array<{
+        key: string;
+        credits: number;
+        priceCents: number;
+        bestValue: boolean;
+        productIdIos: string | null;
+      }>;
+      paymentMethod: 'MPESA' | 'IN_APP_PURCHASE';
+      note: string;
+    }>('/v1/credits/packs', { query: { platform } }),
+};

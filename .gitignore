@@ -33,3 +33,7 @@ pnpm-debug.log*
 *.p12
 *.key
 *.mobileprovision
+
+# Expo build output
+apps/app/dist-web/
+apps/app/.expo/
