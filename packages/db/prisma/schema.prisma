@@ -1,0 +1,1485 @@
+// Nima database schema.
+//
+// Conventions used throughout:
+//   - Money is always an integer number of cents (KES cents). Never a float.
+//   - Timestamps are UTC. createdAt is set by the database, updatedAt by Prisma.
+//   - Anything a user can delete owns its storage keys, so deletion can also
+//     remove the files. See docs/DATA-PROTECTION.md.
+//   - Vector columns use pgvector. Prisma has no native vector type yet, so
+//     they are declared Unsupported() and queried with raw SQL. The HNSW
+//     indexes live in the migration, not here.
+//   - Counters that a seller sees (views, try-ons) are derived from the Event
+//     table by a roll-up job. The few counters kept inline are denormalised
+//     caches, refreshed by the same job.
+
+generator client {
+  provider        = "prisma-client-js"
+  output          = "../generated/client"
+  previewFeatures = ["postgresqlExtensions", "relationJoins"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [vector, pg_trgm, citext, unaccent]
+}
+
+// ---------------------------------------------------------------------------
+// Authentication. These four models are what Better Auth expects. Field names
+// are fixed by the library, so do not rename them. Everything Nima specific
+// hangs off User through a relation instead.
+// ---------------------------------------------------------------------------
+
+model User {
+  id            String    @id @default(cuid())
+  name          String
+  email         String    @unique
+  emailVerified Boolean   @default(false)
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Better Auth anonymous plugin. A guest gets a real row so their likes,
+  // cart and views survive until they create an account.
+  isAnonymous   Boolean   @default(false)
+
+  // Platform role. Sellers are not a role: any user may open a store.
+  role          UserRole  @default(USER)
+  bannedAt      DateTime?
+  bannedReason  String?
+
+  // Set when the account is scheduled for deletion. A worker then removes the
+  // rows and the stored files, as required by the Data Protection Act.
+  deletionRequestedAt DateTime?
+
+  sessions      Session[]
+  accounts      Account[]
+
+  profile       Profile?
+  styleProfile  StyleProfile?
+  store         Store?
+  photos        UserPhoto[]
+  wardrobe      WardrobeItem[]
+  looks         Look[]           @relation("LookOwner")
+  lookbooks     Lookbook[]
+  saves         Save[]
+  likes         Like[]
+  dismissals    Dismissal[]
+  comments      Comment[]
+  following     Follow[]         @relation("Follower")
+  followers     Follow[]         @relation("Followed")
+  blocksMade    Block[]          @relation("Blocker")
+  blocksAgainst Block[]          @relation("Blocked")
+  memberships   ConversationMember[]
+  messages      Message[]
+  tryOnJobs     TryOnJob[]
+  stylistThreads StylistThread[]
+  creditEntries CreditLedgerEntry[]
+  creditBalance CreditBalance?
+  cart          Cart?
+  orders        Order[]
+  checkouts     CheckoutGroup[]
+  reviews       Review[]
+  pushTokens    PushToken[]
+  notifications Notification[]
+  events        Event[]
+
+  @@index([createdAt])
+  @@index([isAnonymous, createdAt])
+  @@map("users")
+}
+
+enum UserRole {
+  USER
+  ADMIN
+  SUPPORT
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  expiresAt DateTime
+  token     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("sessions")
+}
+
+model Account {
+  id                    String    @id @default(cuid())
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@unique([providerId, accountId])
+  @@index([userId])
+  @@map("accounts")
+}
+
+model Verification {
+  id         String   @id @default(cuid())
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+  @@index([expiresAt])
+  @@map("verifications")
+}
+
+// ---------------------------------------------------------------------------
+// Profile and style
+// ---------------------------------------------------------------------------
+
+model Profile {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  handle      String   @unique @db.Citext
+  displayName String
+  bio         String?
+  link        String?
+  avatarKey   String?
+
+  // When true, only accepted followers see looks marked FOLLOWERS.
+  isPrivate   Boolean  @default(false)
+  // The wardrobe is private unless the owner opts in.
+  wardrobePublic Boolean @default(false)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([handle])
+  @@map("profiles")
+}
+
+/// Every field is optional on purpose. The questionnaire saves one answer at a
+/// time and must never block the app. completedSteps drives the progress hint.
+model StyleProfile {
+  id             String   @id @default(cuid())
+  userId         String   @unique
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  birthYear      Int?
+  gender         Gender?
+  county         String?
+  city           String?
+
+  aesthetics     String[] @default([])
+  favouriteColours String[] @default([])
+  avoidColours   String[] @default([])
+  occasions      String[] @default([])
+
+  budgetMinCents Int?
+  budgetMaxCents Int?
+
+  topSize        String?
+  bottomSize     String?
+  dressSize      String?
+  shoeSizeEu     Decimal? @db.Decimal(4, 1)
+  heightCm       Int?
+  measurements   Json?
+
+  /// Which questionnaire steps have been answered, for the progress card.
+  completedSteps String[] @default([])
+  completedAt    DateTime?
+
+  /// A short natural language summary written by the stylist model. Fed back
+  /// into prompts so the model does not re-derive it on every request.
+  summary        String?
+
+  /// Taste vector, updated from behaviour by the recommendation worker.
+  tasteEmbedding Unsupported("vector(768)")?
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@map("style_profiles")
+}
+
+enum Gender {
+  WOMAN
+  MAN
+  NON_BINARY
+  PREFER_NOT_TO_SAY
+}
+
+/// Photos of the user, used as the base image for try-on. Always private.
+model UserPhoto {
+  id         String        @id @default(cuid())
+  userId     String
+  user       User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  kind       UserPhotoKind
+  storageKey String
+  width      Int?
+  height     Int?
+  isDefault  Boolean       @default(false)
+
+  /// Result of the automatic quality check. A photo that fails is never sent
+  /// to the image model, so no credits are wasted.
+  checkState PhotoCheckState @default(PENDING)
+  checkNote  String?
+
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+
+  tryOnJobs  TryOnJob[]
+
+  @@index([userId, kind])
+  @@map("user_photos")
+}
+
+enum UserPhotoKind {
+  FULL_BODY
+  UPPER_BODY
+}
+
+enum PhotoCheckState {
+  PENDING
+  PASSED
+  FAILED
+}
+
+// ---------------------------------------------------------------------------
+// Sellers and catalogue
+// ---------------------------------------------------------------------------
+
+/// A store is an optional extension of a normal account. Buyers and sellers
+/// are the same person, as the brief requires.
+model Store {
+  id            String      @id @default(cuid())
+  ownerId       String      @unique
+  owner         User        @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  name          String
+  slug          String      @unique @db.Citext
+  about         String?
+  logoKey       String?
+  bannerKey     String?
+
+  county        String?
+  whatsapp      String?
+  returnPolicy  String?
+
+  verifiedAt    DateTime?
+  plan          StorePlan   @default(FREE)
+  planRenewsAt  DateTime?
+
+  /// Credits a seller spends on ghost mannequin shots and try-on links.
+  tryOnCredits  Int         @default(0)
+
+  /// Where payouts go. Validated before the first payout runs.
+  payoutMethod  PayoutMethod?
+  payoutPhone   String?
+  payoutAccount String?
+
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  products      Product[]
+  orders        Order[]
+  ledger        SellerLedgerEntry[]
+  payouts       Payout[]
+  promotions    Promotion[]
+  dailyStats    DailyStoreStat[]
+  followers     Follow[]
+
+  @@index([verifiedAt])
+  @@map("stores")
+}
+
+enum StorePlan {
+  FREE
+  STARTER
+  GROWTH
+  PREMIUM
+}
+
+enum PayoutMethod {
+  MPESA
+  BANK
+}
+
+model Product {
+  id            String        @id @default(cuid())
+  storeId       String
+  store         Store         @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  title         String
+  slug          String        @unique @db.Citext
+  description   String?
+  category      ProductCategory
+  subcategory   String?
+  brand         String?
+  material      String?
+
+  colours       String[]      @default([])
+  tags          String[]      @default([])
+  occasions     String[]      @default([])
+  seasons       String[]      @default([])
+  gender        Gender?
+
+  status        ProductStatus @default(DRAFT)
+  publishedAt   DateTime?
+
+  /// Size guide as structured rows, shown next to the no-fit-guarantee notice.
+  sizeGuide     Json?
+
+  /// Cheapest active variant, denormalised so listings can sort and filter
+  /// without a join. Kept in step by the product service.
+  priceFromCents Int          @default(0)
+  inStock        Boolean      @default(true)
+
+  embedding     Unsupported("vector(768)")?
+
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  variants      ProductVariant[]
+  images        ProductImage[]
+  lookItems     LookItem[]
+  cartItems     CartItem[]
+  orderItems    OrderItem[]
+  reviews       Review[]
+  promotions    Promotion[]
+
+  @@index([storeId, status])
+  @@index([category, status])
+  @@index([status, publishedAt])
+  @@index([priceFromCents])
+  @@map("products")
+}
+
+enum ProductCategory {
+  TOP
+  BOTTOM
+  DRESS
+  OUTERWEAR
+  SHOES
+  BAG
+  JEWELLERY
+  EYEWEAR
+  HEADWEAR
+  ACCESSORY
+  OTHER
+}
+
+enum ProductStatus {
+  DRAFT
+  ACTIVE
+  OUT_OF_STOCK
+  ARCHIVED
+}
+
+model ProductVariant {
+  id         String   @id @default(cuid())
+  productId  String
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  size       String?
+  colour     String?
+  sku        String?
+  priceCents Int
+  compareAtCents Int?
+  stock      Int      @default(0)
+  isActive   Boolean  @default(true)
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  cartItems  CartItem[]
+  orderItems OrderItem[]
+
+  @@unique([productId, size, colour])
+  @@index([productId, isActive])
+  @@map("product_variants")
+}
+
+model ProductImage {
+  id           String          @id @default(cuid())
+  productId    String
+  product      Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  /// What the seller uploaded. Kept so processing can be redone.
+  originalKey  String
+  /// Result of background removal or ghost mannequin, when it has run.
+  processedKey String?
+  processing   ImageProcessing @default(NONE)
+  processingError String?
+
+  position     Int             @default(0)
+  isPrimary    Boolean         @default(false)
+  width        Int?
+  height       Int?
+
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  @@index([productId, position])
+  @@map("product_images")
+}
+
+enum ImageProcessing {
+  NONE
+  BACKGROUND_REMOVED
+  GHOST_MANNEQUIN
+}
+
+// ---------------------------------------------------------------------------
+// Looks, wardrobe and lookbooks
+// ---------------------------------------------------------------------------
+
+/// A look is an outfit: products, wardrobe items, or both. Try-on results are
+/// looks too, which is what makes "save", "share" and "recreate" uniform.
+model Look {
+  id            String     @id @default(cuid())
+  ownerId       String?
+  owner         User?      @relation("LookOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+
+  title         String?
+  caption       String?
+  /// One line of stylist copy shown under the card in the feed.
+  nimaSays      String?
+
+  source        LookSource
+  visibility    Visibility @default(PRIVATE)
+  publishedAt   DateTime?
+
+  coverKey      String?
+  width         Int?
+  height        Int?
+
+  /// Set when this look was recreated from another one.
+  recreatedFromId String?
+  recreatedFrom Look?      @relation("Recreations", fields: [recreatedFromId], references: [id], onDelete: SetNull)
+  recreations   Look[]     @relation("Recreations")
+
+  /// Cached engagement counters. Source of truth is the Event table.
+  likeCount     Int        @default(0)
+  saveCount     Int        @default(0)
+  tryOnCount    Int        @default(0)
+
+  embedding     Unsupported("vector(768)")?
+
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  items         LookItem[]
+  saves         Save[]
+  likes         Like[]
+  dismissals    Dismissal[]
+  comments      Comment[]
+  tryOnJobs     TryOnJob[]
+  lookbookEntries LookbookEntry[]
+  promotions    Promotion[]
+
+  @@index([ownerId, createdAt])
+  @@index([visibility, publishedAt])
+  @@index([source, publishedAt])
+  @@map("looks")
+}
+
+enum LookSource {
+  USER
+  AI
+  SELLER
+  CURATED
+  RECREATION
+  TRY_ON
+}
+
+enum Visibility {
+  PRIVATE
+  FOLLOWERS
+  PUBLIC
+}
+
+/// One garment inside a look. Exactly one of productId or wardrobeItemId is
+/// set, enforced by a check constraint in the migration.
+model LookItem {
+  id             String        @id @default(cuid())
+  lookId         String
+  look           Look          @relation(fields: [lookId], references: [id], onDelete: Cascade)
+
+  productId      String?
+  product        Product?      @relation(fields: [productId], references: [id], onDelete: SetNull)
+  variantId      String?
+
+  wardrobeItemId String?
+  wardrobeItem   WardrobeItem? @relation(fields: [wardrobeItemId], references: [id], onDelete: SetNull)
+
+  slot           GarmentSlot
+  position       Int           @default(0)
+
+  createdAt      DateTime      @default(now())
+
+  @@index([lookId])
+  @@index([productId])
+  @@map("look_items")
+}
+
+enum GarmentSlot {
+  TOP
+  BOTTOM
+  FULL_BODY
+  OUTERWEAR
+  SHOES
+  BAG
+  JEWELLERY
+  EYEWEAR
+  HEADWEAR
+  OTHER
+}
+
+/// Clothes the user already owns, photographed by them.
+model WardrobeItem {
+  id           String          @id @default(cuid())
+  userId       String
+  user         User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  label        String?
+  category     ProductCategory
+  slot         GarmentSlot
+  colours      String[]        @default([])
+  tags         String[]        @default([])
+
+  originalKey  String
+  /// Cut out version on a clean background, produced by the media worker.
+  cutoutKey    String?
+  processing   ImageProcessing @default(NONE)
+
+  /// Attributes extracted by the vision model: pattern, fabric, formality.
+  attributes   Json?
+
+  visibility   Visibility      @default(PRIVATE)
+  embedding    Unsupported("vector(768)")?
+
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  lookItems    LookItem[]
+  lookbookEntries LookbookEntry[]
+
+  @@index([userId, category])
+  @@map("wardrobe_items")
+}
+
+/// A themed collection: Vacation, Wedding, Work, Date night.
+model Lookbook {
+  id          String     @id @default(cuid())
+  ownerId     String
+  owner       User       @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  title       String
+  description String?
+  coverKey    String?
+  occasion    String?
+  visibility  Visibility @default(PRIVATE)
+
+  startsOn    DateTime?  @db.Date
+  endsOn      DateTime?  @db.Date
+
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  entries     LookbookEntry[]
+
+  @@index([ownerId, updatedAt])
+  @@map("lookbooks")
+}
+
+model LookbookEntry {
+  id             String        @id @default(cuid())
+  lookbookId     String
+  lookbook       Lookbook      @relation(fields: [lookbookId], references: [id], onDelete: Cascade)
+
+  lookId         String?
+  look           Look?         @relation(fields: [lookId], references: [id], onDelete: Cascade)
+  productId      String?
+  wardrobeItemId String?
+  wardrobeItem   WardrobeItem? @relation(fields: [wardrobeItemId], references: [id], onDelete: Cascade)
+
+  /// Optional planning fields, so a trip can be organised day by day.
+  dayIndex       Int?
+  occasion       String?
+  note           String?
+  position       Int           @default(0)
+
+  createdAt      DateTime      @default(now())
+
+  @@index([lookbookId, position])
+  @@map("lookbook_entries")
+}
+
+// ---------------------------------------------------------------------------
+// Social
+// ---------------------------------------------------------------------------
+
+model Save {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lookId    String?
+  look      Look?    @relation(fields: [lookId], references: [id], onDelete: Cascade)
+  productId String?
+  createdAt DateTime @default(now())
+
+  @@unique([userId, lookId])
+  @@unique([userId, productId])
+  @@index([userId, createdAt])
+  @@map("saves")
+}
+
+model Like {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lookId    String
+  look      Look     @relation(fields: [lookId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, lookId])
+  @@index([lookId])
+  @@map("likes")
+}
+
+/// "Not for me". A strong negative signal for the feed.
+model Dismissal {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lookId    String?
+  look      Look?    @relation(fields: [lookId], references: [id], onDelete: Cascade)
+  productId String?
+  reason    String?
+  createdAt DateTime @default(now())
+
+  @@unique([userId, lookId])
+  @@unique([userId, productId])
+  @@map("dismissals")
+}
+
+model Comment {
+  id        String    @id @default(cuid())
+  lookId    String
+  look      Look      @relation(fields: [lookId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  body      String
+  parentId  String?
+  parent    Comment?  @relation("Replies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies   Comment[] @relation("Replies")
+  hiddenAt  DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([lookId, createdAt])
+  @@map("comments")
+}
+
+/// A follow points at a person or a store. Counts are never exposed publicly:
+/// only the store owner sees their own total, in the dashboard.
+model Follow {
+  id          String   @id @default(cuid())
+  followerId  String
+  follower    User     @relation("Follower", fields: [followerId], references: [id], onDelete: Cascade)
+  followedId  String?
+  followed    User?    @relation("Followed", fields: [followedId], references: [id], onDelete: Cascade)
+  storeId     String?
+  store       Store?   @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+
+  @@unique([followerId, followedId])
+  @@unique([followerId, storeId])
+  @@index([followedId])
+  @@index([storeId])
+  @@map("follows")
+}
+
+/// Blocks are enforced in the feed, search, profiles and messaging.
+model Block {
+  id        String   @id @default(cuid())
+  blockerId String
+  blocker   User     @relation("Blocker", fields: [blockerId], references: [id], onDelete: Cascade)
+  blockedId String
+  blocked   User     @relation("Blocked", fields: [blockedId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([blockerId, blockedId])
+  @@index([blockedId])
+  @@map("blocks")
+}
+
+// ---------------------------------------------------------------------------
+// Messaging
+// ---------------------------------------------------------------------------
+
+model Conversation {
+  id            String               @id @default(cuid())
+  isGroup       Boolean              @default(false)
+  title         String?
+  lastMessageAt DateTime?
+  createdAt     DateTime             @default(now())
+
+  members       ConversationMember[]
+  messages      Message[]
+
+  @@index([lastMessageAt])
+  @@map("conversations")
+}
+
+model ConversationMember {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  lastReadAt     DateTime?
+  mutedUntil     DateTime?
+  leftAt         DateTime?
+  joinedAt       DateTime     @default(now())
+
+  @@unique([conversationId, userId])
+  @@index([userId])
+  @@map("conversation_members")
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  senderId       String
+  sender         User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  kind           MessageKind  @default(TEXT)
+  body           String?
+  /// For shared content: the id of the look, product, try-on or lookbook.
+  refId          String?
+  /// Snapshot of the shared card, so a deleted product still renders.
+  refSnapshot    Json?
+
+  deletedAt      DateTime?
+  createdAt      DateTime     @default(now())
+
+  @@index([conversationId, createdAt])
+  @@map("messages")
+}
+
+enum MessageKind {
+  TEXT
+  LOOK
+  PRODUCT
+  TRY_ON
+  LOOKBOOK
+  SYSTEM
+}
+
+// ---------------------------------------------------------------------------
+// AI: try-on, stylist, credits
+// ---------------------------------------------------------------------------
+
+model TryOnJob {
+  id           String      @id @default(cuid())
+  userId       String
+  user         User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  kind         TryOnKind
+  status       JobStatus   @default(QUEUED)
+
+  photoId      String?
+  photo        UserPhoto?  @relation(fields: [photoId], references: [id], onDelete: SetNull)
+  /// Used by Quick Try-On, where the garment is photographed on the spot, and
+  /// by chained edits, where the previous result is the base image.
+  sourceKey    String?
+
+  /// Snapshot of what is being worn: product ids, variant ids, wardrobe ids,
+  /// plus the text description used in the prompt.
+  inputs       Json
+
+  /// Chained edits: "change the top" points back at the previous job.
+  parentJobId  String?
+  parent       TryOnJob?   @relation("JobChain", fields: [parentJobId], references: [id], onDelete: SetNull)
+  children     TryOnJob[]  @relation("JobChain")
+
+  model        String?
+  promptUsed   String?
+  resultKey    String?
+  lookId       String?
+  look         Look?       @relation(fields: [lookId], references: [id], onDelete: SetNull)
+
+  creditsCharged Int       @default(0)
+  refunded       Boolean   @default(false)
+
+  error        String?
+  attempts     Int         @default(0)
+  queuedAt     DateTime    @default(now())
+  startedAt    DateTime?
+  finishedAt   DateTime?
+  durationMs   Int?
+
+  @@index([userId, queuedAt])
+  @@index([status, queuedAt])
+  @@map("try_on_jobs")
+}
+
+enum TryOnKind {
+  SINGLE_ITEM
+  OUTFIT
+  QUICK
+  RECREATE
+  ACCESSORY
+  ONBOARDING
+  SELLER_LINK
+}
+
+enum JobStatus {
+  QUEUED
+  RUNNING
+  DONE
+  FAILED
+  CANCELLED
+}
+
+model StylistThread {
+  id        String          @id @default(cuid())
+  userId    String
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String?
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+
+  messages  StylistMessage[]
+
+  @@index([userId, updatedAt])
+  @@map("stylist_threads")
+}
+
+model StylistMessage {
+  id        String        @id @default(cuid())
+  threadId  String
+  thread    StylistThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+
+  role      StylistRole
+  content   String
+  /// Tool calls and their results, kept for context and for debugging.
+  toolCalls Json?
+  /// Products or looks attached to this reply, in display order.
+  refs      Json?
+
+  createdAt DateTime      @default(now())
+
+  @@index([threadId, createdAt])
+  @@map("stylist_messages")
+}
+
+enum StylistRole {
+  USER
+  ASSISTANT
+  TOOL
+  SYSTEM
+}
+
+/// Append only. The balance is the sum of deltas, cached in CreditBalance.
+/// Nothing in the codebase may change a balance except by writing an entry.
+model CreditLedgerEntry {
+  id         String       @id @default(cuid())
+  userId     String
+  user       User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  delta      Int
+  reason     CreditReason
+  /// The try-on job, purchase or grant this entry belongs to.
+  refType    String?
+  refId      String?
+  note       String?
+
+  createdAt  DateTime     @default(now())
+
+  @@index([userId, createdAt])
+  @@index([reason, createdAt])
+  @@map("credit_ledger_entries")
+}
+
+enum CreditReason {
+  WEEKLY_GRANT
+  SIGNUP_BONUS
+  TRY_ON
+  LOOK_GENERATION
+  GHOST_MANNEQUIN
+  PURCHASE
+  REFUND
+  ADMIN_ADJUSTMENT
+}
+
+/// Denormalised balance so a request does not sum the whole ledger. Written in
+/// the same transaction as the ledger entry.
+model CreditBalance {
+  userId        String   @id
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  balance       Int      @default(0)
+  freeGrantedAt DateTime?
+  updatedAt     DateTime @updatedAt
+
+  @@map("credit_balances")
+}
+
+model CreditPurchase {
+  id             String        @id @default(cuid())
+  userId         String
+  packKey        String
+  credits        Int
+  amountCents    Int
+  currency       String        @default("KES")
+  platform       Platform
+  status         PaymentStatus @default(PENDING)
+
+  /// Fingo for M-Pesa, or the Apple transaction id for an in app purchase.
+  provider       PaymentProvider
+  providerRef    String?       @unique
+  idempotencyKey String        @unique
+  phone          String?
+  raw            Json?
+
+  createdAt      DateTime      @default(now())
+  completedAt    DateTime?
+
+  @@index([userId, createdAt])
+  @@map("credit_purchases")
+}
+
+enum Platform {
+  IOS
+  ANDROID
+  WEB
+}
+
+// ---------------------------------------------------------------------------
+// Commerce
+// ---------------------------------------------------------------------------
+
+model Cart {
+  id        String     @id @default(cuid())
+  userId    String     @unique
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  updatedAt DateTime   @updatedAt
+  createdAt DateTime   @default(now())
+
+  items     CartItem[]
+
+  @@map("carts")
+}
+
+model CartItem {
+  id        String         @id @default(cuid())
+  cartId    String
+  cart      Cart           @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product        @relation(fields: [productId], references: [id], onDelete: Cascade)
+  variantId String
+  variant   ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+
+  quantity  Int
+  addedAt   DateTime       @default(now())
+
+  @@unique([cartId, variantId])
+  @@index([cartId])
+  @@map("cart_items")
+}
+
+/// One checkout can span several stores. Payment happens once, orders are
+/// split per store so each seller manages and is paid for their own part.
+model CheckoutGroup {
+  id             String        @id @default(cuid())
+  buyerId        String
+  buyer          User          @relation(fields: [buyerId], references: [id], onDelete: Cascade)
+
+  subtotalCents  Int
+  deliveryCents  Int           @default(0)
+  totalCents     Int
+  currency       String        @default("KES")
+
+  status         PaymentStatus @default(PENDING)
+
+  /// Delivery details captured at checkout.
+  deliveryMethod DeliveryMethod @default(PICKUP_POINT)
+  pickupPointId  String?
+  pickupPointName String?
+  recipientName  String
+  recipientPhone String
+  deliveryNote   String?
+
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  orders         Order[]
+  payments       Payment[]
+
+  @@index([buyerId, createdAt])
+  @@map("checkout_groups")
+}
+
+enum DeliveryMethod {
+  PICKUP_POINT
+  DOORSTEP
+}
+
+model Order {
+  id              String        @id @default(cuid())
+  reference       String        @unique
+  checkoutGroupId String
+  checkoutGroup   CheckoutGroup @relation(fields: [checkoutGroupId], references: [id], onDelete: Cascade)
+
+  buyerId         String
+  buyer           User          @relation(fields: [buyerId], references: [id], onDelete: Cascade)
+  storeId         String
+  store           Store         @relation(fields: [storeId], references: [id], onDelete: Restrict)
+
+  status          OrderStatus   @default(PENDING_PAYMENT)
+  subtotalCents   Int
+  deliveryCents   Int           @default(0)
+  totalCents      Int
+  /// What Nima keeps. Stored per order so a fee change does not rewrite history.
+  platformFeeCents Int          @default(0)
+  currency        String        @default("KES")
+
+  placedAt        DateTime      @default(now())
+  paidAt          DateTime?
+  readyAt         DateTime?
+  deliveredAt     DateTime?
+  completedAt     DateTime?
+  cancelledAt     DateTime?
+  cancelReason    String?
+
+  items           OrderItem[]
+  shipment        Shipment?
+  ledgerEntries   SellerLedgerEntry[]
+  reviews         Review[]
+  refunds         Refund[]
+
+  @@index([buyerId, placedAt])
+  @@index([storeId, status])
+  @@map("orders")
+}
+
+enum OrderStatus {
+  PENDING_PAYMENT
+  PAID
+  PREPARING
+  READY_FOR_PICKUP
+  IN_TRANSIT
+  DELIVERED
+  COMPLETED
+  CANCELLED
+  REFUNDED
+}
+
+model OrderItem {
+  id          String         @id @default(cuid())
+  orderId     String
+  order       Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId   String
+  product     Product        @relation(fields: [productId], references: [id], onDelete: Restrict)
+  variantId   String
+  variant     ProductVariant @relation(fields: [variantId], references: [id], onDelete: Restrict)
+
+  /// Snapshot at purchase time. Prices and titles can change later.
+  titleSnapshot String
+  sizeSnapshot  String?
+  colourSnapshot String?
+  imageSnapshot String?
+  unitPriceCents Int
+  quantity      Int
+  totalCents    Int
+
+  @@index([orderId])
+  @@map("order_items")
+}
+
+model Payment {
+  id              String          @id @default(cuid())
+  checkoutGroupId String
+  checkoutGroup   CheckoutGroup   @relation(fields: [checkoutGroupId], references: [id], onDelete: Cascade)
+
+  provider        PaymentProvider
+  method          PaymentMethod
+  status          PaymentStatus   @default(PENDING)
+  amountCents     Int
+  currency        String          @default("KES")
+
+  /// Sent to the provider so a retry never charges twice.
+  idempotencyKey  String          @unique
+  providerRef     String?         @unique
+  phone           String?
+  failureReason   String?
+  raw             Json?
+
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  refunds         Refund[]
+
+  @@index([checkoutGroupId])
+  @@map("payments")
+}
+
+enum PaymentProvider {
+  FINGO
+  APPLE_IAP
+  GOOGLE_PLAY
+  MANUAL
+}
+
+enum PaymentMethod {
+  MPESA
+  CARD
+  IN_APP_PURCHASE
+}
+
+enum PaymentStatus {
+  PENDING
+  PROCESSING
+  SUCCEEDED
+  FAILED
+  CANCELLED
+  REFUNDED
+}
+
+model Refund {
+  id          String   @id @default(cuid())
+  orderId     String
+  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  paymentId   String?
+  payment     Payment? @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+
+  amountCents Int
+  reason      String
+  status      PaymentStatus @default(PENDING)
+  providerRef String?
+  createdAt   DateTime @default(now())
+  completedAt DateTime?
+
+  @@index([orderId])
+  @@map("refunds")
+}
+
+model Shipment {
+  id             String           @id @default(cuid())
+  orderId        String           @unique
+  order          Order            @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  provider       LogisticsProvider @default(PICKUP_MTAANI)
+  providerRef    String?
+  trackingCode   String?
+  pickupPointId  String?
+  pickupPointName String?
+  dropOffPointId String?
+
+  status         ShipmentStatus   @default(PENDING)
+  /// Append only list of provider events, newest last.
+  events         Json?
+  costCents      Int              @default(0)
+
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  @@index([providerRef])
+  @@map("shipments")
+}
+
+enum LogisticsProvider {
+  PICKUP_MTAANI
+  SELF_DELIVERY
+  OTHER
+}
+
+enum ShipmentStatus {
+  PENDING
+  BOOKED
+  COLLECTED
+  IN_TRANSIT
+  AT_PICKUP_POINT
+  DELIVERED
+  RETURNED
+  CANCELLED
+}
+
+/// Money owed to a seller. Nima collects the payment, then pays out after the
+/// return window. The ledger is the record of what is owed and what was paid.
+model SellerLedgerEntry {
+  id        String            @id @default(cuid())
+  storeId   String
+  store     Store             @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  orderId   String?
+  order     Order?            @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  payoutId  String?
+  payout    Payout?           @relation(fields: [payoutId], references: [id], onDelete: SetNull)
+
+  kind      SellerLedgerKind
+  amountCents Int
+  note      String?
+  createdAt DateTime          @default(now())
+  /// When this amount becomes payable. Set to delivery plus the return window.
+  availableAt DateTime?
+
+  @@index([storeId, createdAt])
+  @@index([payoutId])
+  @@map("seller_ledger_entries")
+}
+
+enum SellerLedgerKind {
+  SALE
+  PLATFORM_FEE
+  REFUND
+  PAYOUT
+  ADJUSTMENT
+}
+
+model Payout {
+  id          String        @id @default(cuid())
+  storeId     String
+  store       Store         @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  amountCents Int
+  method      PayoutMethod
+  destination String
+  status      PaymentStatus @default(PENDING)
+  providerRef String?       @unique
+  idempotencyKey String     @unique
+  failureReason String?
+
+  createdAt   DateTime      @default(now())
+  completedAt DateTime?
+
+  entries     SellerLedgerEntry[]
+
+  @@index([storeId, createdAt])
+  @@map("payouts")
+}
+
+model Review {
+  id          String   @id @default(cuid())
+  orderId     String
+  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId   String
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  authorId    String
+  author      User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  rating      Int
+  body        String?
+  imageKeys   String[] @default([])
+  hiddenAt    DateTime?
+  createdAt   DateTime @default(now())
+
+  @@unique([orderId, productId, authorId])
+  @@index([productId, createdAt])
+  @@map("reviews")
+}
+
+/// Raw provider callbacks, stored before processing so a failed handler can be
+/// retried and so we can prove what a provider sent.
+model WebhookEvent {
+  id          String   @id @default(cuid())
+  provider    String
+  eventType   String?
+  signatureOk Boolean
+  /// Provider event id when available, so duplicates are ignored.
+  externalId  String?
+  payload     Json
+  headers     Json?
+  receivedAt  DateTime @default(now())
+  processedAt DateTime?
+  error       String?
+
+  @@unique([provider, externalId])
+  @@index([provider, receivedAt])
+  @@map("webhook_events")
+}
+
+// ---------------------------------------------------------------------------
+// Notifications, analytics and ads
+// ---------------------------------------------------------------------------
+
+model PushToken {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token      String   @unique
+  platform   Platform
+  deviceName String?
+  lastSeenAt DateTime @default(now())
+  createdAt  DateTime @default(now())
+
+  @@index([userId])
+  @@map("push_tokens")
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  type      NotificationType
+  title     String
+  body      String
+  data      Json?
+  readAt    DateTime?
+  createdAt DateTime         @default(now())
+
+  @@index([userId, createdAt])
+  @@index([userId, readAt])
+  @@map("notifications")
+}
+
+enum NotificationType {
+  TRY_ON_READY
+  LOOK_READY
+  LOW_CREDITS
+  NEW_FOLLOWER
+  LOOK_LIKED
+  LOOK_COMMENT
+  MESSAGE
+  ORDER_PLACED
+  ORDER_UPDATE
+  PAYOUT_SENT
+  SYSTEM
+}
+
+/// Append only behaviour log. Everything the feed learns from and everything a
+/// seller sees in their dashboard is derived from this table.
+model Event {
+  id         BigInt    @id @default(autoincrement())
+  /// Null for guests who have not been given a user row yet.
+  userId     String?
+  user       User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  anonId     String?
+
+  type       EventType
+  entityType String
+  entityId   String
+  storeId    String?
+
+  /// Extra context: surface, position in the feed, dwell time, source screen.
+  props      Json?
+  sessionId  String?
+  platform   Platform?
+
+  createdAt  DateTime  @default(now())
+
+  @@index([userId, createdAt])
+  @@index([storeId, type, createdAt])
+  @@index([entityType, entityId, createdAt])
+  @@index([createdAt])
+  @@map("events")
+}
+
+enum EventType {
+  VIEW
+  CLICK
+  LIKE
+  UNLIKE
+  SAVE
+  UNSAVE
+  DISMISS
+  TRY_ON
+  RECREATE
+  SHARE
+  FOLLOW
+  ADD_TO_CART
+  BEGIN_CHECKOUT
+  PURCHASE
+  SEARCH
+  CHAT_MESSAGE
+}
+
+/// Daily roll-up per store, so the dashboard never scans the Event table.
+model DailyStoreStat {
+  id            String   @id @default(cuid())
+  storeId       String
+  store         Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  day           DateTime @db.Date
+
+  views         Int      @default(0)
+  clicks        Int      @default(0)
+  likes         Int      @default(0)
+  saves         Int      @default(0)
+  tryOns        Int      @default(0)
+  addToCarts    Int      @default(0)
+  purchases     Int      @default(0)
+  revenueCents  Int      @default(0)
+  newFollowers  Int      @default(0)
+
+  @@unique([storeId, day])
+  @@index([day])
+  @@map("daily_store_stats")
+}
+
+/// Paid placement. Promoted items are always labelled in the feed.
+model Promotion {
+  id           String          @id @default(cuid())
+  storeId      String
+  store        Store           @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  productId    String?
+  product      Product?        @relation(fields: [productId], references: [id], onDelete: Cascade)
+  lookId       String?
+  look         Look?           @relation(fields: [lookId], references: [id], onDelete: Cascade)
+
+  status       PromotionStatus @default(DRAFT)
+  budgetCents  Int
+  spentCents   Int             @default(0)
+  /// Audience filters: counties, aesthetics, gender, budget band.
+  targeting    Json?
+
+  startsAt     DateTime
+  endsAt       DateTime
+
+  impressions  Int             @default(0)
+  clicks       Int             @default(0)
+
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  @@index([status, startsAt, endsAt])
+  @@index([storeId])
+  @@map("promotions")
+}
+
+enum PromotionStatus {
+  DRAFT
+  ACTIVE
+  PAUSED
+  COMPLETED
+  CANCELLED
+}
+
+/// Values that must be changeable without a deploy: credit costs, free grant
+/// size, platform fee, feature flags. Read through a cached accessor.
+model AppSetting {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt
+  updatedBy String?
+
+  @@map("app_settings")
+}

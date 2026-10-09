@@ -1,0 +1,4 @@
+-- Extensions are created by the Prisma migration (see the datasource
+-- `extensions` list in packages/db/prisma/schema.prisma), so nothing is done
+-- here. The file is kept because Postgres mounts this directory and an empty
+-- directory would be confusing.

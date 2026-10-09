@@ -1,0 +1,711 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Nima Technical Plan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --bg:#FAF8F3; --surface:#FFFFFF; --sunk:#F2EDE4; --ink:#2B1D12; --muted:#76665A; --line:#E4DCCF;
+  --brown:#4A2A12; --terra:#B8645A; --terra-soft:#F3E1DC; --ok:#2F7A4F; --ok-soft:#E1F0E6; --warn:#A5621B; --warn-soft:#F7E8D5; --bad:#A63C32; --bad-soft:#F6DEDA;
+  --diagram-fill:#FFFFFF; --diagram-group:#F5F0E8;
+  --serif:"Cormorant Garamond",Georgia,"Times New Roman",serif;
+  --sans:"DM Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#17110C; --surface:#211912; --sunk:#1C1510; --ink:#F2EAE0; --muted:#B3A395; --line:#3A2E24;
+    --brown:#E8CBAA; --terra:#E0988B; --terra-soft:#3A2420; --ok:#7CC79A; --ok-soft:#1D3326; --warn:#E3AA6A; --warn-soft:#3A2A17; --bad:#EE8C80; --bad-soft:#3D1F1B;
+    --diagram-fill:#241B14; --diagram-group:#1D1611;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#17110C; --surface:#211912; --sunk:#1C1510; --ink:#F2EAE0; --muted:#B3A395; --line:#3A2E24;
+  --brown:#E8CBAA; --terra:#E0988B; --terra-soft:#3A2420; --ok:#7CC79A; --ok-soft:#1D3326; --warn:#E3AA6A; --warn-soft:#3A2A17; --bad:#EE8C80; --bad-soft:#3D1F1B;
+  --diagram-fill:#241B14; --diagram-group:#1D1611;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.6;margin:0;padding-inline:20px}
+.wrap{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:220px minmax(0,1fr);gap:56px;padding-block:48px 96px}
+nav.toc{position:sticky;top:calc(env(safe-area-inset-top,0px) + 24px);align-self:start;font-size:14px}
+nav.toc .brand{font-family:var(--serif);font-size:30px;font-weight:600;color:var(--brown);line-height:1}
+nav.toc .brand small{display:block;font-family:var(--sans);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-top:6px;font-weight:500}
+nav.toc ol{list-style:none;padding:0;margin:28px 0 0;display:grid;gap:2px}
+nav.toc a{display:block;padding:5px 10px;border-radius:8px;color:var(--muted);text-decoration:none}
+nav.toc a:hover{background:var(--sunk);color:var(--ink)}
+nav.toc a:focus-visible,a:focus-visible{outline:2px solid var(--terra);outline-offset:2px}
+main{min-width:0}
+header.hero{padding-bottom:32px;border-bottom:1px solid var(--line);margin-bottom:8px}
+.eyebrow{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--terra);font-weight:600}
+h1{font-family:var(--serif);font-weight:600;font-size:clamp(40px,6vw,60px);line-height:1.02;margin:10px 0 16px;color:var(--brown);text-wrap:balance}
+.lede{font-size:18px;color:var(--muted);max-width:62ch;margin:0}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:20px}
+.chip{font-size:13px;padding:5px 12px;border-radius:999px;background:var(--surface);border:1px solid var(--line);color:var(--ink)}
+.chip b{color:var(--terra);font-weight:600}
+section{padding-top:56px;scroll-margin-top:16px}
+h2{font-family:var(--serif);font-weight:600;font-size:34px;line-height:1.1;margin:0 0 6px;color:var(--brown);text-wrap:balance}
+h2 .n{font-family:var(--mono);font-size:13px;color:var(--terra);vertical-align:middle;margin-right:10px;font-weight:500}
+h3{font-size:17px;margin:32px 0 10px;font-weight:600}
+p{max-width:68ch;margin:10px 0}
+.sub{color:var(--muted);margin-top:0}
+ul.clean{padding-left:20px;max-width:70ch;margin:10px 0}
+ul.clean li{margin:6px 0}
+code,.mono{font-family:var(--mono);font-size:.86em}
+code{background:var(--sunk);padding:1px 6px;border-radius:5px}
+.table-wrap{overflow-x:auto;margin:16px 0;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:14.5px;min-width:640px}
+th,td{text-align:left;vertical-align:top;padding:11px 14px;border-bottom:1px solid var(--line)}
+th{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600;background:var(--sunk)}
+tr:last-child td{border-bottom:0}
+td:first-child{font-weight:600}
+.tag{display:inline-block;font-size:12px;font-weight:600;padding:2px 9px;border-radius:999px;white-space:nowrap}
+.tag.ok{background:var(--ok-soft);color:var(--ok)}
+.tag.bad{background:var(--bad-soft);color:var(--bad)}
+.tag.warn{background:var(--warn-soft);color:var(--warn)}
+.callout{border-radius:14px;padding:18px 20px;margin:18px 0;background:var(--surface);border:1px solid var(--line)}
+.callout.warn{background:var(--warn-soft);border-color:transparent}
+.callout h4{margin:0 0 6px;font-size:15px}
+.callout p{margin:4px 0}
+.verdicts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:18px 0}
+.verdict{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px 18px;display:flex;flex-direction:column;gap:6px}
+.verdict .q{font-weight:600;font-size:15px}
+.verdict p{margin:0;font-size:14.5px;color:var(--muted)}
+.swatches{display:flex;flex-wrap:wrap;gap:12px;margin:16px 0}
+.sw{display:flex;align-items:center;gap:10px;font-size:13px}
+.sw i{width:34px;height:34px;border-radius:10px;border:1px solid var(--line);display:block}
+.diagram{overflow-x:auto;margin:18px 0;padding:8px;border:1px solid var(--line);border-radius:14px;background:var(--surface)}
+.diagram svg{display:block;min-width:820px;width:100%;height:auto}
+svg .box{fill:var(--diagram-fill);stroke:var(--line);stroke-width:1.5}
+svg .group{fill:var(--diagram-group);stroke:var(--line);stroke-width:1.5}
+svg .accent{fill:var(--terra-soft);stroke:var(--terra);stroke-width:1.5}
+svg .t{fill:var(--ink);font-family:var(--sans);font-size:14px;font-weight:600}
+svg .s{fill:var(--muted);font-family:var(--sans);font-size:12px}
+svg .lbl{fill:var(--terra);font-family:var(--mono);font-size:11px;letter-spacing:.06em}
+svg .wire{fill:none;stroke:var(--muted);stroke-width:1.5}
+svg .tunnel{fill:none;stroke:var(--terra);stroke-width:2;stroke-dasharray:6 5}
+svg .head{fill:var(--muted)}
+.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin:16px 0;padding:0;list-style:none;counter-reset:s}
+.steps li{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px;font-size:14px;counter-increment:s}
+.steps li::before{content:counter(s);display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--terra);color:var(--bg);font-size:12px;font-weight:700;margin-bottom:8px}
+.steps li b{display:block;margin-bottom:2px}
+.frames{display:grid;grid-template-columns:.55fr 1fr 1.5fr;gap:16px;align-items:end;margin:20px 0}
+.frame{display:flex;flex-direction:column;gap:8px}
+.frame .cap{font-size:13px;color:var(--muted)}
+.frame .cap b{color:var(--ink)}
+.scr{border:1.5px solid var(--line);border-radius:12px;background:var(--surface);padding:8px;display:grid;gap:6px}
+.scr .bar{height:8px;border-radius:4px;background:var(--sunk)}
+.scr .pill{height:8px;width:40%;margin:0 auto;border-radius:4px;background:var(--terra)}
+.scr .blk{background:var(--sunk);border-radius:6px}
+.scr .ter{background:var(--terra-soft);border-radius:6px}
+.phone{aspect-ratio:9/17}
+.phone .card{flex:1}
+.tablet,.desk{aspect-ratio:16/11}
+.tree{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px 20px;overflow-x:auto;font-family:var(--mono);font-size:13px;line-height:1.75;white-space:pre;margin:16px 0}
+.tree .d{color:var(--terra)}
+.tree .c{color:var(--muted)}
+.models{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px;margin:16px 0}
+.model{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.model h4{margin:0 0 8px;font-size:14px;letter-spacing:.06em;text-transform:uppercase;color:var(--terra)}
+.model ul{margin:0;padding:0;list-style:none;font-size:14px}
+.model li{padding:3px 0;border-bottom:1px dashed var(--line)}
+.model li:last-child{border:0}
+.model li span{color:var(--muted);font-size:13px}
+.flows{display:grid;gap:12px;margin:16px 0}
+.flow{display:grid;grid-template-columns:170px minmax(0,1fr);gap:16px;padding:14px 0;border-bottom:1px solid var(--line)}
+.flow:last-child{border:0}
+.flow .name{font-weight:600}
+.flow .path{font-size:14.5px}
+.flow .path span.arrow{color:var(--terra);margin:0 4px}
+.funnel{display:grid;gap:6px;margin:16px 0;max-width:560px}
+.funnel div{padding:9px 14px;border-radius:8px;background:var(--terra-soft);color:var(--ink);font-size:14px;font-weight:500}
+.roadmap{list-style:none;padding:0;margin:16px 0;display:grid;gap:0}
+.roadmap li{display:grid;grid-template-columns:120px minmax(0,1fr);gap:20px;padding:16px 0;border-top:1px solid var(--line)}
+.roadmap .when{font-family:var(--mono);font-size:12.5px;color:var(--terra);padding-top:3px}
+.roadmap h4{margin:0 0 4px;font-size:16px}
+.roadmap p{margin:0;font-size:14.5px;color:var(--muted)}
+.qs{counter-reset:q;list-style:none;padding:0;margin:16px 0;display:grid;gap:10px}
+.qs li{counter-increment:q;display:grid;grid-template-columns:28px minmax(0,1fr);gap:10px;font-size:15px}
+.qs li::before{content:counter(q);font-family:var(--mono);color:var(--terra);font-size:13px;padding-top:2px}
+.events{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0}
+.events code{background:var(--surface);border:1px solid var(--line);padding:4px 10px;border-radius:8px}
+footer{margin-top:72px;padding-top:20px;border-top:1px solid var(--line);font-size:13px;color:var(--muted)}
+@media (max-width:980px){
+  .wrap{grid-template-columns:minmax(0,1fr);gap:0;padding-block:28px 72px}
+  nav.toc{position:static;margin-bottom:8px}
+  nav.toc ol{display:flex;flex-wrap:wrap;gap:6px;margin-top:16px}
+  nav.toc a{background:var(--surface);border:1px solid var(--line);padding:4px 10px;font-size:13px}
+  .verdicts{grid-template-columns:minmax(0,1fr)}
+}
+@media (max-width:640px){
+  .frames{grid-template-columns:minmax(0,1fr)}
+  .phone{max-width:180px}
+  .flow,.roadmap li{grid-template-columns:minmax(0,1fr);gap:4px}
+  h2{font-size:28px}
+}
+@media (prefers-reduced-motion:no-preference){html{scroll-behavior:smooth}}
+/* print-stylesheet */
+@media print{
+  :root{
+    --bg:#FFFFFF; --surface:#FFFFFF; --sunk:#F4EFE7; --ink:#241811; --muted:#5F5147; --line:#D9CFC0;
+    --brown:#4A2A12; --terra:#A9564C; --terra-soft:#F5E6E1; --ok:#276A44; --ok-soft:#E4F1E9;
+    --warn:#8F5415; --warn-soft:#F8EBD9; --bad:#93342B; --bad-soft:#F8E2DE;
+    --diagram-fill:#FFFFFF; --diagram-group:#F7F3EC;
+  }
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  @page{size:A4;margin:14mm}
+  body{background:#fff;font-size:10.5pt;line-height:1.5;padding-inline:0}
+  .wrap{display:block;max-width:none;padding-block:0}
+  nav.toc{position:static;break-after:page;margin-bottom:0}
+  nav.toc .brand{font-size:34px}
+  nav.toc ol{display:grid;grid-template-columns:1fr 1fr;gap:0 24px;margin-top:20px}
+  nav.toc a{color:var(--ink);padding:3px 0}
+  header.hero{padding-bottom:20px}
+  h1{font-size:30pt}
+  .lede{font-size:12pt}
+  section{padding-top:22px;break-before:auto}
+  h2{font-size:19pt;break-after:avoid}
+  h3{break-after:avoid}
+  p,ul.clean{max-width:none}
+  .table-wrap,.callout,.model,.verdict,.frame,.steps li,.roadmap li,.flow,.funnel,.diagram,.tree,.qs li{break-inside:avoid}
+  .verdicts{grid-template-columns:repeat(3,1fr)}
+  table{min-width:0;font-size:8.6pt}
+  th,td{padding:6px 8px}
+  .diagram{padding:0;border:0}
+  .diagram svg{min-width:0}
+  .tree{font-size:8pt;line-height:1.5}
+  .models{grid-template-columns:1fr 1fr}
+  .events code{font-size:8.5pt}
+  a{color:inherit;text-decoration:none}
+  footer{margin-top:28px}
+}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+<nav class="toc" aria-label="Contents">
+  <div class="brand">Nima<small>Technical plan · v3</small></div>
+  <ol>
+    <li><a href="#overview">Overview</a></li>
+    <li><a href="#costs">What "free" means</a></li>
+    <li><a href="#stack">Stack</a></li>
+    <li><a href="#architecture">Architecture</a></li>
+    <li><a href="#tryon">Virtual try-on</a></li>
+    <li><a href="#ai">Other AI</a></li>
+    <li><a href="#web">Responsive web</a></li>
+    <li><a href="#repo">Monorepo</a></li>
+    <li><a href="#data">Data model</a></li>
+    <li><a href="#flows">Key flows</a></li>
+    <li><a href="#realtime">Realtime</a></li>
+    <li><a href="#analytics">Seller analytics</a></li>
+    <li><a href="#ops">VPS &amp; ops</a></li>
+    <li><a href="#roadmap">Roadmap</a></li>
+    <li><a href="#legacy">Lessons from old code</a></li>
+    <li><a href="#questions">Open questions</a></li>
+  </ol>
+</nav>
+
+<main>
+<header class="hero">
+  <div class="eyebrow">Updated 21 Sep 2026</div>
+  <h1>Nima, built on open source</h1>
+  <p class="lede">AI stylist, virtual try-on, social fashion feed and marketplace, Kenya-first (KSh, M-Pesa, Pick Up Mtaani). One Expo app for iOS, Android and a responsive web. Everything is open source and self-hosted on one Contabo VPS, except try-on images, which use Google Gemini the way the original app did.</p>
+  <div class="chips">
+    <span class="chip"><b>API</b> Fastify 5 + TS</span>
+    <span class="chip"><b>DB</b> Postgres 17 + Prisma</span>
+    <span class="chip"><b>Auth</b> Better Auth</span>
+    <span class="chip"><b>Realtime</b> WebSockets</span>
+    <span class="chip"><b>App</b> Expo (iOS · Android · Web)</span>
+    <span class="chip"><b>Try-on</b> Google Gemini</span>
+  </div>
+</header>
+
+<section id="overview">
+  <h2><span class="n">01</span>What we're building</h2>
+  <p class="sub">From the brief and the 11 Canva screens.</p>
+  <ul class="clean">
+    <li><b>Top navigation:</b> <code>Shop</code> · <code>For You</code> · <code>My Store</code>. Buyers and sellers use one account.</li>
+    <li><b>For You:</b> a full-bleed look card with Love / Save / Comments and a <b>"Nima Says"</b> AI caption.</li>
+    <li><b>Shop:</b> a masonry grid. <b>Auth:</b> a bottom sheet (Apple / Google / email) that appears only on gated actions.</li>
+    <li><b>Share sheet:</b> friend avatars, search, a group icon and Send.</li>
+    <li><b>Profile:</b> credits pill, style tags, highlight circles, and tabs: Looks · Lookbooks · Wardrobe · Recreations · Orders.</li>
+  </ul>
+  <div class="swatches" aria-label="Design tokens from the Canva design">
+    <div class="sw"><i style="background:#FAF8F3"></i><span><b>Cream</b><br><span class="mono">#FAF8F3</span></span></div>
+    <div class="sw"><i style="background:#4A2A12"></i><span><b>Deep brown</b><br><span class="mono">#4A2A12</span></span></div>
+    <div class="sw"><i style="background:#B8645A"></i><span><b>Terracotta</b><br><span class="mono">#B8645A</span></span></div>
+    <div class="sw"><span><b>Type</b><br>Cormorant-style serif + DM Sans</span></div>
+  </div>
+  <div class="callout">
+    <h4>Credits (decided)</h4>
+    <p>Every AI action spends credits from a <b>credit ledger</b>. Free users get a weekly grant. Packs are bought with M-Pesa on Android and web, and with Apple In-App Purchase on iPhone (Apple rejected M-Pesa for digital goods in the old app). Costs per action are settings, not code. Failed jobs refund automatically.</p>
+  </div>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Starting numbers (from the old app)</th><th>Value</th></tr></thead>
+    <tbody>
+      <tr><td>Free weekly credits</td><td>5 (the brief suggests ~20; raise once GPU cost is known)</td></tr>
+      <tr><td>Credit packs</td><td>10 / 20 / 50 / 100 credits for KES 500 / 1,000 / 2,500 / 5,000 (KES 50 per credit)</td></tr>
+      <tr><td>Try-on, quick camera try-on, create a look</td><td>1 credit each</td></tr>
+      <tr><td>3 looks from Ask Nima</td><td>3 credits</td></tr>
+      <tr><td>Onboarding looks</td><td>Free</td></tr>
+      <tr><td>Recreate, retry, wardrobe processing</td><td>Charged. The old app forgot to charge these</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="costs">
+  <h2><span class="n">02</span>What "free" really means</h2>
+  <p class="sub">The software is free. These things still cost money. The App Store and Google Play accounts already exist.</p>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Unavoidable</th><th>Why</th><th>How we minimise it</th></tr></thead>
+    <tbody>
+      <tr><td>Contabo VPS</td><td>Something has to run the server</td><td>One VPS with lots of RAM, because the LLM runs in RAM</td></tr>
+      <tr><td>Domain name</td><td>HTTPS, email and app links</td><td>About $10/yr</td></tr>
+            <tr><td>Apple&#8217;s 15–30% cut</td><td>Credits bought on iPhone must use In-App Purchase</td><td>iOS only; Android and web use M-Pesa</td></tr>
+            <tr><td>Fingo Pay fees</td><td>Charged per transaction, taken from sales</td><td>Priced into the platform fee</td></tr>
+      <tr><td>Pick Up Mtaani fees</td><td>Charged per parcel</td><td>The buyer pays at checkout</td></tr>
+      <tr><td>Google Gemini API</td><td>Try-on images, paid per image (≈ $0.05–0.13 each, est.)</td><td>Credits cover it; cheaper Flash model by default</td></tr>
+      <tr><td>SMS login codes</td><td>Every SMS costs money</td><td><span class="tag ok">Skipped</span> Email codes, magic links, Google/Apple instead</td></tr>
+    </tbody>
+  </table></div>
+  <p class="sub"><b>Sign in with Apple is still required</b> when Google login is offered. <b>Not used:</b> OpenAI, Claude API, Photoroom, Cloudflare R2, Resend, PostHog cloud, Tailscale.</p>
+</section>
+
+<section id="stack">
+  <h2><span class="n">03</span>Stack</h2>
+  <p class="sub">Open source and self-hosted, except Gemini for try-on images.</p>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Concern</th><th>Choice</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td>API</td><td>Fastify 5 + TypeScript (ESM)</td><td>MIT</td></tr>
+      <tr><td>Contracts</td><td>Zod + <code>fastify-type-provider-zod</code> → OpenAPI → typed client</td><td>One source of truth for the app and webhooks</td></tr>
+      <tr><td>Database</td><td>PostgreSQL 17 + Prisma, with <code>pgvector</code>, <code>pg_trgm</code>, <code>citext</code></td><td>Vectors via <code>Unsupported("vector(n)")</code> + raw SQL</td></tr>
+      <tr><td>Auth</td><td>Better Auth 1.7: guests, Google, Apple, email OTP, magic link, passkeys, Expo</td><td>A guest's data moves to their real account on sign-up. No SMS</td></tr>
+      <tr><td>Realtime</td><td><code>@fastify/websocket</code> + Valkey pub/sub</td><td>Ready for more API nodes later</td></tr>
+      <tr><td>Jobs</td><td>BullMQ on Valkey</td><td>All slow work is queued</td></tr>
+      <tr><td>File storage</td><td>Garage or SeaweedFS (S3-compatible)</td><td>Not MinIO, which was archived in 2026</td></tr>
+      <tr><td>Images</td><td>imgproxy behind Caddy</td><td>Resizing, WebP/AVIF</td></tr>
+      <tr><td>Search</td><td>Postgres full-text + <code>pg_trgm</code>, Meilisearch later</td><td>No extra service on day one</td></tr>
+      <tr><td>Email</td><td>Stalwart or Postal</td><td>SPF/DKIM/DMARC; needs IP warm-up for Gmail</td></tr>
+      <tr><td>Push</td><td>Expo push service</td><td>Free, no per-message fee</td></tr>
+      <tr><td>Monitoring</td><td>GlitchTip + Uptime Kuma</td><td>Sentry-compatible, lightweight</td></tr>
+      <tr><td>Try-on images</td><td>Google Gemini API</td><td>The only paid AI service</td></tr>
+      <tr><td>Deploy</td><td>Docker Compose + Caddy</td><td>Automatic HTTPS</td></tr>
+      <tr><td>App</td><td>Expo SDK + Expo Router + NativeWind</td><td>iOS, Android and responsive web from one codebase</td></tr>
+      <tr><td>Monorepo</td><td>Turborepo + pnpm</td><td>Shared types, DB and UI</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="architecture">
+  <h2><span class="n">04</span>Architecture</h2>
+  <p class="sub">Everything runs on one VPS. Workers send try-on images to Google Gemini and push the results back over WebSocket.</p>
+  <div class="diagram" role="img" aria-label="Architecture diagram: the Expo app talks to Caddy and the Fastify API on the Contabo VPS; the API uses Postgres and Valkey; Valkey feeds the workers, which call the Google Gemini API for try-on images.">
+    <svg viewBox="0 0 960 610" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="head"/></marker>
+      </defs>
+      <!-- clients -->
+      <rect x="250" y="16" width="300" height="60" rx="12" class="accent"/>
+      <text x="400" y="42" text-anchor="middle" class="t">Expo app</text>
+      <text x="400" y="61" text-anchor="middle" class="s">iOS · Android · Web (responsive)</text>
+      <rect x="640" y="16" width="300" height="60" rx="12" class="box"/>
+      <text x="790" y="42" text-anchor="middle" class="t">Fingo Pay · Pick Up Mtaani</text>
+      <text x="790" y="61" text-anchor="middle" class="s">payment &amp; delivery webhooks</text>
+      <!-- VPS group -->
+      <rect x="20" y="118" width="920" height="332" rx="16" class="group"/>
+      <text x="920" y="140" text-anchor="end" class="lbl">CONTABO VPS · CPU · DOCKER COMPOSE</text>
+      <!-- Caddy -->
+      <rect x="40" y="160" width="140" height="56" rx="10" class="box"/>
+      <text x="110" y="185" text-anchor="middle" class="t">Caddy</text>
+      <text x="110" y="203" text-anchor="middle" class="s">TLS · proxy</text>
+      <!-- API -->
+      <rect x="220" y="160" width="220" height="100" rx="10" class="accent"/>
+      <text x="330" y="186" text-anchor="middle" class="t">Fastify API</text>
+      <text x="330" y="206" text-anchor="middle" class="s">REST · /api/auth (Better Auth)</text>
+      <text x="330" y="224" text-anchor="middle" class="s">/ws gateway</text>
+      <text x="330" y="242" text-anchor="middle" class="s">/webhooks/fingo · /webhooks/pum</text>
+      <!-- Postgres -->
+      <rect x="500" y="160" width="200" height="50" rx="10" class="box"/>
+      <text x="600" y="182" text-anchor="middle" class="t">PostgreSQL 17</text>
+      <text x="600" y="199" text-anchor="middle" class="s">pgvector · pg_trgm</text>
+      <!-- Valkey -->
+      <rect x="500" y="222" width="200" height="50" rx="10" class="box"/>
+      <text x="600" y="244" text-anchor="middle" class="t">Valkey</text>
+      <text x="600" y="261" text-anchor="middle" class="s">BullMQ queues · pub/sub</text>
+      <!-- Right column -->
+      <rect x="740" y="160" width="180" height="50" rx="10" class="box"/>
+      <text x="830" y="182" text-anchor="middle" class="t">Garage + imgproxy</text>
+      <text x="830" y="199" text-anchor="middle" class="s">S3 files · resizing</text>
+      <rect x="740" y="222" width="180" height="50" rx="10" class="box"/>
+      <text x="830" y="244" text-anchor="middle" class="t">llama.cpp</text>
+      <text x="830" y="261" text-anchor="middle" class="s">Qwen3 MoE · stylist</text>
+      <!-- Workers -->
+      <rect x="220" y="310" width="480" height="64" rx="10" class="box"/>
+      <text x="460" y="335" text-anchor="middle" class="t">Workers (Node + Python)</text>
+      <text x="460" y="356" text-anchor="middle" class="s">try-on jobs · background removal · tagging · embeddings · feed · payouts · notifications</text>
+      <rect x="740" y="310" width="180" height="64" rx="10" class="box"/>
+      <text x="830" y="335" text-anchor="middle" class="t">Ops</text>
+      <text x="830" y="356" text-anchor="middle" class="s">Stalwart · GlitchTip · Uptime</text>
+      <!-- Backups -->
+      <rect x="40" y="310" width="140" height="64" rx="10" class="box"/>
+      <text x="110" y="336" text-anchor="middle" class="t">Backups</text>
+      <text x="110" y="356" text-anchor="middle" class="s">DB + files, offsite</text>
+      <text x="480" y="424" text-anchor="middle" class="s">API and workers reach Garage and llama.cpp over the internal Docker network</text>
+      <!-- Gemini -->
+      <rect x="240" y="500" width="440" height="90" rx="14" class="accent"/>
+      <text x="460" y="528" text-anchor="middle" class="t">Google Gemini API (paid per image)</text>
+      <text x="460" y="550" text-anchor="middle" class="s">try-on · outfit looks · ghost mannequin</text>
+      <text x="460" y="569" text-anchor="middle" class="s">Flash image by default · Pro for outfits and premium</text>
+      <!-- wires -->
+      <path d="M340 76 V96 H110 V158" class="wire" marker-end="url(#ah)"/>
+      <path d="M790 76 V104 H400 V158" class="wire" marker-end="url(#ah)"/>
+      <path d="M180 188 H218" class="wire" marker-end="url(#ah)"/>
+      <path d="M440 185 H498" class="wire" marker-end="url(#ah)"/>
+      <path d="M440 247 H498" class="wire" marker-end="url(#ah)"/>
+      <path d="M600 272 V308" class="wire" marker-end="url(#ah)"/>
+      <path d="M460 374 V498" class="tunnel" marker-end="url(#ah)"/>
+      <text x="472" y="470" class="lbl">HTTPS · PAY PER IMAGE</text>
+    </svg>
+  </div>
+  <ul class="clean">
+    <li>The API never does slow work inline. It queues a job, returns a <code>jobId</code>, and the result arrives over WebSocket.</li>
+    <li>Postgres and Valkey listen only on the internal Docker network, with passwords. Only ports 80/443 and SSH are public.</li>
+    <li>Every AI model or outside service sits behind an interface (<code>TryOnProvider</code>, <code>LLMProvider</code>, <code>PaymentProvider</code>, <code>LogisticsProvider</code>…), so we can swap it without touching the rest of the code.</li>
+  </ul>
+</section>
+
+<section id="tryon">
+  <h2><span class="n">05</span>Virtual try-on: Gemini, done better</h2>
+  <p class="sub">We keep the original app's approach and fix what made it slow, costly and leaky.</p>
+
+  <h3>How the original app did it</h3>
+  <ol class="steps">
+    <li><b>Request</b>The user taps try-on. Credits are taken and a pending job is created.</li>
+    <li><b>Download</b>The server fetches the user's photo and up to 5 item photos, at full size.</li>
+    <li><b>GPT-4o</b>Writes a "photography director" prompt: keep face and body, show every item.</li>
+    <li><b>Gemini</b><code>gemini-3-pro-image-preview</code> dresses the person, falling back to Flash when busy, with one retry.</li>
+    <li><b>Save</b>The image is stored and the app updates.</li>
+  </ol>
+  <p>The same recipe powered item, outfit, camera Quick Try-On, recreate, seller links, the partner API, wardrobe clean-up and ghost mannequin. <b>Why keep it:</b> Gemini handles several items and accessories at once, which dedicated try-on models don't. It's proven on Kenyan outfits and needs no GPU of our own.</p>
+
+  <h3>What we do better</h3>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Change</th><th>Why</th></tr></thead>
+    <tbody>
+      <tr><td>Drop the GPT-4o step; build the prompt from a template plus stored item data</td><td>One less paid service, 2–5 s faster, no OpenAI account</td></tr>
+      <tr><td>Cheaper Gemini Flash image by default; Pro for full outfits and premium</td><td>Pro costs roughly 2× Flash. The week-1 test decides where each is good enough</td></tr>
+      <tr><td>Resize photos to ~1024 px before sending</td><td>Lower cost, faster. The old app sent full-size photos</td></tr>
+      <tr><td>"Change the top" sends the previous result as the base image</td><td>The person stays consistent across edits</td></tr>
+      <tr><td>Free photo check before charging</td><td>No credits wasted on unusable photos</td></tr>
+      <tr><td>Cache: same photo + same items reuses the result</td><td>No double charge on re-opens and shares</td></tr>
+      <tr><td>One charge-then-queue function for every image job, refund on failure</td><td>Fixes the old free recreate, retry and chat-look leaks</td></tr>
+      <tr><td>No user photo means no generation</td><td>The old fallback showed a random person</td></tr>
+      <tr><td>Provider switch built in</td><td>Can A/B-test FASHN (dedicated try-on, ≈ $0.075, sharper prints and logos) later</td></tr>
+      <tr><td>Live result over WebSocket</td><td>"Nima is dressing you…", then the image appears. No polling</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Cost maths</h3>
+  <p class="sub">Estimates. Confirm on Google's pricing page before launch.</p>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Item</th><th>Per image</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td>Gemini Pro image</td><td>≈ $0.13</td><td>What the old app used by default</td></tr>
+      <tr><td>Gemini Flash image</td><td>≈ $0.05–0.07</td><td>Our default</td></tr>
+      <tr><td>One credit sold</td><td>KES 50 ≈ $0.39</td><td>iOS nets 15–30% less after Apple's cut</td></tr>
+    </tbody>
+  </table></div>
+  <div class="callout warn">
+    <h4>Free credits are the real cost</h4>
+    <p>Paid try-ons are profitable, since a credit covers even a Pro image about 3×. But 5 free try-ons a week costs ≈ $0.25–0.65 per active free user, so <b>1,000 active free users ≈ $1,100–2,800/month</b> in the worst case. That's why the free grant starts at 5, not 20. Watch it and tune it.</p>
+    <p><b>Privacy:</b> user photos go to Google. Say so at upload and in the privacy policy, and use the paid API tier.</p>
+  </div>
+
+  <h3>How a try-on runs in the new app</h3>
+  <ol class="steps">
+    <li><b>Request</b>The user picks items and a photo; the app calls <code>POST /tryon</code>.</li>
+    <li><b>Check + charge</b>Photo check, then credits debited and job queued in one transaction.</li>
+    <li><b>Gemini</b>A VPS worker resizes the images, builds the prompt and calls Flash or Pro.</li>
+    <li><b>Deliver</b>Result stored privately; <code>tryon.done</code> over WebSocket. Refund on failure.</li>
+    <li><b>Notice</b>"Visualization only — check the seller's size guide."</li>
+  </ol>
+  <p class="sub">Accessories (jewellery, sunglasses) use the upper-body photo in the same pipeline, labelled "beta" at first.</p>
+</section>
+
+<section id="ai">
+  <h2><span class="n">06</span>Other AI (open weights, self-hosted, free)</h2>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Job</th><th>Model</th><th>License</th><th>Runs on</th></tr></thead>
+    <tbody>
+      <tr><td>Ask Nima stylist</td><td>Qwen3 30B-A3B MoE via llama.cpp (fallback: Qwen3.5-4B / Gemma 4 E4B)</td><td>Apache-2.0</td><td>VPS CPU, est. 5–10 tokens/s</td></tr>
+      <tr><td>"Nima Says" captions, tags</td><td>Qwen3.5-4B / Gemma 4 E4B</td><td>Apache-2.0</td><td>VPS CPU, generated in batches</td></tr>
+      <tr><td>Wardrobe photo tagging</td><td>Qwen3-VL-4B or Florence-2</td><td>Apache-2.0 / MIT</td><td>VPS CPU, async</td></tr>
+      <tr><td>Recommendations (embeddings)</td><td>Marqo-FashionSigLIP → pgvector</td><td>Apache-2.0</td><td>VPS CPU</td></tr>
+      <tr><td>Background removal</td><td>BiRefNet (via rembg, selected explicitly)</td><td>MIT</td><td>VPS CPU, a few seconds per image</td></tr>
+      <tr><td>Ghost mannequin</td><td>Gemini image (paid), charged to seller credits</td><td>—</td><td>Gemini API</td></tr>
+      <tr><td>Upload moderation</td><td>Open NSFW classifier + Qwen3-VL check</td><td>Apache-2.0</td><td>VPS CPU</td></tr>
+    </tbody>
+  </table></div>
+  <div class="callout">
+    <h4>Making a CPU model feel fast</h4>
+    <p>The model only works out what the user wants ("wedding, elegant, under KSh 5,000, size M"). Our code runs the search and returns real, in-stock products. The model then writes a short reply that streams word by word. Short prompts plus llama.cpp's prompt cache avoid long waits before the first word. If it still feels slow, a cheap hosted model (e.g. Gemini Flash text) can be swapped in.</p>
+    <p><b>VPS size:</b> aim for 12+ vCPU and 48 GB+ RAM. The minimum is 8 vCPU / 32 GB with the smaller 4B model.</p>
+  </div>
+</section>
+
+<section id="web">
+  <h2><span class="n">07</span>Responsive web, not a stretched phone</h2>
+  <p class="sub">One codebase. The layout follows screen width, not device type, so a narrow browser window gets the phone layout.</p>
+  <div class="frames" aria-hidden="true">
+    <div class="frame">
+      <div class="scr phone" style="display:flex;flex-direction:column">
+        <div class="pill"></div>
+        <div class="blk card"></div>
+        <div class="bar" style="width:60%"></div>
+        <div class="bar"></div>
+      </div>
+      <div class="cap"><b>Phone · &lt; 768</b><br>Canva design: top pills, bottom tabs, slide-up sheets</div>
+    </div>
+    <div class="frame">
+      <div class="scr tablet" style="grid-template-columns:18px 1fr 0.7fr">
+        <div class="blk"></div>
+        <div class="ter"></div>
+        <div style="display:grid;gap:6px"><div class="blk"></div><div class="blk"></div><div class="blk"></div></div>
+      </div>
+      <div class="cap"><b>Tablet · 768–1279</b><br>Icon rail, centred feed with a product strip, 3–4 column shop</div>
+    </div>
+    <div class="frame">
+      <div class="scr desk" style="grid-template-columns:70px 1fr 1.6fr 1fr">
+        <div style="display:grid;gap:5px;align-content:start"><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div></div>
+        <div></div>
+        <div class="ter"></div>
+        <div style="display:grid;gap:6px;grid-template-rows:auto 1fr"><div class="bar"></div><div class="blk"></div></div>
+      </div>
+      <div class="cap"><b>Desktop · ≥ 1280</b><br>Full sidebar, feed in the middle, Ask Nima docked on the right, pop-up windows</div>
+    </div>
+  </div>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Width</th><th>Navigation</th><th>For You</th><th>Shop</th><th>Sheets</th><th>Ask Nima</th></tr></thead>
+    <tbody>
+      <tr><td>&lt; 768</td><td>Top pills + bottom tabs</td><td>Full-bleed card</td><td>2 columns</td><td>Bottom sheet</td><td>Full screen</td></tr>
+      <tr><td>768–1279</td><td>Left icon rail</td><td>Centred card + product strip</td><td>3–4 columns</td><td>Centred modal</td><td>Side panel</td></tr>
+      <tr><td>≥ 1280</td><td>Full left sidebar</td><td>Feed + right panel</td><td>4–6 columns + filters</td><td>Dialog</td><td>Docked right</td></tr>
+    </tbody>
+  </table></div>
+  <ul class="clean">
+    <li><b>Expo Router</b> shows <code>&lt;Tabs&gt;</code> on narrow screens and <code>&lt;Sidebar&gt;</code> on wide ones. The URLs stay identical.</li>
+    <li><b>Shared components:</b> <code>&lt;Sheet&gt;</code> (bottom sheet ↔ dialog), <code>&lt;Masonry columns={{base:2, md:3, lg:4, xl:6}}&gt;</code>, <code>&lt;Container&gt;</code>, <code>&lt;SplitView&gt;</code>.</li>
+    <li><b>Web polish:</b> hover states, keyboard focus, <code>Esc</code> closes dialogs, and links are real links (open in a new tab works).</li>
+    <li>The <b>seller dashboard</b> is designed desktop-first and stacks into cards on phones.</li>
+    <li><b>Public pages</b> (product, look, store, profile) are pre-rendered, so Google indexes them and WhatsApp links show a preview.</li>
+  </ul>
+</section>
+
+<section id="repo">
+  <h2><span class="n">08</span>Monorepo layout</h2>
+<div class="tree"><span class="d">nima/</span>
+├─ <span class="d">apps/</span>
+│  ├─ api/            <span class="c">Fastify (REST + WS + webhooks)</span>
+│  ├─ worker/         <span class="c">Node BullMQ workers</span>
+│  ├─ ml-cpu/         <span class="c">Python: BiRefNet, FashionSigLIP, Qwen-VL (VPS)</span>
+│  └─ app/            <span class="c">Expo: iOS / Android / Web</span>
+├─ <span class="d">packages/</span>
+│  ├─ db/             <span class="c">Prisma schema, migrations, TypedSQL</span>
+│  ├─ contracts/      <span class="c">Zod schemas + WebSocket event types</span>
+│  ├─ api-client/     <span class="c">Generated typed client</span>
+│  ├─ integrations/   <span class="c">gemini, fingo, pickupmtaani, llm, storage, mailer</span>
+│  ├─ ai/             <span class="c">Stylist prompts, tools, context builder</span>
+│  ├─ ui/             <span class="c">Responsive components + Canva tokens</span>
+│  └─ config/         <span class="c">tsconfig, eslint, env schema</span>
+├─ <span class="d">infra/</span>             <span class="c">docker-compose, Caddyfile, backups</span>
+└─ <span class="d">docs/</span></div>
+</section>
+
+<section id="data">
+  <h2><span class="n">09</span>Data model (first cut)</h2>
+  <div class="models">
+    <div class="model"><h4>Identity</h4><ul>
+      <li>User, Session, Account <span>(Better Auth; <code>isAnonymous</code> marks guests)</span></li>
+      <li>Profile <span>handle, bio, links, avatar, private</span></li>
+      <li>StyleProfile <span>all fields optional, autosaved per question, taste vector</span></li>
+      <li>UserPhoto <span>full-body or upper-body, private</span></li>
+    </ul></div>
+    <div class="model"><h4>Catalog</h4><ul>
+      <li>Store <span>optional, one per user</span></li>
+      <li>Product <span>size guide, return policy, embedding</span></li>
+      <li>ProductVariant <span>size, colour, price, stock</span></li>
+      <li>ProductImage <span>original + processed</span></li>
+    </ul></div>
+    <div class="model"><h4>Looks &amp; social</h4><ul>
+      <li>Look + LookItem <span>try-ons private by default</span></li>
+      <li>WardrobeItem <span>AI-tagged, embedding</span></li>
+      <li>Lookbook + Entry <span>by day or occasion</span></li>
+      <li>Save, Like, NotForMe, Comment, Follow <span>follower counts never public</span></li>
+      <li>Conversation, Message <span>text, product, look, try-on, lookbook</span></li>
+    </ul></div>
+    <div class="model"><h4>AI</h4><ul>
+      <li>TryOnJob <span>status, parent job for "change the top"</span></li>
+      <li>StylistThread + Message</li>
+      <li>CreditLedger <span>weekly grant, try-on, refund</span></li>
+    </ul></div>
+    <div class="model"><h4>Commerce</h4><ul>
+      <li>Cart, CheckoutGroup, Order <span>one order per store</span></li>
+      <li>Payment <span>idempotency key, raw response</span></li>
+      <li>Shipment <span>provider, pickup point, events</span></li>
+      <li>SellerLedgerEntry, Payout, Review, WebhookEvent</li>
+    </ul></div>
+    <div class="model"><h4>Analytics &amp; ads</h4><ul>
+      <li>Event <span>append-only, partitioned monthly</span></li>
+      <li>DailyStoreStats <span>roll-ups</span></li>
+      <li>Promotion <span>budget, targeting, dates</span></li>
+    </ul></div>
+  </div>
+</section>
+
+<section id="flows">
+  <h2><span class="n">10</span>Key flows</h2>
+  <div class="flows">
+    <div class="flow"><div class="name">Guest → account</div><div class="path">Open app as a guest <span class="arrow">→</span> browse, like and add to cart <span class="arrow">→</span> a gated action opens the sheet: "Create an account to try this look on yourself." <span class="arrow">→</span> the guest's data merges into the new account <span class="arrow">→</span> the questionnaire is an optional card and never blocks</div></div>
+    <div class="flow"><div class="name">Ask Nima</div><div class="path">The model works out intent and filters <span class="arrow">→</span> tools run the search, wardrobe, style profile, matching items, look creation and try-on <span class="arrow">→</span> only real, in-stock items <span class="arrow">→</span> the reply streams</div></div>
+    <div class="flow"><div class="name">Wardrobe</div><div class="path">Upload <span class="arrow">→</span> BiRefNet cut-out <span class="arrow">→</span> Qwen-VL tags <span class="arrow">→</span> FashionSigLIP vector <span class="arrow">→</span> appears in Wardrobe</div></div>
+    <div class="flow"><div class="name">For You</div><div class="path">Candidates from taste match, follows, trending, seasonal sets and labelled promotions <span class="arrow">→</span> weighted score, lowered by "not for me" and skips <span class="arrow">→</span> the taste vector keeps learning from activity</div></div>
+    <div class="flow"><div class="name">Checkout</div><div class="path">Cart split per store <span class="arrow">→</span> choose a Pick Up Mtaani point <span class="arrow">→</span> Fingo M-Pesa prompt <span class="arrow">→</span> verified webhook marks the order paid and credits the seller's ledger <span class="arrow">→</span> seller marks ready and a parcel is created <span class="arrow">→</span> after collection and the return window, the seller is paid</div></div>
+    <div class="flow"><div class="name">Seller photos</div><div class="path">Upload <span class="arrow">→</span> BiRefNet white background (free) <span class="arrow">→</span> optional Gemini ghost mannequin (seller credits) <span class="arrow">→</span> seller picks an image</div></div>
+  </div>
+  <div class="callout warn"><h4>Legal check needed</h4><p>Fingo can't split one payment between sellers, so Nima holds the money until delivery. That may raise Central Bank of Kenya licensing questions.</p></div>
+</section>
+
+<section id="realtime">
+  <h2><span class="n">11</span>Realtime events</h2>
+  <p class="sub">Connections are authenticated with the login session. Each user has a private channel. Offline users get a push notification instead.</p>
+  <div class="events">
+    <code>message.new</code><code>message.read</code><code>typing</code>
+    <code>tryon.queued</code><code>tryon.progress</code><code>tryon.done</code><code>tryon.failed</code>
+    <code>stylist.delta</code><code>stylist.done</code>
+    <code>payment.status</code><code>order.updated</code><code>shipment.updated</code><code>notification.new</code>
+  </div>
+</section>
+
+<section id="analytics">
+  <h2><span class="n">12</span>Seller analytics</h2>
+  <p>Every interaction is logged against the store and rolled up daily. The headline feature is the funnel, which shows what shoppers do before they buy:</p>
+  <div class="funnel" aria-label="Seller funnel">
+    <div style="width:100%">Views</div>
+    <div style="width:82%">Try-ons</div>
+    <div style="width:62%">Added to cart</div>
+    <div style="width:44%">Purchases</div>
+  </div>
+  <p class="sub">Premium sellers get grouped customer demographics and preferences. Groups have a minimum size, so no individual buyer can be identified. Follower counts are shown here only.</p>
+</section>
+
+<section id="ops">
+  <h2><span class="n">13</span>VPS &amp; ops</h2>
+  <ul class="clean">
+    <li><b>Services:</b> caddy, api, worker, ml-cpu, llm (llama.cpp), postgres, valkey, garage, imgproxy, stalwart, glitchtip, uptime-kuma.</li>
+    <li><b>Backups:</b> nightly database dump plus continuous WAL archiving, and a Garage snapshot, copied offsite. Test a restore monthly.</li>
+    <li><b>Security:</b> firewall allowing only web and SSH; fail2ban; SSH keys only; non-root containers; secrets kept out of git; the database never public.</li>
+  </ul>
+</section>
+
+<section id="roadmap">
+  <h2><span class="n">14</span>Roadmap</h2>
+  <ol class="roadmap">
+    <li><div class="when">Weeks 1–2</div><div><h4>Foundations + try-on test</h4><p>Monorepo, Docker Compose, Postgres, Valkey, Garage, Caddy, CI. Better Auth with guest, Google and email login. Expo shell with responsive layouts and Canva tokens. Try-on test: Gemini Flash vs Pro on real Kenyan outfit photos.</p></div></li>
+    <li><div class="when">Weeks 3–5</div><div><h4>Discover &amp; account</h4><p>Stores and products, Shop grid, For You v1, looks, like/save/not-for-me, profile, autosaving questionnaire, photo upload, public pages.</p></div></li>
+    <li><div class="when">Weeks 6–9</div><div><h4>AI core</h4><p>Gemini try-on pipeline, credits, live updates. Ask Nima stylist with tools. Wardrobe tagging, embeddings, For You v2.</p></div></li>
+    <li><div class="when">Weeks 10–11</div><div><h4>Social</h4><p>Follows, Explore, DMs and sharing, Recreate Look, Lookbooks, push notifications. Seller try-on links.</p></div></li>
+    <li><div class="when">Weeks 12–15</div><div><h4>Commerce</h4><p>Seller onboarding, product management, background removal, cart, Fingo checkout, Pick Up Mtaani, orders, seller ledger and payouts, reviews.</p></div></li>
+    <li><div class="when">Week 16+</div><div><h4>Growth</h4><p>Seller analytics funnel, promotions, premium plan, admin and moderation, ghost mannequin, FASHN vs Gemini comparison.</p></div></li>
+  </ol>
+</section>
+
+<section id="legacy">
+  <h2><span class="n">15</span>Lessons from the old code</h2>
+  <p class="sub">Four repos from github.com/zyraglobal7, cloned into <code>reference/</code>. Full audits are in <code>docs/legacy/</code>.</p>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Repo</th><th>What it was</th><th>Status</th></tr></thead>
+    <tbody>
+      <tr><td>Nima-Universe</td><td>Newest monorepo: Expo app + Next.js web (seller portal, admin, tailor portal, Wrapped) on one Convex backend (~43 tables)</td><td>37 commits, to Jul 2026</td></tr>
+      <tr><td>Nima-Convex</td><td>Next.js web app at shopnima.ai, the most-worked codebase (~100k lines)</td><td>187 commits, to Apr 2026</td></tr>
+      <tr><td>Nima-Native</td><td>Expo app on a copy of the same backend</td><td>31 commits, to Apr 2026</td></tr>
+      <tr><td>nima-demo</td><td>Fake shop showing the "Try on with Nima" widget for partner stores</td><td>Integration example only</td></tr>
+      <tr><td>docs</td><td>Untouched docs template</td><td><span class="tag bad">Nothing to reuse</span></td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>How their try-on worked</h3>
+  <p>No dedicated try-on model. GPT-4o wrote a "photography director" prompt, then Google Gemini (<code>gemini-3-pro-image-preview</code>) got the user's photo plus up to 5 item photos with the instruction to keep the face and body and dress them in every item. It retried once if the result was empty. The same recipe powered item, outfit, camera Quick Try-On, recreate, seller links and the partner API, plus wardrobe cleanup and ghost mannequin. All of it was paid. <b>We keep Gemini for images</b>, drop the GPT-4o step and OpenAI entirely, and add the improvements in section 05.</p>
+
+  <div class="models">
+    <div class="model"><h4>Keep</h4><ul>
+      <li>Database design <span>blueprint for our Prisma schema</span></li>
+      <li>AI prompts <span>stylist, style profile, try-on, "Nima Says", photo check, wardrobe</span></li>
+      <li>Outfit matcher <span>occasion + formality scoring for For You v1</span></li>
+      <li>Fingo M-Pesa code <span>STK push + signed webhook</span></li>
+      <li>Credit economics &amp; seller tiers <span>KES 0 / 5k / 15k / 30k per month</span></li>
+      <li>Onboarding content, style images, UI flows</li>
+    </ul></div>
+    <div class="model"><h4>Keep as features</h4><ul>
+      <li>Quick Try-On <span>photograph a garment in a shop</span></li>
+      <li>Onboarding looks <span>3 free looks after sign-up</span></li>
+      <li>Seller try-on links</li>
+      <li>Nima Connect <span>partner shops embed try-on</span></li>
+      <li>Nima Wrapped · tailor portal <span>to confirm</span></li>
+    </ul></div>
+    <div class="model"><h4>Discard</h4><ul>
+      <li>All Convex and WorkOS code</li>
+      <li>Duplicate Next.js consumer app</li>
+      <li>Legal texts <span>wrong services, Delaware law; rewrite for Kenya</span></li>
+      <li>Docs template, demo UI</li>
+    </ul></div>
+  </div>
+
+  <h3>Their mistakes, our rules</h3>
+  <div class="table-wrap"><table>
+    <thead><tr><th>What went wrong</th><th>What we do from day one</th></tr></thead>
+    <tbody>
+      <tr><td>Any logged-in user could take over any account (the server trusted the email sent by the app)</td><td>Identity only comes from the login session; every webhook is signature-checked</td></tr>
+      <tr><td>Admin catalogue and admin AI had no login check</td><td>Role guards on every route, and tests that fail if one is missing</td></tr>
+      <tr><td>Profile lookups leaked email, phone and address</td><td>Separate public and private responses; private fields stripped</td></tr>
+      <tr><td>Any file could be deleted by its ID</td><td>Ownership checked before every file action</td></tr>
+      <tr><td>Negative cart quantities lowered the total</td><td>Strict validation; totals always computed on the server</td></tr>
+      <tr><td>Recreate, retry and chat looks generated images for free</td><td>One charge-then-queue function for every AI job, refund on failure</td></tr>
+      <tr><td>Rate limiter written but never switched on</td><td>Rate limits on all routes, tighter on AI and login</td></tr>
+      <tr><td>Deleting an account left photos in storage</td><td>Deletion removes database rows and files (Kenya Data Protection Act)</td></tr>
+      <tr><td>Blocking a user did nothing</td><td>Blocks enforced in feed, DMs, profiles and search</td></tr>
+      <tr><td>Money mixed cents and whole shillings</td><td>All money stored as integer cents</td></tr>
+      <tr><td>A try-on fallback dropped the user's photo and showed a random person</td><td>No user photo means no generation</td></tr>
+      <tr><td>No guest mode, empty Explore, look-only DMs, no courier</td><td>Guest accounts, Explore, text DMs, Pick Up Mtaani</td></tr>
+      <tr><td>iPad got a phone layout; Apple flagged it</td><td>Responsive layouts</td></tr>
+      <tr><td>No tests, lint or CI</td><td>Tests, lint and type checks in CI from week 1</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="questions">
+  <h2><span class="n">16</span>Open questions</h2>
+  <ol class="qs">
+    <li><span><b>Brand colours:</b> the Canva design (brown <code>#4A2A12</code> / cream / terracotta) or the old app (burgundy <code>#5C2A33</code> / ivory / rose gold)?</span></li>
+    <li><span><b>Existing users:</b> shopnima.ai and the old backend look live. Move their users, products and looks into the new database, or start fresh? Keep the shopnima.ai domain?</span></li>
+    <li><span><b>Contabo plan specs</b> (vCPU / RAM / disk). These decide which chat model size we can run.</span></li>
+    <li><span><b>Fingo:</b> is there a card API? Can they split settlement so we avoid holding funds? What are the fees?</span></li>
+    <li><span><b>Pick Up Mtaani API key:</b> request it via their support email; it needs a registered business.</span></li>
+    <li><span><b>Platform fee</b> percentage, and the return window before sellers are paid.</span></li>
+    <li><span><b>Old features:</b> keep Nima Connect, Nima Wrapped, the tailor portal and seller try-on links on the roadmap?</span></li>
+    <li><span><b>Kenya Data Protection Act:</b> consent for body photos, deletion, registration; rewrite the privacy policy and terms.</span></li>
+    <li><span><b>iOS credit prices:</b> charge more on iPhone to cover Apple's cut, or absorb it?</span></li>
+    <li><span><b>Ask Nima chat:</b> free on our VPS (slower, ≈ 5–10 words/s), or a cheap hosted model like Gemini Flash (fast, pennies per chat)?</span></li>
+    <li><span><b>Google account:</b> can we reuse the old Gemini API key and billing account?</span></li>
+  </ol>
+</section>
+
+<footer>Source: <code>docs/PLAN.md</code> in the Nima AI project. Inputs: the Nima AI brief, the Canva design, audits of the previous code, and research on open-source models, licenses and Kenyan integrations. Figures marked "est." or "≈" are estimates, not measurements.</footer>
+</main>
+</div>
+</body>
+</html>

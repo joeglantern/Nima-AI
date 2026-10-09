@@ -1,0 +1,80 @@
+# Local development stack.
+#
+# Only the backing services run here. The API and worker run on the host with
+# `pnpm dev` so that reloads stay fast. The production compose file in
+# infra/docker-compose.prod.yml builds and runs everything.
+#
+#   pnpm stack:up      start Postgres, Valkey, Garage, Mailpit
+#   pnpm stack:down    stop them (data is kept in named volumes)
+
+name: nima-dev
+
+services:
+  postgres:
+    # pgvector ships the vector extension on top of the official Postgres image.
+    image: pgvector/pgvector:pg17
+    container_name: nima-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: nima
+      POSTGRES_PASSWORD: nima_dev_password
+      POSTGRES_DB: nima
+      # Faster local startup. Never use these settings in production.
+      POSTGRES_INITDB_ARGS: "--data-checksums"
+    ports:
+      - "5460:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nima -d nima"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  valkey:
+    # Valkey is the BSD licensed fork of Redis. BullMQ, rate limits, caching
+    # and WebSocket fan-out all use it.
+    image: valkey/valkey:8-alpine
+    container_name: nima-valkey
+    restart: unless-stopped
+    command: ["valkey-server", "--appendonly", "yes", "--save", "60", "1"]
+    ports:
+      - "6460:6379"
+    volumes:
+      - valkey_data:/data
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  garage:
+    # S3 compatible object storage for user photos, product images and
+    # generated try-on results. Replaces MinIO, which is no longer maintained
+    # as an open community edition.
+    image: dxflrs/garage:v2.1.0
+    container_name: nima-garage
+    restart: unless-stopped
+    ports:
+      - "3960:3900" # S3 API
+      - "3963:3903" # admin API
+    volumes:
+      - garage_meta:/var/lib/garage/meta
+      - garage_data:/var/lib/garage/data
+      - ./garage/garage.toml:/etc/garage.toml:ro
+
+  mailpit:
+    # Catches every outgoing email in development. Open http://localhost:8060
+    image: axllent/mailpit:latest
+    container_name: nima-mailpit
+    restart: unless-stopped
+    ports:
+      - "1060:1025" # SMTP
+      - "8060:8025" # web UI
+
+volumes:
+  postgres_data:
+  valkey_data:
+  garage_meta:
+  garage_data:
