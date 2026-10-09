@@ -115,6 +115,11 @@ export function createStorage(env: Env): Storage {
   const client = new S3Client({
     region: env.S3_REGION,
     endpoint: env.S3_ENDPOINT,
+    // The SDK adds a CRC32 checksum header by default. Presigned PUTs then
+    // fail against S3 compatible servers, because the browser never sends
+    // that header. Only calculate a checksum when the operation requires one.
+    requestChecksumCalculation: 'WHEN_REQUIRED',
+    responseChecksumValidation: 'WHEN_REQUIRED',
     // Garage and most self hosted S3 servers need path style addressing.
     forcePathStyle: true,
     credentials: {

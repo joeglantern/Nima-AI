@@ -19,6 +19,7 @@ import securityPlugin from './plugins/security.js';
 import realtimePlugin from './plugins/realtime.js';
 import docsPlugin from './plugins/docs.js';
 import servicesPlugin from './plugins/services.js';
+import queuesPlugin from './plugins/queues.js';
 import { registerErrorHandler } from './lib/errors.js';
 import { registerRoutes } from './routes.js';
 import { healthRoutes } from './modules/health/routes.js';
@@ -78,6 +79,7 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
 
   await app.register(corePlugin, { ...options, env });
   await app.register(servicesPlugin);
+  await app.register(queuesPlugin);
   await app.register(authPlugin);
   await app.register(securityPlugin);
   await app.register(realtimePlugin);

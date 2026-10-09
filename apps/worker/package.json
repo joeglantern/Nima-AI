@@ -1,0 +1,35 @@
+{
+  "name": "@nima/worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "tsx watch --clear-screen=false src/index.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.700.0",
+    "@aws-sdk/s3-request-presigner": "^3.700.0",
+    "@google/genai": "^2.28.0",
+    "@nima/config": "workspace:*",
+    "@nima/contracts": "workspace:*",
+    "@nima/db": "workspace:*",
+    "@nima/jobs": "workspace:*",
+    "bullmq": "^6.3.12",
+    "close-with-grace": "^2.2.0",
+    "ioredis": "^5.11.1",
+    "pino": "^9.14.0",
+    "sharp": "^0.34.5"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.0",
+    "pino-pretty": "^13.1.2",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4"
+  }
+}
