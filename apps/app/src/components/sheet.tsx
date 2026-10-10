@@ -10,7 +10,15 @@
  */
 
 import { type ReactNode, useEffect } from 'react';
-import { Modal, Platform, Pressable, ScrollView, useWindowDimensions, View } from 'react-native';
+import {
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  useWindowDimensions,
+  View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme/index';
 import { Title } from './text';
@@ -49,57 +57,72 @@ export function Sheet({ open, onClose, title, children, dismissable = true }: Sh
       onRequestClose={onClose}
       statusBarTranslucent
     >
-      <Pressable
-        onPress={dismissable ? onClose : undefined}
-        style={{
-          flex: 1,
-          backgroundColor: colors.scrim,
-          justifyContent: isCompact ? 'flex-end' : 'center',
-          alignItems: isCompact ? 'stretch' : 'center',
-        }}
-        accessibilityLabel="Close"
+      {/*
+        The sheet moves up with the keyboard.
+        
+        Without this it sits where it was and the keyboard covers whatever
+        was being typed into, along with the button underneath, which is
+        the state this was found in: a code typed in full and no way to
+        send it.
+      */}
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        {/* Stops a tap inside the sheet from closing it. */}
         <Pressable
-          onPress={(event) => event.stopPropagation()}
+          onPress={dismissable ? onClose : undefined}
           style={{
-            backgroundColor: colors.ground,
-            borderTopLeftRadius: radius.sheet,
-            borderTopRightRadius: radius.sheet,
-            borderBottomLeftRadius: isCompact ? 0 : radius.sheet,
-            borderBottomRightRadius: isCompact ? 0 : radius.sheet,
-            paddingTop: 12,
-            paddingBottom: isCompact ? insets.bottom + 24 : 28,
-            paddingHorizontal: isCompact ? gutter : 28,
-            width: isCompact ? '100%' : 460,
-            maxHeight: height * 0.9,
+            flex: 1,
+            backgroundColor: colors.scrim,
+            justifyContent: isCompact ? 'flex-end' : 'center',
+            alignItems: isCompact ? 'stretch' : 'center',
           }}
+          accessibilityLabel="Close"
         >
-          {/* The grab handle. Phone only: a dialog does not get dragged. */}
-          {isCompact ? (
-            <View
-              style={{
-                alignSelf: 'center',
-                width: 44,
-                height: 5,
-                borderRadius: 999,
-                backgroundColor: colors.line,
-                marginBottom: 18,
-              }}
-            />
-          ) : null}
-
-          {title ? <Title style={{ marginBottom: 18 }}>{title}</Title> : null}
-
-          <ScrollView
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
-            contentContainerStyle={{ gap: 12 }}
+          {/* Stops a tap inside the sheet from closing it. */}
+          <Pressable
+            onPress={(event) => event.stopPropagation()}
+            style={{
+              backgroundColor: colors.ground,
+              borderTopLeftRadius: radius.sheet,
+              borderTopRightRadius: radius.sheet,
+              borderBottomLeftRadius: isCompact ? 0 : radius.sheet,
+              borderBottomRightRadius: isCompact ? 0 : radius.sheet,
+              paddingTop: 12,
+              paddingBottom: isCompact ? insets.bottom + 24 : 28,
+              paddingHorizontal: isCompact ? gutter : 28,
+              width: isCompact ? '100%' : 460,
+              maxHeight: height * 0.9,
+            }}
           >
-            {children}
-          </ScrollView>
+            {/* The grab handle. Phone only: a dialog does not get dragged. */}
+            {isCompact ? (
+              <View
+                style={{
+                  alignSelf: 'center',
+                  width: 44,
+                  height: 5,
+                  borderRadius: 999,
+                  backgroundColor: colors.line,
+                  marginBottom: 18,
+                }}
+              />
+            ) : null}
+
+            {title ? <Title style={{ marginBottom: 18 }}>{title}</Title> : null}
+
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+              // The keyboard stays put while a field inside is tapped.
+              keyboardDismissMode="none"
+              contentContainerStyle={{ gap: 12 }}
+            >
+              {children}
+            </ScrollView>
+          </Pressable>
         </Pressable>
-      </Pressable>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

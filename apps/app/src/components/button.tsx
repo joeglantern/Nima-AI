@@ -27,6 +27,13 @@ export interface ButtonProps extends Omit<PressableProps, 'style' | 'children'> 
   icon?: React.ReactNode;
   full?: boolean;
   style?: ViewStyle;
+  /**
+   * Overrides the label colour.
+   *
+   * For a quiet button on the deep brown sheet, where the burgundy it
+   * would otherwise use is all but invisible.
+   */
+  labelColor?: string;
 }
 
 export function Button({
@@ -38,6 +45,7 @@ export function Button({
   disabled,
   onPress,
   style,
+  labelColor,
   ...props
 }: ButtonProps) {
   const { colors, radius } = useTheme();
@@ -51,7 +59,12 @@ export function Button({
         : 'transparent';
 
   const foreground =
-    variant === 'primary' ? colors.onPrimary : variant === 'provider' ? colors.ink : colors.primary;
+    labelColor ??
+    (variant === 'primary'
+      ? colors.onPrimary
+      : variant === 'provider'
+        ? colors.ink
+        : colors.primary);
 
   return (
     <Pressable
@@ -74,7 +87,7 @@ export function Button({
           alignSelf: full ? 'stretch' : 'flex-start',
           opacity: isDisabled ? 0.45 : 1,
           borderWidth: variant === 'quiet' ? 1 : 0,
-          borderColor: colors.line,
+          borderColor: labelColor ?? colors.line,
           // Pressing moves it, rather than only fading it. A button that
           // only changes opacity reads as disabled for the moment it is held.
           transform: [{ scale: pressed && !isDisabled ? 0.985 : 1 }],

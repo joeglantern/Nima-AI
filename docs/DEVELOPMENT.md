@@ -158,6 +158,9 @@ creates the job. See `TryOnService.start`.
 pnpm test                              # unit tests
 pnpm --filter @nima/api smoke          # end to end against a running API
 pnpm --filter @nima/api test:checkout  # the money path, start to settled
+pnpm --filter @nima/api test:closet    # wardrobe and lookbooks, and who can see them
+pnpm --filter @nima/api test:mail      # every email, and what happens when sending fails
+pnpm test:journey                      # the whole way in, through the real app
 ```
 
 The **smoke test** is the quickest way to know the whole stack is healthy. It
@@ -175,6 +178,13 @@ that a replayed webhook pays nobody twice, that a forged one is recorded and
 ignored, and that a settlement for the wrong amount buys nothing. Run it
 after touching anything under `services/checkout.ts`, `services/payments/`
 or `modules/webhooks/`.
+
+The **journey test** is the only one that uses the app rather than the
+API, and it has caught things none of the others could: a code field with
+no way to submit, and a sign in that bounced you back to the screen you
+signed in from. The API answered 200 throughout. It needs Metro running,
+and it opens a throwaway browser profile each time so it always arrives as
+a stranger.
 
 ### Turning checkout on locally
 

@@ -11,11 +11,12 @@
 
 import { useQueryClient } from '@tanstack/react-query';
 import { createContext, type ReactNode, useCallback, useContext, useMemo, useState } from 'react';
-import { Platform, TextInput, View } from 'react-native';
+import { Platform, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { sendEmailCode, signInWithApple, signInWithGoogle, verifyEmailCode } from '../lib/auth';
 import { useTheme } from '../theme/index';
 import { Button } from './button';
+import { EmailSteps } from './email-steps';
 import { Sheet } from './sheet';
 import { Body, Caption, Title } from './text';
 
@@ -97,29 +98,26 @@ function MailMark({ color }: { color: string }) {
 }
 
 function AuthSheet({ reason, onClose }: { reason: string | null; onClose: () => void }) {
-  const { colors, radius } = useTheme();
+  const { colors } = useTheme();
   const queryClient = useQueryClient();
 
-  const [step, setStep] = useState<'choose' | 'email' | 'code'>('choose');
-  const [email, setEmail] = useState('');
-  const [code, setCode] = useState('');
+  const [step, setStep] = useState<'choose' | 'email'>('choose');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const close = useCallback(() => {
     setStep('choose');
-    setEmail('');
-    setCode('');
     setError(null);
     onClose();
   }, [onClose]);
 
-  const run = async (action: () => Promise<void>, onDone?: () => void) => {
+  const run = async (action: () => Promise<void>) => {
     setBusy(true);
     setError(null);
     try {
       await action();
-      onDone?.();
+      await queryClient.invalidateQueries();
+      close();
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'That did not work');
     } finally {
@@ -127,27 +125,11 @@ function AuthSheet({ reason, onClose }: { reason: string | null; onClose: () => 
     }
   };
 
-  const inputStyle = {
-    backgroundColor: colors.surface,
-    borderRadius: radius.pill,
-    borderWidth: 1,
-    borderColor: colors.line,
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    fontFamily: 'DMSans_400Regular',
-    fontSize: 16,
-    color: colors.ink,
-  } as const;
-
   return (
     <Sheet open={reason !== null} onClose={close}>
-      <View style={{ gap: 6, marginBottom: 10 }}>
-        <Title>{step === 'code' ? 'Check your email' : (reason ?? DEFAULT_REASON)}</Title>
-        <Caption>
-          {step === 'code'
-            ? `We sent a six digit code to ${email}`
-            : 'It takes a moment, and your browsing comes with you.'}
-        </Caption>
+      <View style={{ gap: 6, marginBottom: 14 }}>
+        <Title>{reason ?? DEFAULT_REASON}</Title>
+        <Caption>It takes a moment, and your browsing comes with you.</Caption>
       </View>
 
       {step === 'choose' ? (
@@ -158,7 +140,7 @@ function AuthSheet({ reason, onClose }: { reason: string | null; onClose: () => 
               variant="provider"
               icon={<AppleMark color={colors.ink} />}
               loading={busy}
-              onPress={() => void run(signInWithApple, close)}
+              onPress={() => void run(signInWithApple)}
             />
           ) : null}
 
@@ -167,7 +149,7 @@ function AuthSheet({ reason, onClose }: { reason: string | null; onClose: () => 
             variant="provider"
             icon={<GoogleMark />}
             loading={busy}
-            onPress={() => void run(signInWithGoogle, close)}
+            onPress={() => void run(signInWithGoogle)}
           />
 
           <Button
@@ -177,82 +159,32 @@ function AuthSheet({ reason, onClose }: { reason: string | null; onClose: () => 
             onPress={() => setStep('email')}
           />
         </View>
-      ) : null}
-
-      {step === 'email' ? (
-        <View style={{ gap: 12 }}>
-          <TextInput
-            value={email}
-            onChangeText={setEmail}
-            placeholder="you@example.com"
-            placeholderTextColor={colors.muted}
-            autoCapitalize="none"
-            autoCorrect={false}
-            keyboardType="email-address"
-            textContentType="emailAddress"
-            inputMode="email"
-            style={inputStyle}
-            accessibilityLabel="Email address"
-          />
-          <Button
-            label="Send me a code"
-            loading={busy}
-            disabled={!email.includes('@')}
-            onPress={() =>
-              void run(
-                () => sendEmailCode(email.trim()),
-                () => setStep('code'),
-              )
-            }
-          />
-        </View>
-      ) : null}
-
-      {step === 'code' ? (
-        <View style={{ gap: 12 }}>
-          <TextInput
-            value={code}
-            onChangeText={(next) => setCode(next.replace(/\D/g, '').slice(0, 6))}
-            placeholder="123456"
-            placeholderTextColor={colors.muted}
-            keyboardType="number-pad"
-            textContentType="oneTimeCode"
-            autoComplete="one-time-code"
-            style={[inputStyle, { textAlign: 'center', letterSpacing: 8, fontSize: 22 }]}
-            accessibilityLabel="Six digit code"
-          />
-          <Button
-            label="Sign in"
-            loading={busy}
-            disabled={code.length !== 6}
-            onPress={() =>
-              void run(
-                () => verifyEmailCode(email.trim(), code),
-                async () => {
-                  await queryClient.invalidateQueries();
-                  close();
-                },
-              )
-            }
-          />
-          <Button
-            label="Use a different email"
-            variant="quiet"
-            onPress={() => {
-              setStep('email');
-              setCode('');
-            }}
-          />
-        </View>
-      ) : null}
+      ) : (
+        /*
+         * The same component the welcome screen uses.
+         *
+         * This sheet used to carry its own copy, which is how it ended up
+         * with a code field that had no way to submit itself while the
+         * other one did.
+         */
+        <EmailSteps
+          onCancel={() => setStep('choose')}
+          onSendCode={sendEmailCode}
+          onVerify={async (email, code) => {
+            await verifyEmailCode(email, code);
+            await queryClient.invalidateQueries();
+            close();
+          }}
+        />
+      )}
 
       {error ? (
-        <Body tone="critical" style={{ marginTop: 4 }}>
+        <Body tone="critical" style={{ marginTop: 10 }}>
           {error}
         </Body>
       ) : null}
 
-      <Caption align="center" style={{ marginTop: 14 }}>
+      <Caption align="center" style={{ marginTop: 16 }}>
         By continuing you agree to Nima's terms and privacy notice.
       </Caption>
     </Sheet>

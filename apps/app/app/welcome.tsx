@@ -11,7 +11,7 @@
 
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Platform, Pressable, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 import { Button } from '../src/components/button';
@@ -51,7 +51,15 @@ export default function WelcomeScreen() {
   };
 
   return (
-    <View style={{ flex: 1, width: '100%', backgroundColor: colors.ground }}>
+    /*
+      The sheet at the bottom holds the email field, so the whole screen
+      lifts with the keyboard. Without this the field and the button under
+      it end up behind the keys.
+    */
+    <KeyboardAvoidingView
+      style={{ flex: 1, width: '100%', backgroundColor: colors.ground }}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
       {/*
         The top half: who this is.
 
@@ -185,7 +193,7 @@ export default function WelcomeScreen() {
           <Body style={{ color: colors.onEspresso, opacity: 0.75 }}>Look around first</Body>
         </Pressable>
       </View>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 

@@ -28,7 +28,7 @@ import { Stack, usePathname, useRouter } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import * as SystemUI from 'expo-system-ui';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -114,11 +114,23 @@ function Shell({ showWelcome }: { showWelcome: boolean }) {
   const router = useRouter();
   const pathname = usePathname();
 
-  // First launch opens on the welcome screen, but only when the app was
-  // opened normally. Someone following a shared link to a look lands on that
-  // look, which is the whole point of sharing one.
+  /*
+   * First launch opens on the welcome screen, once.
+   *
+   * Only when the app was opened normally: someone following a shared link
+   * to a look lands on that look, which is the whole point of sharing one.
+   *
+   * The latch matters. `showWelcome` is read from storage at launch and
+   * never changes afterwards, so without it, leaving the welcome screen
+   * for the feed put this effect straight back where it started. Signing
+   * in bounced you to the welcome screen you had just signed in from.
+   */
+  const sentToWelcome = useRef(false);
+
   useEffect(() => {
-    if (showWelcome && pathname === '/') router.replace('/welcome');
+    if (sentToWelcome.current || !showWelcome || pathname !== '/') return;
+    sentToWelcome.current = true;
+    router.replace('/welcome');
   }, [showWelcome, pathname, router]);
 
   useEffect(() => {

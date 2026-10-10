@@ -251,6 +251,56 @@ async function main(): Promise<void> {
     ledger.body.items,
   );
 
+  console.info('\nThe questionnaire');
+
+  const answered = await call<{ completion: number; completedSteps: string[] }>(
+    '/v1/profile/style',
+    {
+      method: 'PATCH',
+      body: { aesthetics: ['Streetwear', 'Minimal'], step: 'style' },
+    },
+  );
+  check('an answer is accepted', answered.status === 200, answered.body);
+  check('answering moves the progress off zero', answered.body.completion > 0, answered.body);
+
+  const colourAnswer = await call<{ completion: number }>('/v1/profile/style', {
+    method: 'PATCH',
+    body: { favouriteColours: ['Black'], step: 'colour' },
+  });
+  check('a second answer is accepted', colourAnswer.status === 200, colourAnswer.body);
+
+  const readBack = await call<{
+    aesthetics: string[];
+    favouriteColours: string[];
+    completion: number;
+  }>('/v1/profile/style');
+
+  check(
+    'the styles come back on the next read',
+    readBack.body.aesthetics.includes('Streetwear'),
+    readBack.body.aesthetics,
+  );
+  check(
+    'the second answer did not wipe the first',
+    readBack.body.favouriteColours.includes('Black') &&
+      readBack.body.aesthetics.includes('Minimal'),
+    readBack.body,
+  );
+  check(
+    'the progress survives the round trip',
+    readBack.body.completion > 0,
+    readBack.body.completion,
+  );
+
+  const onBootstrap = await call<{ user: { styleProfileCompletion: number } | null }>(
+    '/v1/session/bootstrap',
+  );
+  check(
+    'and the profile card sees the same number',
+    (onBootstrap.body.user?.styleProfileCompletion ?? 0) === readBack.body.completion,
+    { bootstrap: onBootstrap.body.user?.styleProfileCompletion, style: readBack.body.completion },
+  );
+
   console.info('\nBasket');
 
   interface CartShape {
