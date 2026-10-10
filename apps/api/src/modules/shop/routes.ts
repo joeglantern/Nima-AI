@@ -6,9 +6,6 @@
  * guest gets false.
  */
 
-import { z } from 'zod';
-import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
-import { Prisma } from '@nima/db';
 import {
   idSchema,
   productCardSchema,
@@ -17,6 +14,9 @@ import {
   searchSuggestionSchema,
   storeCardSchema,
 } from '@nima/contracts';
+import type { Prisma } from '@nima/db';
+import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
+import { z } from 'zod';
 import { errors } from '../../lib/errors.js';
 import { decodeCursor, encodeCursor } from '../../lib/pagination.js';
 import { productCard, publicImage, storeCard } from '../../lib/presenters.js';

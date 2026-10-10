@@ -20,8 +20,8 @@
  * target rather than the image itself.
  */
 
-import { z } from 'zod';
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
+import { z } from 'zod';
 import { errors } from '../../lib/errors.js';
 
 const PUBLIC_PREFIXES = ['seed/', 'stores/'];

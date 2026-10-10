@@ -7,9 +7,9 @@
  * invalidated across nodes through Valkey.
  */
 
-import type { Redis } from 'ioredis';
-import { DEFAULT_SETTINGS, SETTINGS_KEY, settingsSchema, type Settings } from '@nima/config';
+import { DEFAULT_SETTINGS, SETTINGS_KEY, type Settings, settingsSchema } from '@nima/config';
 import type { PrismaClient } from '@nima/db';
+import type { Redis } from 'ioredis';
 
 const CACHE_TTL_MS = 60_000;
 const INVALIDATION_CHANNEL = 'nima:settings:changed';

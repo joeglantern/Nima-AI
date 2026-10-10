@@ -17,10 +17,10 @@
 import { GoogleGenAI } from '@google/genai';
 import type { Env } from '@nima/config';
 import {
-  ImageProviderError,
-  type GenerateImageInput,
   type GeneratedImage,
+  type GenerateImageInput,
   type ImageProvider,
+  ImageProviderError,
 } from './image-provider.js';
 
 interface InteractionsResponse {

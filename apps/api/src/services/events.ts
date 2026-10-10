@@ -9,8 +9,8 @@
  * before anyone signs up, which the brief asks for.
  */
 
-import type { FastifyInstance, FastifyRequest } from 'fastify';
 import type { EventType, Platform } from '@nima/db';
+import type { FastifyInstance, FastifyRequest } from 'fastify';
 
 export interface RecordEventInput {
   request: FastifyRequest;

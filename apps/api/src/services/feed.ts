@@ -15,8 +15,8 @@
  * same author twice in a row, and anything from a blocked account.
  */
 
+import type { Prisma } from '@nima/db';
 import type { FastifyInstance } from 'fastify';
-import { type Prisma } from '@nima/db';
 
 export interface FeedViewer {
   userId: string | null;
@@ -67,9 +67,7 @@ export class FeedService {
         ? { id: { notIn: [...new Set([...options.excludeIds, ...dismissed])] } }
         : {}),
       ...(blocked.size ? { ownerId: { notIn: [...blocked] } } : {}),
-      ...(options.surface === 'following' && follows.size
-        ? { ownerId: { in: [...follows] } }
-        : {}),
+      ...(options.surface === 'following' && follows.size ? { ownerId: { in: [...follows] } } : {}),
       ...(options.occasion
         ? { items: { some: { product: { occasions: { has: options.occasion } } } } }
         : {}),

@@ -5,24 +5,25 @@
  * close it without binding a port.
  */
 
-import Fastify, { type FastifyInstance } from 'fastify';
 import { randomUUID } from 'node:crypto';
+import { type Env, loadEnv } from '@nima/config';
+import Fastify, { type FastifyInstance } from 'fastify';
 import {
   serializerCompiler,
   validatorCompiler,
   type ZodTypeProvider,
 } from 'fastify-type-provider-zod';
-import { loadEnv, type Env } from '@nima/config';
-import corePlugin, { type CorePluginOptions } from './plugins/core.js';
-import authPlugin from './plugins/auth.js';
-import securityPlugin from './plugins/security.js';
-import realtimePlugin from './plugins/realtime.js';
-import docsPlugin from './plugins/docs.js';
-import servicesPlugin from './plugins/services.js';
-import queuesPlugin from './plugins/queues.js';
 import { registerErrorHandler } from './lib/errors.js';
-import { registerRoutes } from './routes.js';
 import { healthRoutes } from './modules/health/routes.js';
+import { webhookRoutes } from './modules/webhooks/routes.js';
+import authPlugin from './plugins/auth.js';
+import corePlugin, { type CorePluginOptions } from './plugins/core.js';
+import docsPlugin from './plugins/docs.js';
+import queuesPlugin from './plugins/queues.js';
+import realtimePlugin from './plugins/realtime.js';
+import securityPlugin from './plugins/security.js';
+import servicesPlugin from './plugins/services.js';
+import { registerRoutes } from './routes.js';
 
 export interface BuildAppOptions extends Partial<CorePluginOptions> {
   env?: Env;
@@ -88,6 +89,12 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
   // Health sits at the root: load balancers and uptime checks should not have
   // to know about API versions.
   await app.register(healthRoutes);
+
+  // Nor do payment providers. The webhook URL is registered with Fingo and
+  // is not ours to version. It is also the one route that reads a raw body,
+  // which is why it registers its own parser inside its own plugin scope.
+  await app.register(webhookRoutes(app.services.checkout, app.services.payments));
+
   await app.register(registerRoutes, { prefix: '/v1' });
 
   // Echo the request id back so a user can quote it in a support message.

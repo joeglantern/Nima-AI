@@ -106,6 +106,11 @@ least once. They are not style preferences.
 5. **Deleting means deleting**, including the stored files.
 6. **Guests are first class.** If a feature cannot work for a guest, it says so
    with `account_required` and the app offers to sign them up.
+7. **Stock is taken by the database, not by our code.** A conditional update
+   settles who got the last one. Reading a number and trusting it a line
+   later is how a shop sells the same dress twice.
+8. **Only a signed webhook marks an order paid.** The request that starts a
+   payment knows that a prompt was sent, nothing more.
 
 ---
 
@@ -120,6 +125,8 @@ least once. They are not style preferences.
 | `pnpm lint` / `pnpm lint:fix` | Biome |
 | `pnpm db:migrate` / `db:seed` / `db:studio` | Database |
 | `pnpm stack:up` / `stack:down` / `stack:logs` | Local services |
+| `pnpm --filter @nima/api smoke` | End to end against a running API |
+| `pnpm --filter @nima/api test:checkout` | The money path, with a stub provider |
 
 ---
 

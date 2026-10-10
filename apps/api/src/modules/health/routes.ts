@@ -7,8 +7,8 @@
  * Uptime Kuma watches /health/ready. The reverse proxy watches /health.
  */
 
-import { z } from 'zod';
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
+import { z } from 'zod';
 
 const checkSchema = z.object({
   ok: z.boolean(),

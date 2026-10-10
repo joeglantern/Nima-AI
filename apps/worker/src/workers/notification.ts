@@ -6,8 +6,8 @@
  * Google, so there is no vendor to pay here.
  */
 
-import { Worker, type Job } from 'bullmq';
-import { QUEUE, createWorkerConnection, type NotificationJobData } from '@nima/jobs';
+import { createWorkerConnection, type NotificationJobData, QUEUE } from '@nima/jobs';
+import { type Job, Worker } from 'bullmq';
 import type { WorkerContext } from '../context.js';
 
 const EXPO_PUSH_URL = 'https://exp.host/--/api/v2/push/send';

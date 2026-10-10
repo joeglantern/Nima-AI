@@ -12,9 +12,12 @@
 
 import type {
   cartSchema,
+  checkoutSchema,
   creditBalanceSchema,
   feedItemSchema,
   lookDetailSchema,
+  orderSchema,
+  pickupPointSchema,
   productCardSchema,
   productDetailSchema,
   publicProfileSchema,
@@ -45,6 +48,9 @@ export type UserPhoto = Infer<typeof userPhotoSchema>;
 export type TryOnJob = Infer<typeof tryOnJobSchema>;
 export type CreditBalance = Infer<typeof creditBalanceSchema>;
 export type Cart = Infer<typeof cartSchema>;
+export type Order = Infer<typeof orderSchema>;
+export type Checkout = Infer<typeof checkoutSchema>;
+export type PickupPoint = Infer<typeof pickupPointSchema>;
 
 export interface Bootstrap {
   user: SessionUser | null;
@@ -112,7 +118,6 @@ function buildUrl(path: string, query?: RequestOptions['query']): string {
 
 export async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const headers: Record<string, string> = {
-    'content-type': 'application/json',
     accept: 'application/json',
     'x-nima-anon-id': await getAnonId(),
     'x-nima-platform': Platform.OS,
@@ -131,6 +136,11 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
       // No stored session yet. The request goes out as a visitor.
     }
   }
+
+  // Only when there is something to describe. Fastify rejects a request that
+  // claims to carry JSON and carries nothing, which is every bodiless DELETE
+  // and every POST that is just a verb, such as liking a look.
+  if (options.body !== undefined) headers['content-type'] = 'application/json';
 
   const response = await fetch(buildUrl(path, options.query), {
     method: options.method ?? 'GET',
@@ -303,4 +313,38 @@ export const api = {
       paymentMethod: 'MPESA' | 'IN_APP_PURCHASE';
       note: string;
     }>('/v1/credits/packs', { query: { platform } }),
+
+  cart: () => request<Cart>('/v1/cart'),
+
+  cartCount: () => request<{ count: number }>('/v1/cart/count'),
+
+  addToCart: (body: { variantId: string; quantity?: number }) =>
+    request<Cart>('/v1/cart/items', { method: 'POST', body }),
+
+  setCartQuantity: (id: string, quantity: number) =>
+    request<Cart>(`/v1/cart/items/${id}`, { method: 'PATCH', body: { quantity } }),
+
+  removeFromCart: (id: string) => request<Cart>(`/v1/cart/items/${id}`, { method: 'DELETE' }),
+
+  pickupPoints: (county?: string) =>
+    request<{ items: PickupPoint[] }>('/v1/delivery/pickup-points', { query: { county } }),
+
+  deliveryQuote: (params: { method: 'PICKUP_POINT' | 'DOORSTEP'; pickupPointId?: string }) =>
+    request<{ costCents: number; estimate: string }>('/v1/delivery/quote', { query: params }),
+
+  startCheckout: (body: {
+    deliveryMethod: 'PICKUP_POINT' | 'DOORSTEP';
+    pickupPointId?: string;
+    recipientName: string;
+    recipientPhone: string;
+    deliveryNote?: string;
+    payerPhone: string;
+  }) => request<Checkout>('/v1/checkout', { method: 'POST', body }),
+
+  checkout: (id: string) => request<Checkout>(`/v1/checkout/${id}`),
+
+  orders: (params: { cursor?: string; limit?: number; status?: string } = {}) =>
+    request<Page<Order>>('/v1/orders', { query: params }),
+
+  order: (id: string) => request<Order>(`/v1/orders/${id}`),
 };

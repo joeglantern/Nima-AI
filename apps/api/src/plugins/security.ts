@@ -7,11 +7,11 @@
  * opt in.
  */
 
-import fp from 'fastify-plugin';
 import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
 import rateLimit from '@fastify/rate-limit';
 import underPressure from '@fastify/under-pressure';
+import fp from 'fastify-plugin';
 
 export default fp(
   async (app) => {

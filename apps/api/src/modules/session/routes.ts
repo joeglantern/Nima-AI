@@ -7,14 +7,14 @@
  * trip on a slow connection matters more than tidy endpoint boundaries.
  */
 
-import { z } from 'zod';
-import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 import { sessionUserSchema } from '@nima/contracts';
+import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
+import { z } from 'zod';
 import { completionOf } from '../profile/completion.js';
 
 const fitNotice = {
   title: 'This is a picture, not a fitting',
-  body: 'Nima shows you how something looks, not how it will fit. Check the seller\'s size guide before you buy.',
+  body: "Nima shows you how something looks, not how it will fit. Check the seller's size guide before you buy.",
 };
 
 export const sessionRoutes: FastifyPluginAsyncZod = async (app) => {

@@ -9,7 +9,14 @@
 import { z } from 'zod';
 import { idSchema, imageSchema, paginationQuerySchema } from './common.js';
 
-export const messageKindSchema = z.enum(['TEXT', 'LOOK', 'PRODUCT', 'TRY_ON', 'LOOKBOOK', 'SYSTEM']);
+export const messageKindSchema = z.enum([
+  'TEXT',
+  'LOOK',
+  'PRODUCT',
+  'TRY_ON',
+  'LOOKBOOK',
+  'SYSTEM',
+]);
 
 export const conversationPeerSchema = z.object({
   id: idSchema,

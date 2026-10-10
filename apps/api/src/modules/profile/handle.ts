@@ -39,8 +39,7 @@ export async function suggestHandle(prisma: PrismaClient, seed: string): Promise
 
   for (let attempt = 0; attempt < 12; attempt += 1) {
     // First try the plain handle, then add a short number.
-    const candidate =
-      attempt === 0 ? base : `${base}${Math.floor(Math.random() * 9000) + 100}`;
+    const candidate = attempt === 0 ? base : `${base}${Math.floor(Math.random() * 9000) + 100}`;
 
     if (RESERVED.has(candidate)) continue;
 

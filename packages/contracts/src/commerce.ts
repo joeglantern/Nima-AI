@@ -6,8 +6,8 @@
  */
 
 import { z } from 'zod';
-import { idSchema, imageSchema, paginationQuerySchema, phoneSchema } from './common.js';
 import { productCardSchema, storeCardSchema } from './catalog.js';
+import { idSchema, imageSchema, paginationQuerySchema, phoneSchema } from './common.js';
 
 export const cartItemSchema = z.object({
   id: idSchema,
@@ -78,9 +78,22 @@ export const startCheckoutSchema = z.object({
   payerPhone: phoneSchema,
 });
 
+/**
+ * Includes REFUNDED, which the live `payment.status` socket frame does not:
+ * a refund is a later chapter, and it reaches the app as an order update.
+ */
+export const paymentStatusSchema = z.enum([
+  'PENDING',
+  'PROCESSING',
+  'SUCCEEDED',
+  'FAILED',
+  'CANCELLED',
+  'REFUNDED',
+]);
+
 export const checkoutSchema = z.object({
   id: idSchema,
-  status: z.enum(['PENDING', 'PROCESSING', 'SUCCEEDED', 'FAILED', 'CANCELLED']),
+  status: paymentStatusSchema,
   subtotalCents: z.number().int(),
   deliveryCents: z.number().int(),
   totalCents: z.number().int(),

@@ -6,8 +6,6 @@
  * makes it feel like someone typing rather than a form submission.
  */
 
-import { z } from 'zod';
-import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 import {
   askNimaResponseSchema,
   askNimaSchema,
@@ -17,11 +15,13 @@ import {
   stylistThreadSchema,
   suggestedPromptSchema,
 } from '@nima/contracts';
+import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
+import { z } from 'zod';
 import { errors } from '../../lib/errors.js';
 import { productCard } from '../../lib/presenters.js';
 import { recordEvent } from '../../services/events.js';
-import { SUGGESTED_PROMPTS } from '../../services/stylist/prompt.js';
 import type { StylistService } from '../../services/stylist/index.js';
+import { SUGGESTED_PROMPTS } from '../../services/stylist/prompt.js';
 
 export function stylistRoutes(stylist: StylistService): FastifyPluginAsyncZod {
   return async (app) => {

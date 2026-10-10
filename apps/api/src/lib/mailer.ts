@@ -8,8 +8,8 @@
  * only a handful of messages and they need to read like a person wrote them.
  */
 
-import { createTransport, type Transporter } from 'nodemailer';
 import type { Env } from '@nima/config';
+import { createTransport, type Transporter } from 'nodemailer';
 
 /** Better Auth also emits 'change-email' when someone updates their address. */
 export type OtpPurpose = 'sign-in' | 'email-verification' | 'forget-password' | 'change-email';
@@ -41,9 +41,7 @@ export function createMailer(env: Env): Mailer {
     host: env.SMTP_HOST,
     port: env.SMTP_PORT,
     secure: env.SMTP_SECURE,
-    ...(env.SMTP_USER
-      ? { auth: { user: env.SMTP_USER, pass: env.SMTP_PASSWORD ?? '' } }
-      : {}),
+    ...(env.SMTP_USER ? { auth: { user: env.SMTP_USER, pass: env.SMTP_PASSWORD ?? '' } } : {}),
   });
 
   async function send(to: string, subject: string, text: string, html: string): Promise<void> {

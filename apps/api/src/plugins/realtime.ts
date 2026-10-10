@@ -12,10 +12,10 @@
  *   publish(channel, frame)  ->  valkey  ->  every node  ->  matching sockets
  */
 
-import type { WebSocket } from 'ws';
-import fp from 'fastify-plugin';
 import websocket from '@fastify/websocket';
 import { channels, clientFrameSchema, type ServerFrame } from '@nima/contracts';
+import fp from 'fastify-plugin';
+import type { WebSocket } from 'ws';
 
 const PUBSUB_CHANNEL = 'nima:realtime';
 
@@ -105,7 +105,10 @@ export default fp(
 
     const realtime: Realtime = {
       async publish(channel, frame) {
-        await app.redis.publish(PUBSUB_CHANNEL, JSON.stringify({ channel, frame } satisfies Envelope));
+        await app.redis.publish(
+          PUBSUB_CHANNEL,
+          JSON.stringify({ channel, frame } satisfies Envelope),
+        );
       },
       async toUser(userId, frame) {
         await realtime.publish(channels.user(userId), frame);

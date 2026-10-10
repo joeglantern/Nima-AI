@@ -72,7 +72,12 @@ interface ProductRow {
   priceFromCents: number;
   inStock: boolean;
   store: StoreRow;
-  images: Array<{ processedKey: string | null; originalKey: string; width: number | null; height: number | null }>;
+  images: Array<{
+    processedKey: string | null;
+    originalKey: string;
+    width: number | null;
+    height: number | null;
+  }>;
 }
 
 export function productCard(
@@ -154,5 +159,77 @@ export function lookCard(
     canRecreate: look.visibility === 'PUBLIC' && (look._count?.items ?? 0) > 0,
     promoted: viewer.promoted ?? false,
     createdAt: look.createdAt.toISOString(),
+  };
+}
+
+interface OrderRow {
+  id: string;
+  reference: string;
+  status: string;
+  store: StoreRow;
+  subtotalCents: number;
+  deliveryCents: number;
+  totalCents: number;
+  placedAt: Date;
+  deliveredAt: Date | null;
+  completedAt: Date | null;
+  items: Array<{
+    id: string;
+    productId: string;
+    titleSnapshot: string;
+    sizeSnapshot: string | null;
+    colourSnapshot: string | null;
+    imageSnapshot: string | null;
+    unitPriceCents: number;
+    quantity: number;
+    totalCents: number;
+  }>;
+  shipment: {
+    status: string;
+    trackingCode: string | null;
+    pickupPointName: string | null;
+    updatedAt: Date;
+  } | null;
+}
+
+/**
+ * An order, as the buyer sees it.
+ *
+ * Every line reads from the snapshot taken at purchase, never from the live
+ * product. A seller who renames a dress or raises its price must not change
+ * what someone already bought, and a product that is deleted must not empty
+ * out an old receipt.
+ */
+export function order(storage: Storage, row: OrderRow) {
+  return {
+    id: row.id,
+    reference: row.reference,
+    status: row.status as never,
+    store: storeCard(storage, row.store),
+    items: row.items.map((item) => ({
+      id: item.id,
+      title: item.titleSnapshot,
+      size: item.sizeSnapshot,
+      colour: item.colourSnapshot,
+      image: publicImage(storage, item.imageSnapshot),
+      unitPriceCents: item.unitPriceCents,
+      quantity: item.quantity,
+      totalCents: item.totalCents,
+      productId: item.productId,
+    })),
+    subtotalCents: row.subtotalCents,
+    deliveryCents: row.deliveryCents,
+    totalCents: row.totalCents,
+    placedAt: row.placedAt.toISOString(),
+    shipment: row.shipment
+      ? {
+          status: row.shipment.status,
+          trackingCode: row.shipment.trackingCode,
+          pickupPointName: row.shipment.pickupPointName,
+          updatedAt: row.shipment.updatedAt.toISOString(),
+        }
+      : null,
+    // Reviewing something you have not received yet is not a review.
+    canReview: row.deliveredAt !== null || row.completedAt !== null,
   };
 }

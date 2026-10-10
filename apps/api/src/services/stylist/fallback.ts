@@ -10,8 +10,8 @@
  * under Y", which this answers perfectly well.
  */
 
+import type { Prisma } from '@nima/db';
 import type { FastifyInstance } from 'fastify';
-import { Prisma } from '@nima/db';
 
 const CATEGORY_WORDS: Array<[RegExp, string]> = [
   [/\b(shirt|top|blouse|tee|t-shirt|hoodie|sweater|knit)\b/i, 'TOP'],
@@ -71,7 +71,9 @@ export async function answerWithoutModel(
   const colour = COLOUR_WORDS.find((word) => message.includes(word));
 
   // "under 3000", "under ksh 3,000", "below 5k"
-  const budgetMatch = message.match(/(?:under|below|less than|max)\s*(?:ksh|kes)?\s*([\d,]+)\s*(k)?/i);
+  const budgetMatch = message.match(
+    /(?:under|below|less than|max)\s*(?:ksh|kes)?\s*([\d,]+)\s*(k)?/i,
+  );
   let maxCents: number | undefined;
 
   if (budgetMatch?.[1]) {

@@ -7,6 +7,7 @@
  */
 
 import { z } from 'zod';
+import { productCardSchema, storeCardSchema } from './catalog.js';
 import {
   garmentSlotSchema,
   idSchema,
@@ -15,16 +16,8 @@ import {
   productCategorySchema,
   visibilitySchema,
 } from './common.js';
-import { productCardSchema, storeCardSchema } from './catalog.js';
 
-export const lookSourceSchema = z.enum([
-  'USER',
-  'AI',
-  'SELLER',
-  'CURATED',
-  'RECREATION',
-  'TRY_ON',
-]);
+export const lookSourceSchema = z.enum(['USER', 'AI', 'SELLER', 'CURATED', 'RECREATION', 'TRY_ON']);
 
 export const lookItemSchema = z.object({
   id: idSchema,
@@ -71,9 +64,7 @@ export const lookDetailSchema = lookCardSchema.extend({
   items: z.array(lookItemSchema),
   /** Total of every purchasable item in the look. */
   shopTotalCents: z.number().int().nullable(),
-  recreatedFrom: z
-    .object({ id: idSchema, author: lookAuthorSchema.nullable() })
-    .nullable(),
+  recreatedFrom: z.object({ id: idSchema, author: lookAuthorSchema.nullable() }).nullable(),
   commentCount: z.number().int(),
 });
 
@@ -130,7 +121,9 @@ export const updateLookSchema = z.object({
 });
 
 export const dismissSchema = z.object({
-  reason: z.enum(['not_my_style', 'too_expensive', 'wrong_size', 'seen_enough', 'other']).optional(),
+  reason: z
+    .enum(['not_my_style', 'too_expensive', 'wrong_size', 'seen_enough', 'other'])
+    .optional(),
 });
 
 export const shareTargetSchema = z.object({
@@ -240,7 +233,6 @@ export const addLookbookEntrySchema = z
     note: z.string().max(280).nullable().optional(),
   })
   .refine(
-    (value) =>
-      [value.lookId, value.productId, value.wardrobeItemId].filter(Boolean).length === 1,
+    (value) => [value.lookId, value.productId, value.wardrobeItemId].filter(Boolean).length === 1,
     { message: 'Add exactly one of lookId, productId or wardrobeItemId' },
   );

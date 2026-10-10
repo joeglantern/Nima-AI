@@ -11,13 +11,14 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { Image } from 'expo-image';
+import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 import Svg, { Circle, Path } from 'react-native-svg';
 import { useAuthGate } from '../../src/components/auth-gate';
 import { Button } from '../../src/components/button';
 import { type EmptyArt, EmptyState } from '../../src/components/empty-state';
-import { Body, BodyStrong, Caption, Eyebrow, Micro, Title } from '../../src/components/text';
+import { Body, BodyStrong, Caption, Eyebrow, Micro, Price, Title } from '../../src/components/text';
 import { api } from '../../src/lib/api';
 import { useTheme } from '../../src/theme/index';
 
@@ -48,11 +49,18 @@ export default function StoreScreen() {
   const { requireAccount } = useAuthGate();
   const [tab, setTab] = useState<(typeof TABS)[number]['key']>('looks');
 
+  const router = useRouter();
   const bootstrap = useQuery({ queryKey: ['bootstrap'], queryFn: api.bootstrap });
   const tryOns = useQuery({
     queryKey: ['tryons'],
     queryFn: () => api.tryOns({ limit: 12 }),
     enabled: Boolean(bootstrap.data?.user && !bootstrap.data.user.isAnonymous),
+  });
+
+  const orders = useQuery({
+    queryKey: ['orders'],
+    queryFn: () => api.orders({ limit: 20 }),
+    enabled: tab === 'orders' && Boolean(bootstrap.data?.user && !bootstrap.data.user.isAnonymous),
   });
 
   const user = bootstrap.data?.user;
@@ -194,7 +202,42 @@ export default function StoreScreen() {
         })}
       </View>
 
-      {tab === 'looks' && (tryOns.data?.items.length ?? 0) > 0 ? (
+      {tab === 'orders' && (orders.data?.items.length ?? 0) > 0 ? (
+        <View style={{ paddingHorizontal: gutter, paddingTop: 24, gap: 12 }}>
+          {orders.data?.items.map((placed) => (
+            <Pressable
+              key={placed.id}
+              onPress={() => router.push({ pathname: '/order/[id]', params: { id: placed.id } })}
+              accessibilityRole="button"
+              style={{
+                padding: 16,
+                gap: 8,
+                borderRadius: radius.card,
+                backgroundColor: colors.surface,
+              }}
+            >
+              <View
+                style={{
+                  flexDirection: 'row',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                }}
+              >
+                <BodyStrong>{placed.store.name}</BodyStrong>
+                <OrderBadge status={placed.status} />
+              </View>
+
+              <Micro>{`${placed.reference} · ${new Date(placed.placedAt).toLocaleDateString('en-KE')}`}</Micro>
+
+              <Body numberOfLines={2} tone="muted">
+                {placed.items.map((entry) => entry.title).join(', ')}
+              </Body>
+
+              <Price cents={placed.totalCents} style={{ fontSize: 16 }} />
+            </Pressable>
+          ))}
+        </View>
+      ) : tab === 'looks' && (tryOns.data?.items.length ?? 0) > 0 ? (
         <View style={{ paddingHorizontal: gutter, paddingTop: 24, gap: 12 }}>
           {tryOns.data?.items.map((job) => (
             <View
@@ -242,6 +285,43 @@ export default function StoreScreen() {
         <EmptyState art={active.art} message={active.empty} />
       )}
     </ScrollView>
+  );
+}
+
+/**
+ * Where an order has got to.
+ *
+ * Plain words rather than the enum. Nobody outside this codebase knows what
+ * READY_FOR_PICKUP means, and "ready to collect" is the same length.
+ */
+function OrderBadge({ status }: { status: string }) {
+  const { colors, radius } = useTheme();
+
+  const words: Record<string, string> = {
+    PENDING_PAYMENT: 'Waiting to be paid',
+    PAID: 'Paid',
+    PREPARING: 'Being packed',
+    READY_FOR_PICKUP: 'Ready to collect',
+    IN_TRANSIT: 'On its way',
+    DELIVERED: 'Delivered',
+    COMPLETED: 'Done',
+    CANCELLED: 'Cancelled',
+    REFUNDED: 'Refunded',
+  };
+
+  const quiet = status === 'CANCELLED' || status === 'REFUNDED';
+
+  return (
+    <View
+      style={{
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        borderRadius: radius.pill,
+        backgroundColor: quiet ? colors.sunk : colors.accentSoft,
+      }}
+    >
+      <Micro tone={quiet ? 'muted' : 'ink'}>{words[status] ?? status}</Micro>
+    </View>
   );
 }
 

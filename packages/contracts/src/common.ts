@@ -16,10 +16,29 @@ export const handleSchema = z
   .regex(/^[a-z0-9_.]+$/, 'Letters, numbers, dots and underscores only')
   .describe('Public profile handle');
 
-/** Kenyan mobile numbers, stored in full international form. */
+/**
+ * Kenyan mobile numbers.
+ *
+ * Stored in full international form, but accepted the way people actually
+ * write them: 0712 345 678, +254 712 345 678, 712345678. Rejecting a number
+ * because of a space or a leading zero is the kind of thing that loses a
+ * sale at the last screen, and normalising once here means nothing
+ * downstream has to wonder which shape it is holding.
+ */
 export const phoneSchema = z
   .string()
-  .regex(/^254[17]\d{8}$/, 'Use the format 2547XXXXXXXX');
+  .trim()
+  .transform((value) => {
+    const digits = value.replace(/\D/g, '');
+
+    if (digits.startsWith('254')) return digits;
+    if (digits.startsWith('0')) return `254${digits.slice(1)}`;
+    if (digits.startsWith('7') || digits.startsWith('1')) return `254${digits}`;
+    return digits;
+  })
+  .refine((value) => /^254[17]\d{8}$/.test(value), {
+    message: 'That does not look like a Kenyan mobile number',
+  });
 
 export const cursorSchema = z.string().max(200).optional();
 

@@ -6,8 +6,8 @@
  * This also replaces the deprecated `prisma` block in package.json.
  */
 
-import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { config as loadDotenv } from 'dotenv';
 
 const here = dirname(fileURLToPath(import.meta.url));

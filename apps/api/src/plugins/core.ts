@@ -6,10 +6,10 @@
  * the app testable: a test builds an app with its own connections.
  */
 
-import fp from 'fastify-plugin';
-import { Redis } from 'ioredis';
 import type { Env } from '@nima/config';
 import { createPrismaClient, type PrismaClient } from '@nima/db';
+import fp from 'fastify-plugin';
+import { Redis } from 'ioredis';
 import { createMailer, type Mailer } from '../lib/mailer.js';
 import { createStorage, type Storage } from '../lib/storage.js';
 

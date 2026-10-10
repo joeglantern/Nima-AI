@@ -8,9 +8,9 @@
  * spec describes seller and admin endpoints too.
  */
 
-import fp from 'fastify-plugin';
 import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
+import fp from 'fastify-plugin';
 import { jsonSchemaTransform } from 'fastify-type-provider-zod';
 
 export default fp(
@@ -40,7 +40,7 @@ export default fp(
           { name: 'profile', description: 'Profile, style questionnaire, photos' },
           { name: 'feed', description: 'For You and Explore' },
           { name: 'looks', description: 'Looks, saves, likes, comments' },
-          { name: 'wardrobe', description: 'The user\'s own clothes' },
+          { name: 'wardrobe', description: "The user's own clothes" },
           { name: 'lookbooks', description: 'Collections of outfits' },
           { name: 'shop', description: 'Products, search, stores' },
           { name: 'tryon', description: 'Virtual try-on' },
@@ -69,9 +69,7 @@ export default fp(
     await app.register(swaggerUi, {
       routePrefix: '/docs',
       uiConfig: { docExpansion: 'list', deepLinking: true, persistAuthorization: true },
-      ...(app.env.NODE_ENV === 'production'
-        ? { uiHooks: { onRequest: app.requireAdmin } }
-        : {}),
+      ...(app.env.NODE_ENV === 'production' ? { uiHooks: { onRequest: app.requireAdmin } } : {}),
     });
   },
   { name: 'docs', dependencies: ['core', 'auth'] },

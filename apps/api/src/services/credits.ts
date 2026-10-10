@@ -15,7 +15,7 @@
  * dormant account costs nothing.
  */
 
-import { type CreditReason, type Prisma, type PrismaClient } from '@nima/db';
+import type { CreditReason, Prisma, PrismaClient } from '@nima/db';
 import { errors } from '../lib/errors.js';
 import type { SettingsService } from './settings.js';
 
@@ -76,8 +76,7 @@ export class CreditsService {
     }
 
     const isFirstEver = !existing;
-    const grant =
-      settings.freeWeeklyCredits + (isFirstEver ? settings.signupBonusCredits : 0);
+    const grant = settings.freeWeeklyCredits + (isFirstEver ? settings.signupBonusCredits : 0);
 
     if (grant <= 0) {
       return {
@@ -130,7 +129,9 @@ export class CreditsService {
   }
 
   /** How much an action costs right now. */
-  async costOf(action: keyof Awaited<ReturnType<SettingsService['get']>>['creditCosts']): Promise<number> {
+  async costOf(
+    action: keyof Awaited<ReturnType<SettingsService['get']>>['creditCosts'],
+  ): Promise<number> {
     const settings = await this.settings.get();
     return settings.creditCosts[action];
   }

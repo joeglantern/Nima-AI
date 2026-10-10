@@ -7,8 +7,6 @@
  * reads "is the questionnaire finished" as a condition.
  */
 
-import { z } from 'zod';
-import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 import {
   confirmUserPhotoSchema,
   createUploadSchema,
@@ -21,9 +19,11 @@ import {
   uploadTicketSchema,
   userPhotoSchema,
 } from '@nima/contracts';
+import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
+import { z } from 'zod';
 import { errors } from '../../lib/errors.js';
-import { FileTooLargeError, UnsupportedMediaError } from '../../lib/storage.js';
 import { privateImage, publicImage, storeCard } from '../../lib/presenters.js';
+import { FileTooLargeError, UnsupportedMediaError } from '../../lib/storage.js';
 import { completionOf } from './completion.js';
 import { suggestHandle } from './handle.js';
 
@@ -171,9 +171,7 @@ export const profileRoutes: FastifyPluginAsyncZod = async (app) => {
         avatar: publicImage(app.storage, profile.avatarKey),
         isPrivate: profile.isPrivate,
         isFollowing: null,
-        store: profile.user.store
-          ? storeCard(app.storage, profile.user.store)
-          : null,
+        store: profile.user.store ? storeCard(app.storage, profile.user.store) : null,
         joinedAt: profile.createdAt.toISOString(),
       };
     },

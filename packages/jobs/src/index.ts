@@ -7,7 +7,7 @@
  * tagging, embeddings, notifications, payouts and roll-ups.
  */
 
-import { Queue, type ConnectionOptions, type JobsOptions } from 'bullmq';
+import { type ConnectionOptions, type JobsOptions, Queue } from 'bullmq';
 import { Redis } from 'ioredis';
 import { z } from 'zod';
 

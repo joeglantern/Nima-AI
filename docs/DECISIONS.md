@@ -136,3 +136,68 @@ release to change a number is how numbers stop being tuned.
 
 They sit in `app_settings`, are read through a cached accessor, and are
 validated against the same schema that defines the defaults.
+
+---
+
+## 11. One basket becomes one order per shop
+
+**Why:** Nima is a marketplace, not a shop. Each seller packs, posts and is
+paid separately, so an order that spans two of them is two orders wearing one
+coat. Pretending otherwise means a single status, a single cancellation and a
+single refund across people who have nothing to do with each other.
+
+The buyer sees the split in the basket, before they commit, so two delivery
+messages are not a surprise. The payment stays whole: one M-Pesa prompt for
+the lot, held as a `CheckoutGroup` that the orders hang off. Delivery is
+charged once for the basket and apportioned across the orders by subtotal,
+with the rounding remainder on the largest, so the orders add up to exactly
+what was charged.
+
+---
+
+## 12. Stock is taken when the order is placed, not when it is paid
+
+**Why:** an M-Pesa prompt can sit on a phone for minutes. Holding nothing
+during that window means two people can both be told they bought the last
+dress, and one of them gets a refund and never comes back.
+
+The decrement is a conditional update, `WHERE stock >= quantity`, so the
+database settles the race rather than our code reading a number and trusting
+it a line later. If the payment fails or the prompt cannot be sent, every
+unit goes back and the order is cancelled with a reason the buyer can read.
+The cost of this choice is stock held by abandoned checkouts, which is the
+cheaper mistake: it corrects itself, overselling does not.
+
+---
+
+## 13. Only the webhook marks an order paid
+
+**Why:** the request that starts a payment knows one thing, that a prompt was
+sent. Treating that as a sale is how a shop posts goods against money that
+never arrived.
+
+`POST /v1/checkout` returns `PROCESSING`. The order becomes `PAID`, and the
+seller's ledger is credited, in one place: the signed webhook. Three rules
+around it, all from reading how the previous code handled this:
+
+- **Signature over the raw bytes.** The route keeps the body as a string and
+  checks an HMAC in constant time. Re-serialising parsed JSON changes
+  whitespace and the signature stops matching.
+- **Every delivery is recorded before it is acted on**, valid or not. When a
+  buyer says they paid and the order disagrees, the stored payload is the
+  only useful thing in the room.
+- **Always answer 200 once it is stored.** A provider that gets an error
+  retries for days. Our failure to process is ours to fix from the row.
+
+A settlement for the wrong amount is never treated as a payment. It unwinds
+the order and shouts in the log.
+
+---
+
+## 14. Checkout is behind a flag, and the sandbox gateway refuses production
+
+**Why:** a basket you cannot pay for is worse than no basket. `features.
+checkout` is false until Fingo credentials exist, and the API refuses to boot
+in production without them rather than falling back to a gateway that takes
+orders nobody can pay.
+

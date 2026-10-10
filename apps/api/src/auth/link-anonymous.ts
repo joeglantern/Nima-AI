@@ -82,10 +82,12 @@ export async function linkAnonymousAccount(
 
     let movedSaves = 0;
     for (const save of saves) {
-      const moved = await tx.save.updateMany({
-        where: { id: save.id },
-        data: { userId: newUserId },
-      }).catch(() => ({ count: 0 }));
+      const moved = await tx.save
+        .updateMany({
+          where: { id: save.id },
+          data: { userId: newUserId },
+        })
+        .catch(() => ({ count: 0 }));
       movedSaves += moved.count;
     }
 
@@ -110,7 +112,10 @@ export async function linkAnonymousAccount(
     ]);
 
     await Promise.all([
-      tx.wardrobeItem.updateMany({ where: { userId: anonymousUserId }, data: { userId: newUserId } }),
+      tx.wardrobeItem.updateMany({
+        where: { userId: anonymousUserId },
+        data: { userId: newUserId },
+      }),
       tx.lookbook.updateMany({ where: { ownerId: anonymousUserId }, data: { ownerId: newUserId } }),
       tx.tryOnJob.updateMany({ where: { userId: anonymousUserId }, data: { userId: newUserId } }),
       tx.userPhoto.updateMany({ where: { userId: anonymousUserId }, data: { userId: newUserId } }),

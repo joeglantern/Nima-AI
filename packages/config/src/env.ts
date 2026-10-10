@@ -36,14 +36,12 @@ function findEnvFile(startDir: string = process.cwd()): string | undefined {
   return undefined;
 }
 
-const csv = z
-  .string()
-  .transform((value) =>
-    value
-      .split(',')
-      .map((part) => part.trim())
-      .filter(Boolean),
-  );
+const csv = z.string().transform((value) =>
+  value
+    .split(',')
+    .map((part) => part.trim())
+    .filter(Boolean),
+);
 
 const bool = z
   .union([z.boolean(), z.enum(['true', 'false', '1', '0'])])

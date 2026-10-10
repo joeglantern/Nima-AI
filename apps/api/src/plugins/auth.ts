@@ -12,10 +12,10 @@
  * signed in user take over any account. See docs/DECISIONS.md.
  */
 
+import { fromNodeHeaders } from 'better-auth/node';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import fp from 'fastify-plugin';
-import { fromNodeHeaders } from 'better-auth/node';
-import { createAuth, type Auth } from '../auth/auth.js';
+import { type Auth, createAuth } from '../auth/auth.js';
 import { errors } from '../lib/errors.js';
 
 export interface RequestUser {
@@ -70,11 +70,12 @@ export default fp(
         const headers = fromNodeHeaders(request.raw.headers);
 
         const hasBody = request.method !== 'GET' && request.method !== 'HEAD';
-        const body = hasBody && request.body !== undefined
-          ? typeof request.body === 'string'
-            ? request.body
-            : JSON.stringify(request.body)
-          : undefined;
+        const body =
+          hasBody && request.body !== undefined
+            ? typeof request.body === 'string'
+              ? request.body
+              : JSON.stringify(request.body)
+            : undefined;
 
         const response = await auth.handler(
           new Request(url.toString(), {

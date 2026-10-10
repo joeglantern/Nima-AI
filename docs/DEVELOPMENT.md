@@ -146,13 +146,34 @@ creates the job. See `TryOnService.start`.
 ## Testing
 
 ```bash
-pnpm test                      # unit tests
-pnpm --filter @nima/api smoke  # end to end against a running API
+pnpm test                              # unit tests
+pnpm --filter @nima/api smoke          # end to end against a running API
+pnpm --filter @nima/api test:checkout  # the money path, start to settled
 ```
 
-The smoke test is the quickest way to know the whole stack is healthy. It
+The **smoke test** is the quickest way to know the whole stack is healthy. It
 covers guest browsing, the account gate, email sign in, uploads, the credit
-charge and the privacy of public responses.
+charge, filling a basket and the privacy of public responses. It needs the
+API and the stack running, and it is safe to run twice: it cancels try-ons
+and empties the basket it left behind last time.
+
+The **checkout test** builds its own API in process, with a stub standing in
+for Fingo, so nothing leaves the machine. It is the one that proves the parts
+that cost money if they are wrong: that a basket becomes one order per shop,
+that stock moves when the order is placed and comes back if the payment
+fails, that the seller ledger gets the sale and the fee and not the delivery,
+that a replayed webhook pays nobody twice, that a forged one is recorded and
+ignored, and that a settlement for the wrong amount buys nothing. Run it
+after touching anything under `services/checkout.ts`, `services/payments/`
+or `modules/webhooks/`.
+
+### Turning checkout on locally
+
+It is off by default, because `features.checkout` is false until Fingo
+credentials exist. To walk the screens, flip the flag in `app_settings` and
+set `FINGO_API_KEY` and `FINGO_WEBHOOK_SECRET` to anything. Without a real
+provider no webhook will arrive, so orders sit at `PENDING_PAYMENT`, which is
+the honest outcome: nothing was paid.
 
 ---
 
@@ -171,3 +192,11 @@ default checksum header on presigned uploads.
 **A response is rejected by its own schema.** The error says
 `response did not match schema` with the field. The presenter and the
 contract have drifted apart; fix the presenter.
+
+**Checkout answers 409 "Checkout is not open yet".** That is the feature
+flag, not a bug. See above.
+
+**A request with no body is rejected as empty JSON.** Fastify refuses a
+request that sets `content-type: application/json` and sends nothing, which
+is every bodiless DELETE. The API client only sets that header when there is
+a body; a new caller must do the same.

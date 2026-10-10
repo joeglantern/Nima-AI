@@ -7,9 +7,9 @@
  */
 
 import { z } from 'zod';
+import { productCardSchema } from './catalog.js';
 import { garmentSlotSchema, idSchema, imageSchema, paginationQuerySchema } from './common.js';
 import { jobStatusSchema } from './events.js';
-import { productCardSchema } from './catalog.js';
 import { lookCardSchema } from './looks.js';
 
 export const tryOnKindSchema = z.enum([
@@ -55,7 +55,9 @@ export const startTryOnSchema = z
   })
   .refine(
     (value) =>
-      value.items.length > 0 || Boolean(value.sourceKey) || Boolean(value.lookId) ||
+      value.items.length > 0 ||
+      Boolean(value.sourceKey) ||
+      Boolean(value.lookId) ||
       Boolean(value.parentJobId),
     { message: 'Give at least one item, a photographed garment, or a look to recreate' },
   );

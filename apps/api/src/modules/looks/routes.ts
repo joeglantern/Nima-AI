@@ -7,8 +7,6 @@
  * the brief requires.
  */
 
-import { z } from 'zod';
-import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 import {
   commentSchema,
   createCommentSchema,
@@ -22,6 +20,8 @@ import {
   shareLinkSchema,
   updateLookSchema,
 } from '@nima/contracts';
+import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
+import { z } from 'zod';
 import { errors } from '../../lib/errors.js';
 import { lookAuthor, lookCard, productCard, publicImage } from '../../lib/presenters.js';
 import { recordEvent } from '../../services/events.js';
@@ -343,7 +343,10 @@ export const lookRoutes: FastifyPluginAsyncZod = async (app) => {
       }
 
       await app.prisma.save.create({ data: { userId: user.id, lookId } });
-      await app.prisma.look.update({ where: { id: lookId }, data: { saveCount: { increment: 1 } } });
+      await app.prisma.look.update({
+        where: { id: lookId },
+        data: { saveCount: { increment: 1 } },
+      });
 
       void recordEvent(app, { request, type: 'SAVE', entityType: 'look', entityId: lookId });
 

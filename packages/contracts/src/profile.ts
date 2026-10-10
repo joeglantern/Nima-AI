@@ -140,7 +140,11 @@ export const createUploadSchema = z.object({
   ]),
   contentType: z.enum(['image/jpeg', 'image/png', 'image/webp', 'image/heic']),
   /** Bytes. Rejected above the per purpose limit. */
-  size: z.number().int().positive().max(25 * 1024 * 1024),
+  size: z
+    .number()
+    .int()
+    .positive()
+    .max(25 * 1024 * 1024),
 });
 
 export const uploadTicketSchema = z.object({

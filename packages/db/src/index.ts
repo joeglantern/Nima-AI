@@ -27,9 +27,7 @@ declare global {
 export function createPrismaClient(options: CreateClientOptions = {}): PrismaClient {
   const client = new PrismaClient({
     log: options.log ?? ['warn', 'error'],
-    ...(options.databaseUrl
-      ? { datasources: { db: { url: options.databaseUrl } } }
-      : {}),
+    ...(options.databaseUrl ? { datasources: { db: { url: options.databaseUrl } } } : {}),
   });
 
   return client;

@@ -10,9 +10,9 @@
  * the old fallback dropped the photo and produced a picture of a stranger.
  */
 
-import type { FastifyInstance, FastifyRequest } from 'fastify';
-import type { Queues, TryOnJobData } from '@nima/jobs';
 import type { CreditReason, GarmentSlot, Prisma, TryOnKind } from '@nima/db';
+import type { Queues, TryOnJobData } from '@nima/jobs';
+import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { errors } from '../lib/errors.js';
 
 export interface StartTryOnInput {
@@ -158,6 +158,60 @@ export class TryOnService {
       queuePosition: waiting,
       estimatedSeconds: Math.max(SECONDS_PER_JOB, waiting * SECONDS_PER_JOB),
     };
+  }
+
+  /**
+   * Stop a try-on that has not started yet, and give the credits back.
+   *
+   * Someone who picked the wrong photo should not have to watch it finish,
+   * and without this a job that never runs, because the image provider is
+   * down or a key is missing, counts against the concurrency limit forever
+   * and locks the person out of the feature with no way to clear it.
+   *
+   * A job already running is left alone: the image is being paid for whether
+   * or not anybody still wants it.
+   */
+  async cancel(userId: string, jobId: string): Promise<{ creditsRefunded: number }> {
+    const { app } = this;
+
+    const job = await app.prisma.tryOnJob.findFirst({
+      where: { id: jobId, userId },
+      select: { id: true, status: true, creditsCharged: true },
+    });
+
+    if (!job) throw errors.notFound('That try-on');
+
+    if (job.status === 'DONE' || job.status === 'FAILED' || job.status === 'CANCELLED') {
+      return { creditsRefunded: 0 };
+    }
+
+    if (job.status === 'RUNNING') {
+      throw errors.conflict('That image is already being made. It will be ready shortly.');
+    }
+
+    // Take it off the queue first. A worker that picks it up between here and
+    // the refund would produce an image nobody paid for.
+    await this.queues.tryOn.remove(jobId).catch((error: unknown) => {
+      app.log.warn({ err: error, jobId }, 'Could not remove a cancelled job from the queue');
+    });
+
+    await app.prisma.tryOnJob.update({
+      where: { id: job.id },
+      data: { status: 'CANCELLED', refunded: true, error: 'cancelled_by_user' },
+    });
+
+    // The refund is keyed on the job, so calling this twice gives back one
+    // lot of credits.
+    await app.services.credits.refund({
+      userId,
+      amount: job.creditsCharged,
+      reason: 'REFUND' as CreditReason,
+      refType: 'try_on_job',
+      refId: job.id,
+      note: 'Try-on cancelled',
+    });
+
+    return { creditsRefunded: job.creditsCharged };
   }
 
   /**

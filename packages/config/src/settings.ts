@@ -57,6 +57,21 @@ export const settingsSchema = z.object({
   /** Days after delivery before a seller can be paid, to cover returns. */
   payoutHoldDays: z.number().int().min(0).default(3),
 
+  /**
+   * Delivery, in KES cents.
+   *
+   * Charged once per checkout rather than once per store: a buyer who picks
+   * two things from two shops is making one trip to one pickup point, and
+   * billing them twice for it is the fastest way to lose the second item.
+   * The real cost is settled with the courier against the whole consignment.
+   */
+  delivery: z.object({
+    pickupPointCents: z.number().int().min(0).default(20_000),
+    doorstepCents: z.number().int().min(0).default(35_000),
+    /** Basket size at which delivery stops being charged. 0 turns this off. */
+    freeOverCents: z.number().int().min(0).default(0),
+  }),
+
   /** Free try-ons a guest may run before an account is required. */
   guestTryOnLimit: z.number().int().min(0).default(0),
 
@@ -93,6 +108,7 @@ export const DEFAULT_SETTINGS: Settings = settingsSchema.parse({
   signupBonusCredits: 3,
   platformFeeBps: 700,
   payoutHoldDays: 3,
+  delivery: { pickupPointCents: 20_000, doorstepCents: 35_000, freeOverCents: 0 },
   guestTryOnLimit: 0,
   features: {
     checkout: false,

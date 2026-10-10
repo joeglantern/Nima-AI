@@ -91,7 +91,7 @@ export function buildSimplePrompt(data: TryOnJobData): string {
 
   return [
     `Show the person from Reference Image 1 wearing: ${items || 'the clothing in the other images'}.`,
-    "Keep their face, body and identity exactly the same.",
+    'Keep their face, body and identity exactly the same.',
     'Professional fashion photograph, clean background.',
   ].join(' ');
 }

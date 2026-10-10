@@ -7,9 +7,9 @@
  * leaving sessions behind.
  */
 
-import closeWithGrace from 'close-with-grace';
 import { loadEnv, redactedEnv } from '@nima/config';
 import { pingDatabase } from '@nima/db';
+import closeWithGrace from 'close-with-grace';
 import { buildApp } from './app.js';
 
 async function main(): Promise<void> {

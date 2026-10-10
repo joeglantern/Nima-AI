@@ -10,13 +10,13 @@
  * never gates.
  */
 
-import { z } from 'zod';
-import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 import { feedItemSchema, feedQuerySchema } from '@nima/contracts';
+import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
+import { z } from 'zod';
 import { decodeCursor, encodeCursor } from '../../lib/pagination.js';
 import { lookCard, productCard } from '../../lib/presenters.js';
-import { FeedService } from '../../services/feed.js';
 import { recordEvent } from '../../services/events.js';
+import { FeedService } from '../../services/feed.js';
 
 export const feedRoutes: FastifyPluginAsyncZod = async (app) => {
   const feed = new FeedService(app);

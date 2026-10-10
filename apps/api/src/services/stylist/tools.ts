@@ -7,8 +7,8 @@
  * is in stock in Nairobi this week.
  */
 
+import type { Prisma } from '@nima/db';
 import type { FastifyInstance } from 'fastify';
-import { Prisma } from '@nima/db';
 import type { ToolDefinition } from '../llm.js';
 
 export const STYLIST_TOOLS: ToolDefinition[] = [
@@ -53,7 +53,7 @@ export const STYLIST_TOOLS: ToolDefinition[] = [
     type: 'function',
     function: {
       name: 'search_wardrobe',
-      description: "Look through clothes this person already owns.",
+      description: 'Look through clothes this person already owns.',
       parameters: {
         type: 'object',
         properties: {
@@ -232,7 +232,10 @@ async function buildOutfit(
   ]);
 
   if (products.length === 0 && owned.length === 0) {
-    return { forModel: 'None of those ids exist. Search again before building a look.', productIds: [] };
+    return {
+      forModel: 'None of those ids exist. Search again before building a look.',
+      productIds: [],
+    };
   }
 
   const look = await app.prisma.look.create({

@@ -6,8 +6,8 @@
  * API.
  */
 
-import fp from 'fastify-plugin';
 import { createQueueConnection, createQueues, type Queues } from '@nima/jobs';
+import fp from 'fastify-plugin';
 
 declare module 'fastify' {
   interface FastifyInstance {

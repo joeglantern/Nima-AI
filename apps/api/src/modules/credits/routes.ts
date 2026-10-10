@@ -7,9 +7,9 @@
  * prompt.
  */
 
-import { z } from 'zod';
-import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 import { creditEntrySchema, creditPackSchema, paginationQuerySchema } from '@nima/contracts';
+import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
+import { z } from 'zod';
 
 export const creditRoutes: FastifyPluginAsyncZod = async (app) => {
   app.get(

@@ -9,7 +9,10 @@
  */
 
 import type { FastifyError, FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
-import { hasZodFastifySchemaValidationErrors, isResponseSerializationError } from 'fastify-type-provider-zod';
+import {
+  hasZodFastifySchemaValidationErrors,
+  isResponseSerializationError,
+} from 'fastify-type-provider-zod';
 
 export type ErrorCode =
   | 'bad_request'
@@ -149,7 +152,10 @@ export function registerErrorHandler(app: FastifyInstance): void {
 
     // We built a response that does not match its own schema. Always our bug.
     if (isResponseSerializationError(error)) {
-      request.log.error({ err: error, requestId, route: error.method }, 'Response did not match schema');
+      request.log.error(
+        { err: error, requestId, route: error.method },
+        'Response did not match schema',
+      );
       return reply.status(500).send({
         error: { code: 'internal_error', message: 'Something went wrong on our side', requestId },
       } satisfies ErrorBody);

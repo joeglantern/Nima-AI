@@ -32,6 +32,7 @@ export default function ProductScreen() {
   const router = useRouter();
 
   const [variantId, setVariantId] = useState<string | null>(null);
+  const [added, setAdded] = useState(false);
   const [jobId, setJobId] = useState<string | null>(null);
   const [resultUrl, setResultUrl] = useState<string | null>(null);
   const [progress, setProgress] = useState<string | null>(null);
@@ -44,6 +45,30 @@ export default function ProductScreen() {
   });
 
   const bootstrap = useQuery({ queryKey: ['bootstrap'], queryFn: api.bootstrap });
+
+  const chosen =
+    product.data?.variants.find((variant) => variant.id === variantId) ??
+    product.data?.variants.find((variant) => variant.inStock) ??
+    null;
+
+  const addToCart = useMutation({
+    mutationFn: () => {
+      if (!chosen) throw new ApiError(400, 'no_variant', 'Pick a size first');
+      return api.addToCart({ variantId: chosen.id, quantity: 1 });
+    },
+    onSuccess: () => {
+      setAdded(true);
+      setProblem(null);
+      void queryClient.invalidateQueries({ queryKey: ['cart'] });
+    },
+    onError: (error) => {
+      if (error instanceof ApiError && error.needsAccount) {
+        requireAccount('Create an account to start a basket');
+        return;
+      }
+      setProblem(error instanceof Error ? error.message : 'That did not work');
+    },
+  });
 
   // The result arrives on the socket, not from polling.
   useServerFrame('tryon.progress', (frame) => {
@@ -232,6 +257,22 @@ export default function ProductScreen() {
               loading={tryOn.isPending || Boolean(jobId && !resultUrl)}
               onPress={() => tryOn.mutate()}
             />
+
+            {/*
+              Buying comes second, under the try-on, because seeing it on
+              yourself is what Nima is for and is what makes the decision.
+              It is hidden entirely until payments are connected: a basket
+              you cannot pay for is worse than no basket.
+            */}
+            {bootstrap.data?.features.checkout ? (
+              <Button
+                label={added ? 'In your basket' : 'Add to basket'}
+                variant="quiet"
+                loading={addToCart.isPending}
+                disabled={!chosen?.inStock}
+                onPress={() => addToCart.mutate()}
+              />
+            ) : null}
 
             {progress ? <Caption align="center">{progress}</Caption> : null}
             {problem ? (

@@ -6,13 +6,13 @@
  * set of workers, which is why each one is a separate function.
  */
 
-import closeWithGrace from 'close-with-grace';
 import type { Worker } from 'bullmq';
+import closeWithGrace from 'close-with-grace';
 import { createContext } from './context.js';
 import { createGeminiProvider } from './providers/gemini.js';
-import { startTryOnWorker } from './workers/tryon.js';
 import { startMediaWorker } from './workers/media.js';
 import { startNotificationWorker } from './workers/notification.js';
+import { startTryOnWorker } from './workers/tryon.js';
 
 async function main(): Promise<void> {
   const context = createContext();

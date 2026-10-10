@@ -9,8 +9,6 @@
  * not the fit.
  */
 
-import { z } from 'zod';
-import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 import {
   idSchema,
   paginationQuerySchema,
@@ -18,6 +16,8 @@ import {
   startTryOnSchema,
   tryOnJobSchema,
 } from '@nima/contracts';
+import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
+import { z } from 'zod';
 import { errors } from '../../lib/errors.js';
 import { privateImage } from '../../lib/presenters.js';
 import { recordEvent } from '../../services/events.js';
@@ -192,6 +192,23 @@ export function tryOnRoutes(tryOn: TryOnService): FastifyPluginAsyncZod {
           nextCursor: hasMore ? (items.at(-1)?.id ?? null) : null,
         };
       },
+    );
+
+    app.delete(
+      '/tryon/:id',
+      {
+        preHandler: app.requireAccount,
+        schema: {
+          tags: ['tryon'],
+          summary: 'Stop a try-on that has not started',
+          description:
+            'Refunds the credits. A job already being made cannot be stopped, because ' +
+            'the image is being paid for either way.',
+          params: z.object({ id: idSchema }),
+          response: { 200: z.object({ creditsRefunded: z.number().int() }) },
+        },
+      },
+      async (request) => tryOn.cancel(request.requireUser().id, request.params.id),
     );
 
     app.post(

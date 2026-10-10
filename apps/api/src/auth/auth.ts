@@ -13,11 +13,11 @@
  * everything. See docs/DECISIONS.md.
  */
 
+import type { Env } from '@nima/config';
+import type { PrismaClient } from '@nima/db';
 import { betterAuth } from 'better-auth';
 import { prismaAdapter } from 'better-auth/adapters/prisma';
 import { anonymous, emailOTP, magicLink } from 'better-auth/plugins';
-import type { Env } from '@nima/config';
-import type { PrismaClient } from '@nima/db';
 import type { Mailer } from '../lib/mailer.js';
 import { linkAnonymousAccount } from './link-anonymous.js';
 

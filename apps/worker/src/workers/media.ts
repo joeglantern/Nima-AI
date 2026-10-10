@@ -11,9 +11,9 @@
  * original is used, which is honest rather than pretending the work was done.
  */
 
+import { createWorkerConnection, type MediaJobData, QUEUE } from '@nima/jobs';
+import { type Job, Worker } from 'bullmq';
 import sharp from 'sharp';
-import { Worker, type Job } from 'bullmq';
-import { QUEUE, createWorkerConnection, type MediaJobData } from '@nima/jobs';
 import type { WorkerContext } from '../context.js';
 
 export function startMediaWorker(context: WorkerContext): Worker<MediaJobData> {

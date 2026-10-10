@@ -7,17 +7,24 @@
  * one failure that loses trust, so the refund path is handled on every exit.
  */
 
+import { createWorkerConnection, QUEUE, type TryOnJobData } from '@nima/jobs';
+import { type Job, Worker } from 'bullmq';
 import sharp from 'sharp';
-import { Worker, type Job } from 'bullmq';
-import { QUEUE, createWorkerConnection, type TryOnJobData } from '@nima/jobs';
 import type { WorkerContext } from '../context.js';
 import { buildSimplePrompt, buildTryOnPrompt } from '../prompts.js';
-import { ImageProviderError, type ImageProvider, type ReferenceImage } from '../providers/image-provider.js';
+import {
+  type ImageProvider,
+  ImageProviderError,
+  type ReferenceImage,
+} from '../providers/image-provider.js';
 
 /** What the model sees. Bigger costs more and helps very little. */
 const MAX_EDGE = 1024;
 
-export function startTryOnWorker(context: WorkerContext, provider: ImageProvider): Worker<TryOnJobData> {
+export function startTryOnWorker(
+  context: WorkerContext,
+  provider: ImageProvider,
+): Worker<TryOnJobData> {
   const connection = createWorkerConnection(context.env.REDIS_URL);
 
   const worker = new Worker<TryOnJobData>(

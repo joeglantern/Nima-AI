@@ -11,12 +11,12 @@
  * articulate is not.
  */
 
-import type { FastifyInstance } from 'fastify';
 import type { ServerFrame } from '@nima/contracts';
-import { LlmUnavailableError, type ChatMessage, type LlmProvider } from '../llm.js';
-import { NIMA_PERSONA, describeShopper } from './prompt.js';
-import { STYLIST_TOOLS, runStylistTool } from './tools.js';
+import type { FastifyInstance } from 'fastify';
+import { type ChatMessage, type LlmProvider, LlmUnavailableError } from '../llm.js';
 import { answerWithoutModel } from './fallback.js';
+import { describeShopper, NIMA_PERSONA } from './prompt.js';
+import { runStylistTool, STYLIST_TOOLS } from './tools.js';
 
 /** Two rounds of tools is enough for search, then build. More is a loop. */
 const MAX_TOOL_ROUNDS = 3;
