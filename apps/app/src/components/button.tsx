@@ -5,15 +5,15 @@
  * one, and a provider button for the sign in sheet. Anything else is a link.
  */
 
+import * as Haptics from 'expo-haptics';
 import {
   ActivityIndicator,
+  Platform,
   Pressable,
-  View,
   type PressableProps,
+  View,
   type ViewStyle,
 } from 'react-native';
-import * as Haptics from 'expo-haptics';
-import { Platform } from 'react-native';
 import { useTheme } from '../theme/index';
 import { BodyStrong } from './text';
 
@@ -43,7 +43,11 @@ export function Button({
   const isDisabled = disabled || loading;
 
   const background =
-    variant === 'primary' ? colors.primary : variant === 'provider' ? colors.surface : 'transparent';
+    variant === 'primary'
+      ? colors.primary
+      : variant === 'provider'
+        ? colors.surface
+        : 'transparent';
 
   const foreground =
     variant === 'primary' ? colors.onPrimary : variant === 'provider' ? colors.ink : colors.primary;

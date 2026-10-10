@@ -7,16 +7,16 @@
 
 import { useState } from 'react';
 import { TextInput, View } from 'react-native';
+import { useTheme } from '../theme/index';
 import { Button } from './button';
 import { Caption } from './text';
-import { useTheme } from '../theme/index';
 
 export interface EmailStepsProps {
   onSendCode: (email: string) => Promise<void>;
   onVerify: (email: string, code: string) => Promise<void>;
   onCancel: () => void;
   /** Which background it sits on, so the small print stays readable. */
-  onSurface?: 'ground' | 'primary';
+  onSurface?: 'ground' | 'deep';
 }
 
 export function EmailSteps({
@@ -33,7 +33,7 @@ export function EmailSteps({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const quietText = onSurface === 'primary' ? colors.onPrimary : colors.muted;
+  const quietText = onSurface === 'deep' ? colors.onEspresso : colors.muted;
 
   const inputStyle = {
     backgroundColor: colors.surface,
@@ -81,7 +81,12 @@ export function EmailSteps({
           label="Send me a code"
           loading={busy}
           disabled={!email.includes('@')}
-          onPress={() => void run(() => onSendCode(email.trim()), () => setSent(true))}
+          onPress={() =>
+            void run(
+              () => onSendCode(email.trim()),
+              () => setSent(true),
+            )
+          }
         />
 
         <Button label="Back" variant="quiet" onPress={onCancel} />

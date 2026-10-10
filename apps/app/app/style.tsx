@@ -6,15 +6,15 @@
  * block anything, so there is no final submit and no progress gate.
  */
 
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Stack, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
-import { Stack, useRouter } from 'expo-router';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Svg, { Path } from 'react-native-svg';
+import { Button } from '../src/components/button';
+import { Body, BodyStrong, Caption, Eyebrow, Title } from '../src/components/text';
 import { api } from '../src/lib/api';
 import { useTheme } from '../src/theme/index';
-import { Body, BodyStrong, Caption, Label, Title } from '../src/components/text';
-import { Button } from '../src/components/button';
 
 const AESTHETICS = [
   'Smart casual',
@@ -84,11 +84,18 @@ export default function StyleScreen() {
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ padding: gutter, paddingBottom: 56, gap: 32, maxWidth: 680, width: '100%', alignSelf: 'center' }}
+        contentContainerStyle={{
+          padding: gutter,
+          paddingBottom: 56,
+          gap: 32,
+          maxWidth: 680,
+          width: '100%',
+          alignSelf: 'center',
+        }}
       >
         <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 12 }}>
           <View style={{ flex: 1, gap: 6 }}>
-            <Label tone="primary">{`${profile.data?.completion ?? 0} percent done`}</Label>
+            <Eyebrow>{`${profile.data?.completion ?? 0} percent done`}</Eyebrow>
             <Title>What do you like to wear?</Title>
             <Caption>
               Answer what you feel like. You can close this at any point and nothing is lost.
@@ -158,8 +165,7 @@ export default function StyleScreen() {
           <View style={{ gap: 8 }}>
             {BUDGETS.map((band, index) => {
               const active =
-                budget === index ||
-                (budget === null && profile.data?.budgetMaxCents === band.max);
+                budget === index || (budget === null && profile.data?.budgetMaxCents === band.max);
 
               return (
                 <Pressable

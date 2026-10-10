@@ -6,9 +6,9 @@
  * session, created on first launch, so the app works straight away.
  */
 
-import { createAuthClient } from 'better-auth/react';
 import { expoClient } from '@better-auth/expo/client';
 import { anonymousClient, emailOTPClient, magicLinkClient } from 'better-auth/client/plugins';
+import { createAuthClient } from 'better-auth/react';
 import { API_URL } from './config';
 import { sessionStorage } from './session-storage';
 

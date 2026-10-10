@@ -5,15 +5,15 @@
  * tablet, four or five on a desktop. Browsing never asks who you are.
  */
 
+import { useInfiniteQuery } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, TextInput, View } from 'react-native';
-import { useInfiniteQuery } from '@tanstack/react-query';
 import Svg, { Circle, Path } from 'react-native-svg';
+import { ProductCard } from '../../src/components/cards';
+import { EmptyState } from '../../src/components/empty-state';
+import { BodyStrong, Caption } from '../../src/components/text';
 import { api, type ProductCard as ProductCardData } from '../../src/lib/api';
 import { useTheme } from '../../src/theme/index';
-import { ProductCard } from '../../src/components/cards';
-import { BodyStrong, Caption } from '../../src/components/text';
-import { EmptyState } from '../../src/components/empty-state';
 
 const CATEGORIES = [
   { label: 'Everything', value: undefined },
@@ -47,7 +47,7 @@ export default function ShopScreen() {
    */
   const columns = useMemo(() => {
     const buckets: ProductCardData[][] = Array.from({ length: gridColumns }, () => []);
-    items.forEach((item, index) => buckets[index % gridColumns]?.push(item));
+    for (const [index, item] of items.entries()) buckets[index % gridColumns]?.push(item);
     return buckets;
   }, [items, gridColumns]);
 
@@ -73,7 +73,10 @@ export default function ShopScreen() {
                 flexDirection: 'row',
                 alignItems: 'center',
                 gap: 10,
-                backgroundColor: colors.sunk,
+                // White with a hairline, the way the store screen draws it.
+                backgroundColor: colors.surface,
+                borderWidth: 1,
+                borderColor: colors.line,
                 borderRadius: radius.pill,
                 paddingHorizontal: 16,
                 paddingVertical: 12,
@@ -118,7 +121,7 @@ export default function ShopScreen() {
             data={CATEGORIES}
             keyExtractor={(item) => item.label}
             showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ paddingHorizontal: gutter, gap: 8 }}
+            contentContainerStyle={{ paddingHorizontal: gutter, gap: 8, paddingRight: gutter + 8 }}
             renderItem={({ item }) => {
               const active = category === item.value;
 
@@ -131,13 +134,13 @@ export default function ShopScreen() {
                     paddingHorizontal: 16,
                     paddingVertical: 8,
                     borderRadius: radius.pill,
-                    backgroundColor: active ? colors.primary : 'transparent',
-                    borderWidth: active ? 0 : 1,
-                    borderColor: colors.line,
+                    backgroundColor: active ? colors.accent : colors.surface,
+                    borderWidth: 1,
+                    borderColor: active ? colors.accent : colors.line,
                   }}
                 >
                   <BodyStrong
-                    style={{ fontSize: 14, color: active ? colors.onPrimary : colors.ink }}
+                    style={{ fontSize: 14, color: active ? colors.onAccent : colors.ink }}
                   >
                     {item.label}
                   </BodyStrong>
@@ -172,7 +175,10 @@ export default function ShopScreen() {
         return (
           <View style={{ flexDirection: 'row', gap: 12, paddingHorizontal: gutter }}>
             {columns.map((column, index) => (
-              <View key={index} style={{ flex: 1, gap: 20 }}>
+              // A column has no identity of its own: it is the nth of a fixed
+              // number, and that number only changes with the window width.
+              // biome-ignore lint/suspicious/noArrayIndexKey: the index is the identity
+              <View key={index} style={{ flex: 1, gap: 22 }}>
                 {column.map((product) => (
                   <ProductCard key={product.id} product={product} />
                 ))}

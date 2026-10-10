@@ -7,8 +7,8 @@
  * It hides itself on the Ask screen, so it never covers its own conversation.
  */
 
+import { usePathname, useRouter } from 'expo-router';
 import { Pressable, View } from 'react-native';
-import { useRouter, usePathname } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 import { useTheme } from '../theme/index';

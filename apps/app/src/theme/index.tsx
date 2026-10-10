@@ -6,9 +6,9 @@
  * hook rather than being read from the device in each component.
  */
 
-import { createContext, useContext, useMemo, type ReactNode } from 'react';
+import { createContext, type ReactNode, useContext, useMemo } from 'react';
 import { useColorScheme, useWindowDimensions } from 'react-native';
-import { breakpoint, dark, light, radius, space, type, type Palette } from './tokens';
+import { breakpoint, dark, light, type Palette, radius, space, type } from './tokens';
 
 export type Layout = 'phone' | 'tablet' | 'desktop';
 
@@ -63,5 +63,5 @@ export function useTheme(): Theme {
   return theme;
 }
 
-export { breakpoint, dark, light, radius, space, type };
 export type { Palette };
+export { breakpoint, dark, light, radius, space, type };

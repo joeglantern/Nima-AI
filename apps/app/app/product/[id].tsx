@@ -9,19 +9,19 @@
  * a fit, and the brief is firm that this must never be buried.
  */
 
-import { useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, View, useWindowDimensions } from 'react-native';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useState } from 'react';
+import { ActivityIndicator, Pressable, ScrollView, useWindowDimensions, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
-import { api, ApiError } from '../../src/lib/api';
-import { useTheme } from '../../src/theme/index';
-import { Body, BodyStrong, Caption, Heading, Label, Price, Title } from '../../src/components/text';
+import { useAuthGate } from '../../src/components/auth-gate';
 import { Button } from '../../src/components/button';
 import { Sheet } from '../../src/components/sheet';
-import { useAuthGate } from '../../src/components/auth-gate';
+import { Body, BodyStrong, Caption, Eyebrow, Micro, Price, Title } from '../../src/components/text';
+import { ApiError, api } from '../../src/lib/api';
 import { useServerFrame } from '../../src/lib/realtime';
+import { useTheme } from '../../src/theme/index';
 
 export default function ProductScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -119,7 +119,10 @@ export default function ProductScreen() {
     <>
       <Stack.Screen options={{ title: item.title }} />
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 48 }}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 48 }}
+      >
         <View
           style={{
             width: '100%',
@@ -185,7 +188,7 @@ export default function ProductScreen() {
           {/* Everything else */}
           <View style={{ flex: isWide ? 1 : undefined, padding: isWide ? 0 : gutter, gap: 20 }}>
             <View style={{ gap: 6 }}>
-              <Label>{item.store.name}</Label>
+              <Micro>{item.store.name}</Micro>
               <Title>{item.title}</Title>
               <Price cents={price} style={{ fontSize: 20 }} />
             </View>
@@ -294,7 +297,7 @@ export default function ProductScreen() {
             marginTop: 8,
           }}
         >
-          <Label tone="secondary">{bootstrap.data?.fitNotice.title ?? 'About the fit'}</Label>
+          <Eyebrow tone="secondary">{bootstrap.data?.fitNotice.title ?? 'About the fit'}</Eyebrow>
           <Caption tone="ink">
             {bootstrap.data?.fitNotice.body ??
               "Nima shows you how something looks, not how it will fit. Check the seller's size guide."}

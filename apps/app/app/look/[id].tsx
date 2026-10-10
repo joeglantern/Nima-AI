@@ -6,24 +6,24 @@
  * change a piece.
  */
 
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Image } from 'expo-image';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import {
   ActivityIndicator,
   Platform,
   Pressable,
   ScrollView,
   Share,
-  View,
   useWindowDimensions,
+  View,
 } from 'react-native';
-import { Image } from 'expo-image';
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Svg, { Path } from 'react-native-svg';
-import { api, ApiError } from '../../src/lib/api';
-import { useTheme } from '../../src/theme/index';
-import { Body, BodyStrong, Caption, Label, Price, Title } from '../../src/components/text';
-import { Button } from '../../src/components/button';
 import { useAuthGate } from '../../src/components/auth-gate';
+import { Button } from '../../src/components/button';
+import { Body, BodyStrong, Caption, Eyebrow, Micro, Price, Title } from '../../src/components/text';
+import { ApiError, api } from '../../src/lib/api';
+import { useTheme } from '../../src/theme/index';
 
 export default function LookScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -87,7 +87,10 @@ export default function LookScreen() {
     <>
       <Stack.Screen options={{ title: item.title ?? 'A look' }} />
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 48 }}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 48 }}
+      >
         <View
           style={{
             width: '100%',
@@ -144,7 +147,7 @@ export default function LookScreen() {
 
           <View style={{ flex: isWide ? 1 : undefined, padding: isWide ? 0 : gutter, gap: 20 }}>
             <View style={{ gap: 6 }}>
-              {item.author ? <Label>{item.author.displayName}</Label> : null}
+              {item.author ? <Micro>{item.author.displayName}</Micro> : null}
               {item.title ? <Title>{item.title}</Title> : null}
               {item.caption ? <Body tone="muted">{item.caption}</Body> : null}
             </View>
@@ -158,7 +161,7 @@ export default function LookScreen() {
                   gap: 4,
                 }}
               >
-                <Label tone="primary">Nima says</Label>
+                <Eyebrow>Nima Says</Eyebrow>
                 <Body>{item.nimaSays}</Body>
               </View>
             ) : null}
@@ -193,7 +196,10 @@ export default function LookScreen() {
                   <Pressable
                     key={piece.id}
                     disabled={!product}
-                    onPress={() => product && router.push({ pathname: '/product/[id]', params: { id: product.id } })}
+                    onPress={() =>
+                      product &&
+                      router.push({ pathname: '/product/[id]', params: { id: product.id } })
+                    }
                     style={{
                       flexDirection: 'row',
                       alignItems: 'center',

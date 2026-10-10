@@ -6,10 +6,10 @@
  * because a row of three pills across 1400 pixels looks lost.
  */
 
-import { Pressable, View } from 'react-native';
 import { Link, usePathname, useRouter } from 'expo-router';
+import { Pressable, View } from 'react-native';
 import { useTheme } from '../theme/index';
-import { BodyStrong, Display, Label } from './text';
+import { Body, BodyStrong, Display, Label } from './text';
 
 export interface Destination {
   label: string;
@@ -53,15 +53,19 @@ export function TopPills() {
             accessibilityRole="tab"
             accessibilityState={{ selected: active }}
             style={{
-              paddingHorizontal: 20,
+              paddingHorizontal: 22,
               paddingVertical: 9,
               borderRadius: radius.pill,
-              backgroundColor: active ? colors.primary : 'transparent',
+              backgroundColor: active ? colors.accent : 'transparent',
             }}
           >
-            <BodyStrong style={{ color: active ? colors.onPrimary : colors.primary }}>
-              {destination.label}
-            </BodyStrong>
+            {active ? (
+              <BodyStrong style={{ color: colors.onAccent }}>{destination.label}</BodyStrong>
+            ) : (
+              // Inactive labels sit in the burgundy at normal weight, so the
+              // filled pill is the only thing shouting.
+              <Body style={{ color: colors.primary }}>{destination.label}</Body>
+            )}
           </Pressable>
         );
       })}
@@ -104,10 +108,10 @@ export function Sidebar() {
                   paddingHorizontal: 14,
                   paddingVertical: 11,
                   borderRadius: radius.pill,
-                  backgroundColor: active ? colors.primary : 'transparent',
+                  backgroundColor: active ? colors.accent : 'transparent',
                 }}
               >
-                <BodyStrong style={{ color: active ? colors.onPrimary : colors.ink }}>
+                <BodyStrong style={{ color: active ? colors.onAccent : colors.ink }}>
                   {destination.label}
                 </BodyStrong>
               </Pressable>

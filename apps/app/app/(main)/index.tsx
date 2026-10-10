@@ -6,17 +6,17 @@
  * appears when they reach for something that needs to be theirs.
  */
 
-import { useCallback } from 'react';
-import { ActivityIndicator, FlatList, RefreshControl, View } from 'react-native';
 import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
-import { api, ApiError, type FeedItem } from '../../src/lib/api';
-import { useTheme } from '../../src/theme/index';
-import { LookCard, ProductCard } from '../../src/components/cards';
-import { Body, Caption, Heading, Label, Title } from '../../src/components/text';
-import { Button } from '../../src/components/button';
-import { EmptyState } from '../../src/components/empty-state';
+import { useCallback } from 'react';
+import { ActivityIndicator, FlatList, RefreshControl, View } from 'react-native';
 import { useAuthGate } from '../../src/components/auth-gate';
+import { Button } from '../../src/components/button';
+import { LookCard, ProductCard } from '../../src/components/cards';
+import { EmptyState } from '../../src/components/empty-state';
+import { Body, Caption, Eyebrow, Heading } from '../../src/components/text';
+import { ApiError, api, type FeedItem } from '../../src/lib/api';
+import { useTheme } from '../../src/theme/index';
 
 export default function ForYouScreen() {
   const { colors, gutter, isWide } = useTheme();
@@ -63,7 +63,9 @@ export default function ForYouScreen() {
                 look={item.look}
                 onLike={() => like.mutate(item.look.id)}
                 onSave={() => save.mutate(item.look.id)}
-                onComment={() => router.push({ pathname: '/look/[id]', params: { id: item.look.id } })}
+                onComment={() =>
+                  router.push({ pathname: '/look/[id]', params: { id: item.look.id } })
+                }
               />
             </View>
           );
@@ -102,7 +104,7 @@ export default function ForYouScreen() {
                   gap: 10,
                 }}
               >
-                <Label tone="primary">Nima</Label>
+                <Eyebrow>Nima</Eyebrow>
                 <Heading>{item.title}</Heading>
                 <Body tone="muted">{item.body}</Body>
                 <Button
@@ -189,7 +191,9 @@ export default function ForYouScreen() {
         <EmptyState
           art="sparkle"
           message="Nothing here yet. Have a look around the shop and Nima will start learning what you like."
-          action={<Button label="Open the shop" full={false} onPress={() => router.push('/shop')} />}
+          action={
+            <Button label="Open the shop" full={false} onPress={() => router.push('/shop')} />
+          }
         />
       }
       ListFooterComponent={

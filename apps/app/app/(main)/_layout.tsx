@@ -12,13 +12,13 @@
  * layout, which is what Apple rejected the previous app for.
  */
 
-import { View } from 'react-native';
 import { Slot } from 'expo-router';
+import { View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useTheme } from '../../src/theme/index';
-import { Sidebar, TopPills } from '../../src/components/top-nav';
 import { AskNimaButton } from '../../src/components/ask-button';
+import { Sidebar, TopPills } from '../../src/components/top-nav';
 import { useRealtimeConnection } from '../../src/lib/realtime';
+import { useTheme } from '../../src/theme/index';
 
 export default function MainLayout() {
   const { colors, isCompact, layout } = useTheme();
@@ -47,9 +47,7 @@ export default function MainLayout() {
   }
 
   return (
-    <View
-      style={{ flex: 1, width: '100%', flexDirection: 'row', backgroundColor: colors.ground }}
-    >
+    <View style={{ flex: 1, width: '100%', flexDirection: 'row', backgroundColor: colors.ground }}>
       <Sidebar />
       <View style={{ flex: 1 }}>
         {/* The content column stays readable however wide the window gets. */}

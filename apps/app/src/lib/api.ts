@@ -10,7 +10,6 @@
  * the server.
  */
 
-import { Platform } from 'react-native';
 import type {
   cartSchema,
   creditBalanceSchema,
@@ -25,10 +24,11 @@ import type {
   tryOnJobSchema,
   userPhotoSchema,
 } from '@nima/contracts';
+import { Platform } from 'react-native';
 import type { z } from 'zod';
-import { API_URL } from './config';
 import { getAnonId } from './anon-id';
 import { authClient } from './auth';
+import { API_URL } from './config';
 
 export { API_URL };
 
@@ -64,7 +64,6 @@ export interface Page<T> {
   items: T[];
   nextCursor: string | null;
 }
-
 
 export class ApiError extends Error {
   constructor(
@@ -147,7 +146,16 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
   const payload = text ? (JSON.parse(text) as unknown) : null;
 
   if (!response.ok) {
-    const error = (payload as { error?: { code: string; message: string; fields?: Record<string, string[]>; requestId?: string } })?.error;
+    const error = (
+      payload as {
+        error?: {
+          code: string;
+          message: string;
+          fields?: Record<string, string[]>;
+          requestId?: string;
+        };
+      }
+    )?.error;
 
     throw new ApiError(
       response.status,
@@ -165,8 +173,11 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
 export const api = {
   bootstrap: () => request<Bootstrap>('/v1/session/bootstrap'),
 
-  feed: (params: { surface?: 'foryou' | 'explore' | 'following'; cursor?: string; limit?: number }) =>
-    request<Page<FeedItem>>('/v1/feed', { query: params }),
+  feed: (params: {
+    surface?: 'foryou' | 'explore' | 'following';
+    cursor?: string;
+    limit?: number;
+  }) => request<Page<FeedItem>>('/v1/feed', { query: params }),
 
   products: (params: {
     q?: string;
@@ -183,8 +194,7 @@ export const api = {
   likeLook: (id: string) =>
     request<{ liked: boolean; likeCount: number }>(`/v1/looks/${id}/like`, { method: 'POST' }),
 
-  saveLook: (id: string) =>
-    request<{ saved: boolean }>(`/v1/looks/${id}/save`, { method: 'POST' }),
+  saveLook: (id: string) => request<{ saved: boolean }>(`/v1/looks/${id}/save`, { method: 'POST' }),
 
   dismissLook: (id: string, reason?: string) =>
     request<{ ok: true }>(`/v1/looks/${id}/not-for-me`, {
@@ -225,13 +235,17 @@ export const api = {
 
   startTryOn: (body: {
     kind?: string;
-    items?: Array<{ slot: string; productId?: string; variantId?: string; wardrobeItemId?: string }>;
+    items?: Array<{
+      slot: string;
+      productId?: string;
+      variantId?: string;
+      wardrobeItemId?: string;
+    }>;
     photoId?: string;
     lookId?: string;
     parentJobId?: string;
     instruction?: string;
-  }) =>
-    request<Infer<typeof startTryOnResponseSchema>>('/v1/tryon', { method: 'POST', body }),
+  }) => request<Infer<typeof startTryOnResponseSchema>>('/v1/tryon', { method: 'POST', body }),
 
   tryOn: (id: string) => request<TryOnJob>(`/v1/tryon/${id}`),
 
@@ -254,9 +268,9 @@ export const api = {
     ),
 
   stylistThreads: () =>
-    request<Page<{ id: string; title: string | null; updatedAt: string; lastMessage: string | null }>>(
-      '/v1/stylist/threads',
-    ),
+    request<
+      Page<{ id: string; title: string | null; updatedAt: string; lastMessage: string | null }>
+    >('/v1/stylist/threads'),
 
   stylistThread: (id: string) =>
     request<{

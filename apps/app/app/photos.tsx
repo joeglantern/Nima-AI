@@ -9,23 +9,22 @@
  * published without being shared deliberately.
  */
 
-import { useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, View } from 'react-native';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { Stack, useRouter } from 'expo-router';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useState } from 'react';
+import { ActivityIndicator, Alert, Pressable, ScrollView, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
+import { EmptyState } from '../src/components/empty-state';
+import { Body, BodyStrong, Caption, Micro, Title } from '../src/components/text';
 import { api } from '../src/lib/api';
 import { useTheme } from '../src/theme/index';
-import { Body, BodyStrong, Caption, Label, Title } from '../src/components/text';
-import { Button } from '../src/components/button';
-import { EmptyState } from '../src/components/empty-state';
 
 type PhotoKind = 'FULL_BODY' | 'UPPER_BODY';
 
 export default function PhotosScreen() {
-  const { colors, gutter, radius } = useTheme();
+  const { colors, gutter } = useTheme();
   const router = useRouter();
   const queryClient = useQueryClient();
   const [busy, setBusy] = useState<PhotoKind | null>(null);
@@ -221,7 +220,7 @@ function PhotoGroup({
             ) : null}
 
             <Pressable onPress={() => onRemove(photo.id)} accessibilityLabel="Delete this photo">
-              <Label tone="critical">Delete</Label>
+              <Micro tone="critical">Delete</Micro>
             </Pressable>
           </View>
         ))}

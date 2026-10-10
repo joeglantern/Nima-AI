@@ -9,8 +9,8 @@
  * sign in gate: you can see what you are being asked to sign up for.
  */
 
-import { useEffect, type ReactNode } from 'react';
-import { Modal, Platform, Pressable, ScrollView, View, useWindowDimensions } from 'react-native';
+import { type ReactNode, useEffect } from 'react';
+import { Modal, Platform, Pressable, ScrollView, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme/index';
 import { Title } from './text';

@@ -9,16 +9,17 @@
  * because an empty profile that explains itself is better than a wall.
  */
 
+import { useQuery } from '@tanstack/react-query';
+import { Image } from 'expo-image';
 import { useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
-import { Image } from 'expo-image';
-import { useQuery } from '@tanstack/react-query';
+import Svg, { Circle, Path } from 'react-native-svg';
+import { useAuthGate } from '../../src/components/auth-gate';
+import { Button } from '../../src/components/button';
+import { type EmptyArt, EmptyState } from '../../src/components/empty-state';
+import { Body, BodyStrong, Caption, Eyebrow, Micro, Title } from '../../src/components/text';
 import { api } from '../../src/lib/api';
 import { useTheme } from '../../src/theme/index';
-import { Body, BodyStrong, Caption, Label, Title } from '../../src/components/text';
-import { Button } from '../../src/components/button';
-import { EmptyState, type EmptyArt } from '../../src/components/empty-state';
-import { useAuthGate } from '../../src/components/auth-gate';
 
 const TABS = [
   { key: 'looks', label: 'Looks', art: 'hanger' as EmptyArt, empty: 'Your looks will appear here' },
@@ -34,7 +35,12 @@ const TABS = [
     art: 'wardrobe' as EmptyArt,
     empty: 'Clothes you already own will appear here',
   },
-  { key: 'orders', label: 'Orders', art: 'cart' as EmptyArt, empty: 'Your orders will appear here' },
+  {
+    key: 'orders',
+    label: 'Orders',
+    art: 'cart' as EmptyArt,
+    empty: 'Your orders will appear here',
+  },
 ] as const;
 
 export default function StoreScreen() {
@@ -60,11 +66,11 @@ export default function StoreScreen() {
       contentContainerStyle={{ paddingBottom: 56, width: '100%' }}
     >
       <View style={{ paddingHorizontal: gutter, paddingTop: 8, gap: 18 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 14 }}>
           <View
             style={{
-              width: 84,
-              height: 84,
+              width: 88,
+              height: 88,
               borderRadius: 999,
               backgroundColor: colors.sunk,
               overflow: 'hidden',
@@ -80,33 +86,42 @@ export default function StoreScreen() {
             ) : null}
           </View>
 
-          <View style={{ flex: 1, gap: 6 }}>
-            <Title numberOfLines={1}>{isGuest ? 'Your Nima' : (user?.name ?? 'You')}</Title>
+          {/* The screens centre the name over the email and the credit pill. */}
+          <View style={{ flex: 1, alignItems: 'center', gap: 4, paddingTop: 4 }}>
+            <Title numberOfLines={1} align="center">
+              {isGuest ? 'Your Nima' : (user?.name ?? 'You')}
+            </Title>
 
             {isGuest ? (
-              <Caption>Sign in to keep your looks, wardrobe and orders</Caption>
+              <Caption align="center">Sign in to keep your looks, wardrobe and orders</Caption>
             ) : (
               <>
                 <Caption numberOfLines={1}>{user?.email ?? ''}</Caption>
-                <View
-                  style={{
-                    alignSelf: 'flex-start',
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    gap: 6,
-                    paddingHorizontal: 12,
-                    paddingVertical: 5,
-                    borderRadius: radius.pill,
-                    backgroundColor: colors.secondarySoft,
-                  }}
-                >
-                  <Label tone="secondary" style={{ letterSpacing: 1 }}>
-                    {`${bootstrap.data?.credits.balance ?? 0} credits`}
-                  </Label>
-                </View>
+                <CreditPill credits={bootstrap.data?.credits.balance ?? 0} />
               </>
             )}
           </View>
+
+          <Pressable
+            onPress={() => requireAccount('Create an account to change your settings')}
+            accessibilityRole="button"
+            accessibilityLabel="Settings"
+            style={{ alignItems: 'center', gap: 4, paddingTop: 4, width: 48 }}
+          >
+            <View
+              style={{
+                width: 34,
+                height: 34,
+                borderRadius: 999,
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: colors.espresso,
+              }}
+            >
+              <GearMark color={colors.onEspresso} hole={colors.espresso} />
+            </View>
+            <Micro tone="ink">Settings</Micro>
+          </Pressable>
         </View>
 
         {isGuest ? (
@@ -125,9 +140,7 @@ export default function StoreScreen() {
               gap: 8,
             }}
           >
-            <Label tone="primary">
-              {`Style profile ${user?.styleProfileCompletion ?? 0} percent`}
-            </Label>
+            <Eyebrow>{`Style profile ${user?.styleProfileCompletion ?? 0} percent`}</Eyebrow>
             <Body>Answer a few more and Nima gets sharper at picking for you.</Body>
           </View>
         ) : null}
@@ -140,9 +153,16 @@ export default function StoreScreen() {
           gap: 6,
           marginTop: 24,
           marginHorizontal: gutter,
-          padding: 4,
+          padding: 5,
           borderRadius: radius.pill,
-          backgroundColor: colors.sunk,
+          // White, so the row reads as a control sitting on the page rather
+          // than a dent in it. This is the one place the screens use a shadow.
+          backgroundColor: colors.surface,
+          shadowColor: '#2D2926',
+          shadowOpacity: 0.05,
+          shadowRadius: 10,
+          shadowOffset: { width: 0, height: 3 },
+          elevation: 2,
         }}
         accessibilityRole="tablist"
       >
@@ -222,5 +242,52 @@ export default function StoreScreen() {
         <EmptyState art={active.art} message={active.empty} />
       )}
     </ScrollView>
+  );
+}
+
+/**
+ * The credit balance.
+ *
+ * Green, as the screens draw it. A balance is a quantity you hold, not brand
+ * furniture, so it takes the semantic positive colour rather than the
+ * burgundy, and stays legible next to a name set in the brand serif.
+ */
+function CreditPill({ credits }: { credits: number }) {
+  const { colors, radius } = useTheme();
+
+  return (
+    <View
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        paddingHorizontal: 14,
+        paddingVertical: 6,
+        marginTop: 2,
+        borderRadius: radius.pill,
+        backgroundColor: colors.positiveSoft,
+        borderWidth: 1,
+        borderColor: colors.positive,
+      }}
+    >
+      <Svg width={13} height={13} viewBox="0 0 24 24">
+        <Path d="M13 2 4 14h7l-1 8 9-12h-7l1-8Z" fill={colors.positive} />
+      </Svg>
+      <BodyStrong style={{ fontSize: 14, color: colors.positive }}>
+        {`${credits.toLocaleString('en-KE')} credits`}
+      </BodyStrong>
+    </View>
+  );
+}
+
+function GearMark({ color, hole }: { color: string; hole: string }) {
+  return (
+    <Svg width={17} height={17} viewBox="0 0 24 24">
+      <Path
+        fill={color}
+        d="M10.4 2h3.2l.4 2.2c.6.2 1.1.5 1.6.8l2-1.1 2.3 2.3-1.1 2c.3.5.6 1 .8 1.6l2.2.4v3.2l-2.2.4c-.2.6-.5 1.1-.8 1.6l1.1 2-2.3 2.3-2-1.1c-.5.3-1 .6-1.6.8L13.6 22h-3.2l-.4-2.2a7 7 0 0 1-1.6-.8l-2 1.1-2.3-2.3 1.1-2c-.3-.5-.6-1-.8-1.6L2.2 13.6v-3.2l2.2-.4c.2-.6.5-1.1.8-1.6l-1.1-2 2.3-2.3 2 1.1c.5-.3 1-.6 1.6-.8L10.4 2Z"
+      />
+      <Circle cx={12} cy={12} r={3.2} fill={hole} />
+    </Svg>
   );
 }

@@ -16,9 +16,21 @@ export const light = {
   primary: '#5C2A33',
   primarySoft: '#F3E7E9',
   onPrimary: '#FAF8F5',
+  /**
+   * The lighter rose the screens use for the active navigation pill and the
+   * rings around profile highlights. Measured off `Design/2.png` and
+   * `Design/7.png`, where it is the one warm note against the burgundy.
+   */
+  accent: '#BA635F',
+  accentSoft: '#F3E8E5',
+  onAccent: '#FFFFF0',
   secondary: '#A67C52',
   secondarySoft: '#F5EDE3',
+  /** The deep brown of the sheet on the opening screen, `Design/1.png`. */
+  espresso: '#4D2A13',
+  onEspresso: '#FFFFF0',
   positive: '#2F7A4F',
+  positiveSoft: '#E4F6EC',
   caution: '#A5621B',
   critical: '#A63C32',
   scrim: 'rgba(45, 41, 38, 0.45)',
@@ -34,9 +46,15 @@ export const dark = {
   primary: '#A66B73',
   primarySoft: '#3A2529',
   onPrimary: '#1A1614',
+  accent: '#C97B76',
+  accentSoft: '#3B2A28',
+  onAccent: '#1A1614',
   secondary: '#C9A07A',
   secondarySoft: '#33271E',
+  espresso: '#2A1810',
+  onEspresso: '#F5F0E8',
   positive: '#7CC79A',
+  positiveSoft: '#1F3328',
   caution: '#E3AA6A',
   critical: '#EE8C80',
   scrim: 'rgba(0, 0, 0, 0.6)',
@@ -59,6 +77,14 @@ export const type = {
   body: { fontFamily: 'DMSans_400Regular', fontSize: 16, lineHeight: 24 },
   bodyStrong: { fontFamily: 'DMSans_600SemiBold', fontSize: 16, lineHeight: 24 },
   caption: { fontFamily: 'DMSans_400Regular', fontSize: 13, lineHeight: 18 },
+  /**
+   * The small sentence case labels the screens use under an icon and above a
+   * line of stylist copy: "Love it", "Saved", "Nima Says". They are DM Sans,
+   * not mono. Mono caps everywhere was the single biggest thing making the
+   * interface read as generated rather than drawn.
+   */
+  micro: { fontFamily: 'DMSans_500Medium', fontSize: 12, lineHeight: 15 },
+  eyebrow: { fontFamily: 'DMSans_600SemiBold', fontSize: 14, lineHeight: 20 },
   label: {
     fontFamily: 'JetBrainsMono_500Medium',
     fontSize: 12,
@@ -71,6 +97,8 @@ export const type = {
 export const radius = {
   card: 24,
   image: 20,
+  /** The small rounded square on the feed actions in `Design/5.png`. */
+  chip: 14,
   sheet: 28,
   pill: 999,
 } as const;

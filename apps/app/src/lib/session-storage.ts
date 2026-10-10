@@ -11,8 +11,8 @@
  * session just means signing in again.
  */
 
-import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
+import { Platform } from 'react-native';
 
 export interface SessionStorage {
   getItemAsync(key: string): Promise<string | null>;
@@ -99,5 +99,4 @@ const nativeStorage: SessionStorage = {
   },
 };
 
-export const sessionStorage: SessionStorage =
-  Platform.OS === 'web' ? webStorage : nativeStorage;
+export const sessionStorage: SessionStorage = Platform.OS === 'web' ? webStorage : nativeStorage;

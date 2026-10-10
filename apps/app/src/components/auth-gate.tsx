@@ -9,15 +9,15 @@
  * Email is a six digit code. There is no password anywhere in the app.
  */
 
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { createContext, type ReactNode, useCallback, useContext, useMemo, useState } from 'react';
 import { Platform, TextInput, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
-import { useQueryClient } from '@tanstack/react-query';
-import { Sheet } from './sheet';
-import { Button } from './button';
-import { Body, Caption, Title } from './text';
-import { useTheme } from '../theme/index';
 import { sendEmailCode, signInWithApple, signInWithGoogle, verifyEmailCode } from '../lib/auth';
+import { useTheme } from '../theme/index';
+import { Button } from './button';
+import { Sheet } from './sheet';
+import { Body, Caption, Title } from './text';
 
 interface GateState {
   /** Opens the sheet. The reason becomes the heading. */
@@ -64,10 +64,19 @@ function AppleMark({ color }: { color: string }) {
 function GoogleMark() {
   return (
     <Svg width={18} height={18} viewBox="0 0 24 24">
-      <Path fill="#4285F4" d="M23 12.3c0-.8-.1-1.6-.2-2.3H12v4.5h6.2a5.3 5.3 0 0 1-2.3 3.5v2.9h3.7c2.2-2 3.4-5 3.4-8.6Z" />
-      <Path fill="#34A853" d="M12 23.5c3.1 0 5.7-1 7.6-2.8l-3.7-2.9c-1 .7-2.3 1.1-3.9 1.1-3 0-5.5-2-6.4-4.7H1.8v3C3.7 21 7.6 23.5 12 23.5Z" />
+      <Path
+        fill="#4285F4"
+        d="M23 12.3c0-.8-.1-1.6-.2-2.3H12v4.5h6.2a5.3 5.3 0 0 1-2.3 3.5v2.9h3.7c2.2-2 3.4-5 3.4-8.6Z"
+      />
+      <Path
+        fill="#34A853"
+        d="M12 23.5c3.1 0 5.7-1 7.6-2.8l-3.7-2.9c-1 .7-2.3 1.1-3.9 1.1-3 0-5.5-2-6.4-4.7H1.8v3C3.7 21 7.6 23.5 12 23.5Z"
+      />
       <Path fill="#FBBC05" d="M5.6 14.2a6.9 6.9 0 0 1 0-4.4v-3H1.8a11.5 11.5 0 0 0 0 10.4l3.8-3Z" />
-      <Path fill="#EA4335" d="M12 5.1c1.7 0 3.2.6 4.4 1.7l3.3-3.3C17.7 1.6 15.1.5 12 .5 7.6.5 3.7 3 1.8 6.8l3.8 3c.9-2.7 3.4-4.7 6.4-4.7Z" />
+      <Path
+        fill="#EA4335"
+        d="M12 5.1c1.7 0 3.2.6 4.4 1.7l3.3-3.3C17.7 1.6 15.1.5 12 .5 7.6.5 3.7 3 1.8 6.8l3.8 3c.9-2.7 3.4-4.7 6.4-4.7Z"
+      />
     </Svg>
   );
 }
@@ -189,7 +198,12 @@ function AuthSheet({ reason, onClose }: { reason: string | null; onClose: () => 
             label="Send me a code"
             loading={busy}
             disabled={!email.includes('@')}
-            onPress={() => void run(() => sendEmailCode(email.trim()), () => setStep('code'))}
+            onPress={() =>
+              void run(
+                () => sendEmailCode(email.trim()),
+                () => setStep('code'),
+              )
+            }
           />
         </View>
       ) : null}

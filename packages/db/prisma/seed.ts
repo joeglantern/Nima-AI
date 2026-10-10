@@ -9,14 +9,17 @@
  * Safe to run repeatedly: everything is keyed by a stable slug or handle.
  */
 
-import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { config as loadDotenv } from 'dotenv';
-import { PrismaClient, type ProductCategory, type GarmentSlot } from '../generated/client/index.js';
-import { createSeedUploader, placeholderImage } from './seed-media.js';
+import { type GarmentSlot, PrismaClient, type ProductCategory } from '../generated/client/index.js';
+import { createSeedUploader, placeholderImage, placeholderShape } from './seed-media.js';
 
 // Configuration lives in one .env at the repository root.
-loadDotenv({ path: join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', '.env'), quiet: true });
+loadDotenv({
+  path: join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', '.env'),
+  quiet: true,
+});
 
 const prisma = new PrismaClient();
 
@@ -50,8 +53,7 @@ const SAMPLE_STORES = [
   {
     slug: 'kanzu-collective',
     name: 'Kanzu Collective',
-    about:
-      'Tailored African print and linen, cut and sewn in Nairobi. Made to order in five days.',
+    about: 'Tailored African print and linen, cut and sewn in Nairobi. Made to order in five days.',
     county: 'Nairobi',
     verified: true,
     products: [
@@ -75,7 +77,8 @@ const SAMPLE_STORES = [
         category: 'BOTTOM' as ProductCategory,
         slot: 'BOTTOM' as GarmentSlot,
         brand: 'Kanzu',
-        description: 'Light linen with a wide leg and a drawstring waist. Built for hot afternoons.',
+        description:
+          'Light linen with a wide leg and a drawstring waist. Built for hot afternoons.',
         colours: ['sand', 'olive', 'black'],
         tags: ['linen', 'relaxed', 'warm weather'],
         occasions: ['weekend', 'holiday'],
@@ -262,11 +265,17 @@ async function main(): Promise<void> {
       });
 
       // Give every product a placeholder so the grid can be judged for real.
-      const existingImage = await prisma.productImage.findFirst({ where: { productId: product.id } });
+      const existingImage = await prisma.productImage.findFirst({
+        where: { productId: product.id },
+      });
 
       if (!existingImage) {
         const key = `seed/products/${product.slug}.jpg`;
-        await upload(key, await placeholderImage(product.title, productSeed.brand, imageIndex));
+        // The shape is recorded so the shop grid can lay the tile out before
+        // the picture has downloaded, which is what keeps the masonry from
+        // jumping as the page fills.
+        const shape = placeholderShape(imageIndex);
+        await upload(key, await placeholderImage(imageIndex, shape));
         imageIndex += 1;
 
         await prisma.productImage.create({
@@ -276,8 +285,8 @@ async function main(): Promise<void> {
             processedKey: key,
             isPrimary: true,
             position: 0,
-            width: 900,
-            height: 1200,
+            width: shape.width,
+            height: shape.height,
           },
         });
       }
@@ -306,7 +315,7 @@ async function main(): Promise<void> {
 
   if (existingLooks === 0 && shirt && trouser && tee && cargo && sneaker) {
     const saturdayCover = 'seed/looks/saturday-in-town.jpg';
-    await upload(saturdayCover, await placeholderImage('Saturday in town', 'Curated look', 0, { width: 1080, height: 1350 }));
+    await upload(saturdayCover, await placeholderImage(1, { width: 1080, height: 1350 }));
 
     await prisma.look.create({
       data: {
@@ -332,7 +341,7 @@ async function main(): Promise<void> {
     });
 
     const weekendCover = 'seed/looks/weekend-uniform.jpg';
-    await upload(weekendCover, await placeholderImage('Weekend uniform', 'Curated look', 2, { width: 1080, height: 1350 }));
+    await upload(weekendCover, await placeholderImage(3, { width: 1080, height: 1350 }));
 
     await prisma.look.create({
       data: {

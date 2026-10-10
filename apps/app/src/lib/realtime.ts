@@ -9,11 +9,11 @@
  * the background.
  */
 
+import { type ServerFrame, serverFrameSchema } from '@nima/contracts';
 import { useEffect, useRef } from 'react';
-import { AppState, Platform, type AppStateStatus } from 'react-native';
-import { serverFrameSchema, type ServerFrame } from '@nima/contracts';
-import { API_URL } from './config';
+import { AppState, type AppStateStatus, Platform } from 'react-native';
 import { authClient } from './auth';
+import { API_URL } from './config';
 
 type Listener = (frame: ServerFrame) => void;
 
@@ -33,7 +33,10 @@ function emit(frame: ServerFrame): void {
 }
 
 async function connect(): Promise<void> {
-  if (socket && (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING)) {
+  if (
+    socket &&
+    (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING)
+  ) {
     return;
   }
 

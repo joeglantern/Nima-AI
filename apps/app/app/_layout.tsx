@@ -6,15 +6,6 @@
  * can ask for an account without owning the flow.
  */
 
-import { useEffect, useState } from 'react';
-import { View } from 'react-native';
-import { Stack, usePathname, useRouter } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
-import * as SplashScreen from 'expo-splash-screen';
-import * as SystemUI from 'expo-system-ui';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
   CormorantGaramond_500Medium,
   CormorantGaramond_600SemiBold,
@@ -32,13 +23,22 @@ import {
   JetBrainsMono_500Medium,
   useFonts as useJetBrains,
 } from '@expo-google-fonts/jetbrains-mono';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { Stack, usePathname, useRouter } from 'expo-router';
+import * as SplashScreen from 'expo-splash-screen';
+import { StatusBar } from 'expo-status-bar';
+import * as SystemUI from 'expo-system-ui';
+import { useEffect, useState } from 'react';
+import { View } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import '../global.css';
-import { ThemeProvider, useTheme } from '../src/theme/index';
 import { AuthGateProvider } from '../src/components/auth-gate';
+import { ApiError } from '../src/lib/api';
 import { ensureGuestSession } from '../src/lib/auth';
 import { hasSeenWelcome } from '../src/lib/first-run';
-import { ApiError } from '../src/lib/api';
+import { ThemeProvider, useTheme } from '../src/theme/index';
 
 void SplashScreen.preventAutoHideAsync();
 

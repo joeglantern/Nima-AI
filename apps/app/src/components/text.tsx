@@ -10,7 +10,7 @@
 import { Text as RNText, type TextProps as RNTextProps, type TextStyle } from 'react-native';
 import { useTheme } from '../theme/index';
 
-type Tone = 'ink' | 'muted' | 'primary' | 'secondary' | 'onPrimary' | 'critical';
+type Tone = 'ink' | 'muted' | 'primary' | 'accent' | 'secondary' | 'onPrimary' | 'critical';
 
 export interface TextProps extends RNTextProps {
   tone?: Tone;
@@ -25,6 +25,8 @@ function useTone(tone: Tone = 'ink'): string {
       return colors.muted;
     case 'primary':
       return colors.primary;
+    case 'accent':
+      return colors.accent;
     case 'secondary':
       return colors.secondary;
     case 'onPrimary':
@@ -73,7 +75,29 @@ export function Caption({ tone = 'muted', align, style, ...props }: TextProps) {
   return <RNText {...props} style={[type.caption, { color, textAlign: align }, style]} />;
 }
 
-/** Small uppercase labels: AI STYLIST, section eyebrows, data captions. */
+/**
+ * The small sentence case label under an icon: "Love it", "Saved".
+ */
+export function Micro({ tone = 'muted', align, style, ...props }: TextProps) {
+  const { type } = useTheme();
+  const color = useTone(tone);
+  return <RNText {...props} style={[type.micro, { color, textAlign: align }, style]} />;
+}
+
+/**
+ * The line that introduces a short piece of copy: "Nima Says" in the feed.
+ * Sentence case, DM Sans, the way it reads in `Design/5.png`.
+ */
+export function Eyebrow({ tone = 'primary', align, style, ...props }: TextProps) {
+  const { type } = useTheme();
+  const color = useTone(tone);
+  return <RNText {...props} style={[type.eyebrow, { color, textAlign: align }, style]} />;
+}
+
+/**
+ * Mono small caps. Kept for the wordmark's "AI STYLIST" and for data, which
+ * is all the brand book asks of it. Nothing in the interface chrome uses it.
+ */
 export function Label({ tone = 'muted', align, style, ...props }: TextProps) {
   const { type } = useTheme();
   const color = useTone(tone);
@@ -81,21 +105,13 @@ export function Label({ tone = 'muted', align, style, ...props }: TextProps) {
 }
 
 /** Prices. Tabular figures so columns line up. */
-export function Price({
-  cents,
-  style,
-  tone,
-  ...props
-}: TextProps & { cents: number }) {
+export function Price({ cents, style, tone, ...props }: TextProps & { cents: number }) {
   const { type } = useTheme();
   const color = useTone(tone);
   const shillings = Math.round(cents / 100);
 
   return (
-    <RNText
-      {...props}
-      style={[type.bodyStrong, { color, fontVariant: ['tabular-nums'] }, style]}
-    >
+    <RNText {...props} style={[type.bodyStrong, { color, fontVariant: ['tabular-nums'] }, style]}>
       {`KSh ${shillings.toLocaleString('en-KE')}`}
     </RNText>
   );

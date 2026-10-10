@@ -6,18 +6,35 @@
  * the screens.
  */
 
-import { Pressable, View } from 'react-native';
 import { Image } from 'expo-image';
 import { Link } from 'expo-router';
+import { Pressable, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import type { FeedItem, ProductCard as ProductCardData } from '../lib/api';
 import { useTheme } from '../theme/index';
-import { Body, Caption, Label, Price } from './text';
+import { Body, Caption, Eyebrow, Micro, Price } from './text';
 
 type LookCardData = Extract<FeedItem, { kind: 'look' }>['look'];
 
 /** A soft placeholder while the photo loads, in the brand ground colour. */
 const BLUR = 'L6Pj0^jE.AyE_3t7t7R**0o#DgR4';
+
+/**
+ * The shop grid in `Design/2.png` is a masonry: tiles share a width and keep
+ * their own height, so a long coat is taller than a pair of sunglasses and
+ * the two columns never line up. The shape comes from the photograph itself
+ * when the uploader gave us its size, clamped so one odd crop cannot leave a
+ * column metres taller than its neighbour.
+ */
+const TALLEST = 0.62; // 5:8
+const WIDEST = 0.9; // close to square
+
+function tileRatio(image: { width: number | null; height: number | null } | null): number {
+  if (image?.width && image.height) {
+    return Math.min(WIDEST, Math.max(TALLEST, image.width / image.height));
+  }
+  return 3 / 4;
+}
 
 export function ProductCard({ product }: { product: ProductCardData }) {
   const { colors, radius } = useTheme();
@@ -30,7 +47,7 @@ export function ProductCard({ product }: { product: ProductCardData }) {
             borderRadius: radius.image,
             overflow: 'hidden',
             backgroundColor: colors.sunk,
-            aspectRatio: 3 / 4,
+            aspectRatio: tileRatio(product.image),
           }}
         >
           {product.image ? (
@@ -52,11 +69,11 @@ export function ProductCard({ product }: { product: ProductCardData }) {
                 left: 10,
                 backgroundColor: colors.ground,
                 paddingHorizontal: 10,
-                paddingVertical: 4,
+                paddingVertical: 5,
                 borderRadius: radius.pill,
               }}
             >
-              <Label>Promoted</Label>
+              <Micro>Promoted</Micro>
             </View>
           ) : null}
         </View>
@@ -74,7 +91,15 @@ export function ProductCard({ product }: { product: ProductCardData }) {
   );
 }
 
-function ActionIcon({ name, filled, color }: { name: 'heart' | 'bookmark' | 'comment'; filled: boolean; color: string }) {
+function ActionIcon({
+  name,
+  filled,
+  color,
+}: {
+  name: 'heart' | 'bookmark' | 'comment';
+  filled: boolean;
+  color: string;
+}) {
   const common = {
     stroke: color,
     strokeWidth: 1.6,
@@ -86,7 +111,10 @@ function ActionIcon({ name, filled, color }: { name: 'heart' | 'bookmark' | 'com
   if (name === 'heart') {
     return (
       <Svg width={20} height={20} viewBox="0 0 24 24">
-        <Path d="M12 20s-7-4.4-7-9.4A4.1 4.1 0 0 1 12 7a4.1 4.1 0 0 1 7 3.6c0 5-7 9.4-7 9.4Z" {...common} />
+        <Path
+          d="M12 20s-7-4.4-7-9.4A4.1 4.1 0 0 1 12 7a4.1 4.1 0 0 1 7 3.6c0 5-7 9.4-7 9.4Z"
+          {...common}
+        />
       </Svg>
     );
   }
@@ -116,7 +144,7 @@ export interface LookCardProps {
 }
 
 export function LookCard({ look, onLike, onSave, onComment, variant = 'feed' }: LookCardProps) {
-  const { colors, radius, isWide } = useTheme();
+  const { colors, radius, isWide, scheme } = useTheme();
   const feed = variant === 'feed';
 
   return (
@@ -148,28 +176,39 @@ export function LookCard({ look, onLike, onSave, onComment, variant = 'feed' }: 
 
       {feed ? (
         <>
-          <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 10 }}>
-            <ActionPill
+          <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 12 }}>
+            <ActionChip
               label={look.likedByMe ? 'Loved' : 'Love it'}
-              icon={<ActionIcon name="heart" filled={look.likedByMe} color={colors.primary} />}
+              tint="love"
+              icon={<ActionIcon name="heart" filled={look.likedByMe} color={colors.accent} />}
               onPress={onLike}
             />
-            <ActionPill
+            <ActionChip
               label={look.savedByMe ? 'Saved' : 'Save'}
+              tint="save"
               icon={<ActionIcon name="bookmark" filled={look.savedByMe} color={colors.primary} />}
               onPress={onSave}
             />
-            <ActionPill
+            <ActionChip
               label="Comments"
-              icon={<ActionIcon name="comment" filled={false} color={colors.primary} />}
+              tint="comment"
+              icon={<ActionIcon name="comment" filled={false} color={colors.secondary} />}
               onPress={onComment}
             />
           </View>
 
           {look.nimaSays ? (
-            <View style={{ gap: 4 }}>
-              <Label tone="primary">Nima says</Label>
-              <Body>{look.nimaSays}</Body>
+            <View style={{ gap: 2 }}>
+              <Eyebrow>Nima Says</Eyebrow>
+              {/*
+                The screens tint the stylist's line towards the burgundy so
+                it reads as Nima speaking. In dark mode the burgundy is
+                already a light rose, and tinting the paragraph too would
+                leave it floating, so there it stays as ordinary text.
+              */}
+              <Body style={{ color: scheme === 'dark' ? colors.ink : colors.primary }}>
+                {look.nimaSays}
+              </Body>
             </View>
           ) : null}
         </>
@@ -183,16 +222,28 @@ export function LookCard({ look, onLike, onSave, onComment, variant = 'feed' }: 
   );
 }
 
-function ActionPill({
+/**
+ * One of the three actions under a look.
+ *
+ * `Design/5.png` draws them as small rounded squares with a soft fill rather
+ * than outlines, each tinted towards its own meaning: rose for love, a warm
+ * neutral for saved, sand for comments.
+ */
+function ActionChip({
   label,
   icon,
+  tint,
   onPress,
 }: {
   label: string;
   icon: React.ReactNode;
+  tint: 'love' | 'save' | 'comment';
   onPress?: () => void;
 }) {
   const { colors, radius } = useTheme();
+
+  const fill =
+    tint === 'love' ? colors.accentSoft : tint === 'save' ? colors.sunk : colors.secondarySoft;
 
   return (
     <Pressable
@@ -201,18 +252,18 @@ function ActionPill({
       accessibilityLabel={label}
       style={({ pressed }) => ({
         alignItems: 'center',
-        gap: 4,
-        paddingHorizontal: 14,
-        paddingVertical: 8,
-        borderRadius: radius.image,
-        borderWidth: 1,
-        borderColor: colors.line,
-        backgroundColor: pressed ? colors.sunk : 'transparent',
-        minWidth: 76,
+        justifyContent: 'center',
+        gap: 3,
+        paddingHorizontal: 12,
+        paddingVertical: 9,
+        borderRadius: radius.chip,
+        backgroundColor: fill,
+        opacity: pressed ? 0.75 : 1,
+        minWidth: 84,
       })}
     >
       {icon}
-      <Label style={{ fontSize: 10, letterSpacing: 1 }}>{label}</Label>
+      <Micro tone="ink">{label}</Micro>
     </Pressable>
   );
 }

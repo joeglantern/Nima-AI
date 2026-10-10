@@ -9,6 +9,9 @@
  * prices. Nothing here is invented by the model.
  */
 
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { Image } from 'expo-image';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -19,16 +22,13 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { Image } from 'expo-image';
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { useMutation, useQuery } from '@tanstack/react-query';
 import Svg, { Path } from 'react-native-svg';
-import { api, ApiError, type ProductCard as ProductCardData } from '../src/lib/api';
+import { useAuthGate } from '../src/components/auth-gate';
+import { ProductCard } from '../src/components/cards';
+import { Body, Caption, Eyebrow, Title } from '../src/components/text';
+import { ApiError, api, type ProductCard as ProductCardData } from '../src/lib/api';
 import { useServerFrame } from '../src/lib/realtime';
 import { useTheme } from '../src/theme/index';
-import { Body, Caption, Label, Price, Title } from '../src/components/text';
-import { ProductCard } from '../src/components/cards';
-import { useAuthGate } from '../src/components/auth-gate';
 
 interface Turn {
   id: string;
@@ -59,12 +59,9 @@ export default function AskScreen() {
 
     setTurns((current) => {
       const last = current.at(-1);
-      if (!last || last.role !== 'nima' || !last.streaming) return current;
+      if (last?.role !== 'nima' || !last.streaming) return current;
 
-      return [
-        ...current.slice(0, -1),
-        { ...last, text: last.text + frame.text, note: null },
-      ];
+      return [...current.slice(0, -1), { ...last, text: last.text + frame.text, note: null }];
     });
   });
 
@@ -73,7 +70,7 @@ export default function AskScreen() {
 
     setTurns((current) => {
       const last = current.at(-1);
-      if (!last || last.role !== 'nima') return current;
+      if (last?.role !== 'nima') return current;
       return [...current.slice(0, -1), { ...last, note: frame.note }];
     });
   });
@@ -145,10 +142,15 @@ export default function AskScreen() {
     ask.mutate(text);
   }
 
+  // A new turn, or another word of one, should bring the bottom back into
+  // view. The conversation is the trigger even though nothing reads it here.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: turns is the trigger
   useEffect(() => {
     const timer = setTimeout(() => scroller.current?.scrollToEnd({ animated: true }), 60);
     return () => clearTimeout(timer);
   }, [turns]);
+
+  const ready = Boolean(draft.trim()) && !ask.isPending;
 
   return (
     <>
@@ -182,7 +184,12 @@ export default function AskScreen() {
             }}
           >
             <Svg width={16} height={16} viewBox="0 0 24 24">
-              <Path d="m7 7 10 10M17 7 7 17" stroke={colors.ink} strokeWidth={1.8} strokeLinecap="round" />
+              <Path
+                d="m7 7 10 10M17 7 7 17"
+                stroke={colors.ink}
+                strokeWidth={1.8}
+                strokeLinecap="round"
+              />
             </Svg>
           </Pressable>
 
@@ -257,7 +264,7 @@ export default function AskScreen() {
                 </View>
               ) : (
                 <View style={{ gap: 10, maxWidth: '95%' }}>
-                  <Label tone="primary">Nima</Label>
+                  <Eyebrow>Nima</Eyebrow>
 
                   {turn.note ? (
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
@@ -337,14 +344,15 @@ export default function AskScreen() {
               borderRadius: 999,
               alignItems: 'center',
               justifyContent: 'center',
-              backgroundColor: colors.primary,
-              opacity: !draft.trim() || ask.isPending ? 0.5 : 1,
+              // Empty box: the button steps back to a neutral rather than a
+              // faded burgundy, which reads as a rendering fault.
+              backgroundColor: ready ? colors.primary : colors.sunk,
             }}
           >
             <Svg width={20} height={20} viewBox="0 0 24 24">
               <Path
                 d="M5 12h13M12 5l7 7-7 7"
-                stroke={colors.onPrimary}
+                stroke={ready ? colors.onPrimary : colors.muted}
                 strokeWidth={1.9}
                 strokeLinecap="round"
                 strokeLinejoin="round"
