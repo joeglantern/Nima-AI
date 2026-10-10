@@ -15,6 +15,8 @@ import type {
   checkoutSchema,
   creditBalanceSchema,
   feedItemSchema,
+  lookbookEntrySchema,
+  lookbookSchema,
   lookDetailSchema,
   orderSchema,
   pickupPointSchema,
@@ -26,6 +28,7 @@ import type {
   styleProfileSchema,
   tryOnJobSchema,
   userPhotoSchema,
+  wardrobeItemSchema,
 } from '@nima/contracts';
 import { Platform } from 'react-native';
 import type { z } from 'zod';
@@ -51,6 +54,9 @@ export type Cart = Infer<typeof cartSchema>;
 export type Order = Infer<typeof orderSchema>;
 export type Checkout = Infer<typeof checkoutSchema>;
 export type PickupPoint = Infer<typeof pickupPointSchema>;
+export type WardrobeItem = Infer<typeof wardrobeItemSchema>;
+export type Lookbook = Infer<typeof lookbookSchema>;
+export type LookbookEntry = Infer<typeof lookbookEntrySchema>;
 
 export interface Bootstrap {
   user: SessionUser | null;
@@ -318,6 +324,42 @@ export const api = {
     request<{ requestedAt: string; graceDays: number; message: string }>('/v1/profile/delete', {
       method: 'POST',
     }),
+
+  wardrobe: (params: { cursor?: string; limit?: number; category?: string } = {}) =>
+    request<Page<WardrobeItem> & { counts: Record<string, number> }>('/v1/wardrobe', {
+      query: params,
+    }),
+
+  addWardrobeItem: (body: {
+    storageKey: string;
+    label?: string | null;
+    category?: string;
+    slot?: string;
+  }) => request<WardrobeItem>('/v1/wardrobe', { method: 'POST', body }),
+
+  updateWardrobeItem: (id: string, body: { label?: string | null; category?: string }) =>
+    request<WardrobeItem>(`/v1/wardrobe/${id}`, { method: 'PATCH', body }),
+
+  removeWardrobeItem: (id: string) => request<void>(`/v1/wardrobe/${id}`, { method: 'DELETE' }),
+
+  lookbooks: (params: { cursor?: string; limit?: number } = {}) =>
+    request<Page<Lookbook>>('/v1/lookbooks', { query: params }),
+
+  createLookbook: (body: { title: string; occasion?: string | null }) =>
+    request<Lookbook>('/v1/lookbooks', { method: 'POST', body }),
+
+  lookbook: (id: string) =>
+    request<{ lookbook: Lookbook; entries: LookbookEntry[] }>(`/v1/lookbooks/${id}`),
+
+  addToLookbook: (
+    id: string,
+    body: { lookId?: string; productId?: string; wardrobeItemId?: string; note?: string },
+  ) => request<{ id: string }>(`/v1/lookbooks/${id}/entries`, { method: 'POST', body }),
+
+  removeFromLookbook: (id: string, entryId: string) =>
+    request<void>(`/v1/lookbooks/${id}/entries/${entryId}`, { method: 'DELETE' }),
+
+  deleteLookbook: (id: string) => request<void>(`/v1/lookbooks/${id}`, { method: 'DELETE' }),
 
   cart: () => request<Cart>('/v1/cart'),
 

@@ -140,6 +140,7 @@ function Shell({ showWelcome }: { showWelcome: boolean }) {
         <Stack.Screen name="product/[id]" options={{ presentation: 'card' }} />
         <Stack.Screen name="look/[id]" options={{ presentation: 'card' }} />
         <Stack.Screen name="order/[id]" options={{ presentation: 'card' }} />
+        <Stack.Screen name="lookbook/[id]" options={{ presentation: 'card' }} />
         <Stack.Screen name="style" options={{ presentation: 'modal' }} />
         <Stack.Screen name="photos" options={{ presentation: 'modal' }} />
         <Stack.Screen name="settings" options={{ presentation: 'card' }} />

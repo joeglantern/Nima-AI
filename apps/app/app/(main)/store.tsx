@@ -18,7 +18,9 @@ import Svg, { Circle, Path } from 'react-native-svg';
 import { useAuthGate } from '../../src/components/auth-gate';
 import { Button } from '../../src/components/button';
 import { type EmptyArt, EmptyState } from '../../src/components/empty-state';
+import { LookbooksTab } from '../../src/components/lookbooks-tab';
 import { Body, BodyStrong, Caption, Eyebrow, Micro, Price, Title } from '../../src/components/text';
+import { WardrobeTab } from '../../src/components/wardrobe-tab';
 import { api } from '../../src/lib/api';
 import { elevation } from '../../src/theme/elevation';
 import { useTheme } from '../../src/theme/index';
@@ -212,7 +214,13 @@ export default function StoreScreen() {
         })}
       </View>
 
-      {tab === 'orders' && (orders.data?.items.length ?? 0) > 0 ? (
+      {isGuest ? (
+        <EmptyState art={active.art} message={active.empty} />
+      ) : tab === 'wardrobe' ? (
+        <WardrobeTab />
+      ) : tab === 'lookbooks' ? (
+        <LookbooksTab />
+      ) : tab === 'orders' && (orders.data?.items.length ?? 0) > 0 ? (
         <View style={{ paddingHorizontal: gutter, paddingTop: 24, gap: 12 }}>
           {orders.data?.items.map((placed) => (
             <Pressable
