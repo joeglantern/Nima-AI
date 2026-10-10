@@ -13,19 +13,9 @@ import { Pressable, ScrollView, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { Button } from '../src/components/button';
 import { Body, BodyStrong, Caption, Eyebrow, Title } from '../src/components/text';
+import { VibeTiles } from '../src/components/vibe-tiles';
 import { api } from '../src/lib/api';
 import { useTheme } from '../src/theme/index';
-
-const AESTHETICS = [
-  'Smart casual',
-  'Streetwear',
-  'Heritage',
-  'Minimal',
-  'Elegant',
-  'Sporty',
-  'Bold colour',
-  'Vintage',
-];
 
 const COLOURS = [
   'Black',
@@ -126,8 +116,7 @@ export default function StyleScreen() {
         </View>
 
         <Section title="Styles you reach for">
-          <Chips
-            options={AESTHETICS}
+          <VibeTiles
             selected={current.aesthetics}
             onToggle={(value) => {
               const next = toggle(current.aesthetics, value);

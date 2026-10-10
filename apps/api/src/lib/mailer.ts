@@ -100,14 +100,25 @@ export function createMailer(env: Env, log?: MailLogger): Mailer {
         throw new MailNotSentError('That address was refused by the mail server', to);
       }
 
+      /*
+       * In development the mail server is Mailpit on this machine, so a
+       * code addressed to a real inbox never leaves the laptop. Saying
+       * where it actually went saves the half hour spent refreshing Gmail
+       * and concluding that sign in is broken.
+       */
+      const caught = env.SMTP_HOST === 'localhost' || env.SMTP_HOST === '127.0.0.1';
+
       log?.info(
         {
           kind,
           to: maskEmail(to),
           messageId: result.messageId,
           ms: Date.now() - started,
+          ...(caught ? { readItAt: 'http://localhost:8060' } : {}),
         },
-        'Email accepted by the mail server',
+        caught
+          ? 'Email caught by Mailpit, it did not leave this machine'
+          : 'Email accepted by the mail server',
       );
     } catch (error) {
       if (error instanceof MailNotSentError) throw error;

@@ -161,3 +161,50 @@ Save as `placeholder-product.png`, `placeholder-store.png`,
   interface undercut that.
 - **Icons for the interface.** Those are drawn in code so they take the theme
   colour and stay sharp at every size.
+
+### Where the line actually falls
+
+The first rule is about what a shopper sees, not about what a developer
+looks at while building. A seeded shop of seven grey rectangles cannot be
+judged: you cannot tell whether the masonry reads, whether a tile fights the
+title under it, or whether a dress and a pair of shoes tell apart at a
+glance.
+
+So the seed uses the eight outfit drawings from Batch 4, and that is
+allowed because every part of it is true:
+
+- They are **drawings**, plainly. Nobody mistakes a flat illustration for a
+  photograph of a real garment.
+- They live behind a **`seed/` key** and the seed is the only thing that
+  writes one.
+- No drawing is ever attached to a real seller's listing.
+
+Where there is no drawing for a category, sunglasses, a bag, a necklace,
+the seed uses `placeholder-product.png`, the faint outline that means **no
+photo yet**. That is the honest answer. Putting a jumper behind "Round frame
+sunglasses" would be the thing this section is warning about, in miniature.
+
+---
+
+## Cutting the sheets up
+
+An image model returns a contact sheet: several pieces laid out on one
+square. `node scripts/extract-assets.mjs` cuts them into the files above.
+
+It is worth reading before adding a batch, because three things make a bad
+slice very easy and all three have already happened here:
+
+- **A painted checkerboard is not transparency.** Two of the sheets came
+  back with the grey and white squares that mean "transparent" in an editor
+  drawn in as pixels. Cropping straight would bake a chessboard into the
+  asset.
+- **A halo is not a subject.** The mascot sheet carries a fringe of white
+  speckle at alpha 1 out of 255: invisible in the file, and loud in a
+  bounding box measured without thresholding first.
+- **A sparkle is not part of the egg.** The mascot and the sparkles around
+  it are separate islands of pixels, so taking the largest island alone
+  slices the sparkles off at the edge of the character. Nearby pieces are
+  grouped before anything is cut.
+
+Nothing is stretched. Every piece is fitted inside its target size with its
+own proportions kept.

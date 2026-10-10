@@ -78,6 +78,15 @@ Nima uses an unusual range on purpose, so several projects can run at once.
 
 ## Signing in while developing
 
+**Codes do not reach your real inbox.** Development sends through Mailpit on
+this machine, so a code addressed to your Gmail is caught at
+**http://localhost:8060** and goes no further. The API log says so on every
+send, with the link. Nothing is broken; it is the point of Mailpit.
+
+To get a code in a real inbox, run against the deployed backend with
+`pnpm live`, which sends through the shared mailbox.
+
+
 There are no passwords. Ask for a code, then read it from Mailpit:
 
 ```bash

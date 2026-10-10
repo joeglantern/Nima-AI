@@ -275,7 +275,15 @@ async function main(): Promise<void> {
         // the picture has downloaded, which is what keeps the masonry from
         // jumping as the page fills.
         const shape = placeholderShape(imageIndex);
-        await upload(key, await placeholderImage(imageIndex, shape));
+        await upload(
+          key,
+          await placeholderImage({
+            index: imageIndex,
+            slug: product.slug,
+            category: product.category,
+            size: shape,
+          }),
+        );
         imageIndex += 1;
 
         await prisma.productImage.create({
@@ -315,7 +323,14 @@ async function main(): Promise<void> {
 
   if (existingLooks === 0 && shirt && trouser && tee && cargo && sneaker) {
     const saturdayCover = 'seed/looks/saturday-in-town.jpg';
-    await upload(saturdayCover, await placeholderImage(1, { width: 1080, height: 1350 }));
+    await upload(
+      saturdayCover,
+      await placeholderImage({
+        index: 0,
+        slug: 'look-saturday',
+        size: { width: 1080, height: 1350 },
+      }),
+    );
 
     await prisma.look.create({
       data: {
@@ -341,7 +356,14 @@ async function main(): Promise<void> {
     });
 
     const weekendCover = 'seed/looks/weekend-uniform.jpg';
-    await upload(weekendCover, await placeholderImage(3, { width: 1080, height: 1350 }));
+    await upload(
+      weekendCover,
+      await placeholderImage({
+        index: 1,
+        slug: 'look-weekend',
+        size: { width: 1080, height: 1350 },
+      }),
+    );
 
     await prisma.look.create({
       data: {

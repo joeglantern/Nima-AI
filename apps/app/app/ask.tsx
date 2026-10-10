@@ -214,7 +214,7 @@ export default function AskScreen() {
           {turns.length === 0 ? (
             <View style={{ gap: 18, paddingTop: 24 }}>
               <View style={{ alignItems: 'center', gap: 14 }}>
-                <Mascot size={108} mood="happy" sparkles={false} />
+                <Mascot size={112} mood="thinking" />
                 <Body tone="muted" align="center" style={{ maxWidth: 320 }}>
                   Tell me where you are going, or what you already own, and I will work with that.
                 </Body>

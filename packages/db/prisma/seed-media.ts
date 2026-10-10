@@ -1,47 +1,88 @@
 /**
- * Placeholder imagery for development.
+ * Imagery for the development seed.
  *
- * Real photography comes from sellers. Until then the seed needs something
- * to render, and a blank grey box makes it impossible to judge layout.
+ * Real photographs come from sellers. Until there are any, the seed needs
+ * something to render, and a grid of grey rectangles cannot be judged: you
+ * cannot see whether the masonry reads, whether a tile fights the title
+ * under it, or whether a dress and a pair of shoes tell apart at a glance.
  *
- * Two rules these follow, learned from looking at the grid next to the
- * screens in `Design/`:
- *
- *   1. No text in the picture. A tile that shouts its own name reads as a
- *      mockup, and the title is already set underneath it.
- *   2. Not every photo is the same shape. Sellers upload what their camera
- *      gave them, so the heights vary and the masonry staggers. A seed where
- *      every image is 3:4 makes a grid look like a spreadsheet.
- *
- * They are never created outside development.
+ * So it uses the illustrated garments in `seed-assets/`, which were drawn
+ * for this and are obviously drawings. They are not photographs and must
+ * never be passed off as a seller's product. They live behind a `seed/`
+ * key, the seed is the only thing that writes them, and `docs/ASSETS.md`
+ * says why that line matters in a shopping app.
  */
 
+import { readFile } from 'node:fs/promises';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import sharp from 'sharp';
 
+const assets = join(dirname(fileURLToPath(import.meta.url)), 'seed-assets');
+
 /**
- * Muted warm neutrals, with two brand tints among them.
+ * Which drawing stands in for which product.
  *
- * Studio backdrops, roughly: the tones a garment is usually shot against.
- * Full strength burgundy on a whole tile reads as a colour swatch, not as a
- * photograph, so the brand colours appear here only as washes.
+ * By slug where there is an obvious match, so the ankara shirt gets the
+ * ankara shirt, and by category otherwise. Getting this right is most of
+ * what makes the seeded shop look like a shop.
  */
-const WASHES = [
-  { top: '#E8DED2', bottom: '#CDBCAA' },
-  { top: '#F1EAE2', bottom: '#D8C8B8' },
-  { top: '#DED3CA', bottom: '#BBA897' },
-  { top: '#F3E7E6', bottom: '#D8BCBA' },
-  { top: '#E6E2DA', bottom: '#C4BCAF' },
-  { top: '#EFE2D3', bottom: '#CBAE8E' },
-  { top: '#E4DCD6', bottom: '#B9A79C' },
+const BY_SLUG: Record<string, string> = {
+  'ankara-panel-shirt': 'garment-heritage',
+  'linen-drawstring-trouser': 'garment-minimal',
+  'kitenge-wrap-dress': 'garment-elegant',
+  // Both of these are in the streetwear outfit, which is where they came
+  // from, so sharing a drawing is the truthful answer rather than a clash.
+  'boxy-logo-tee': 'garment-streetwear',
+  'cargo-utility-pant': 'garment-streetwear',
+  'suede-court-sneaker': 'garment-sporty',
+  // The two curated looks on the feed, which are whole outfits.
+  'look-saturday': 'garment-smart-casual',
+  'look-weekend': 'garment-vintage',
+};
+
+/**
+ * Categories with no drawing of their own.
+ *
+ * The sheet is eight outfits, so there is nothing for sunglasses, a bag or
+ * a necklace. Putting a jumper behind "Round frame sunglasses" is worse
+ * than admitting there is no picture: the faint outline says "no photo
+ * yet", which is true, and it is the same placeholder a real listing gets
+ * before the seller uploads anything.
+ */
+const NO_DRAWING = new Set(['EYEWEAR', 'JEWELLERY', 'BAG', 'HEADWEAR', 'ACCESSORY']);
+
+const BY_CATEGORY: Record<string, string> = {
+  TOP: 'garment-smart-casual',
+  BOTTOM: 'garment-streetwear',
+  DRESS: 'garment-elegant',
+  OUTERWEAR: 'garment-bold',
+  SHOES: 'garment-sporty',
+  BAG: 'no-photo',
+  JEWELLERY: 'no-photo',
+  EYEWEAR: 'no-photo',
+  HEADWEAR: 'no-photo',
+  ACCESSORY: 'no-photo',
+};
+
+const EVERY = [
+  'garment-smart-casual',
+  'garment-streetwear',
+  'garment-heritage',
+  'garment-minimal',
+  'garment-elegant',
+  'garment-sporty',
+  'garment-bold',
+  'garment-vintage',
 ];
 
 /**
  * The shapes a photograph comes in.
  *
- * Portrait, because clothes are. The spread is deliberate: the shortest and
- * the tallest differ by about a third, which is what makes two columns stop
- * lining up.
+ * Portrait, because clothes are. The spread is deliberate: the shortest
+ * and the tallest differ by about a third, which is what stops two columns
+ * of a masonry lining up and reading as a spreadsheet.
  */
 const SHAPES = [
   { width: 900, height: 1125 },
@@ -52,53 +93,50 @@ const SHAPES = [
   { width: 900, height: 1260 },
 ];
 
-/** The shape the seed should store for image number `index`. */
 export function placeholderShape(index: number): { width: number; height: number } {
   return SHAPES[index % SHAPES.length] ?? { width: 900, height: 1200 };
 }
 
+export interface PlaceholderInput {
+  index: number;
+  slug?: string;
+  category?: string;
+  size?: { width: number; height: number };
+}
+
 /**
- * One placeholder photograph.
+ * One stand in photograph.
  *
- * A soft wash with a hanger drawn faintly over it, so it is obvious at a
- * glance that the picture has not arrived yet without the tile turning into
- * a label.
+ * The drawing is covered to the shape asked for rather than stretched, and
+ * taken from the middle, which is where the garment sits on every one of
+ * these tiles.
  */
-export async function placeholderImage(
-  index: number,
-  size: { width: number; height: number } = placeholderShape(index),
-): Promise<Buffer> {
-  const wash = WASHES[index % WASHES.length] ?? { top: '#E8DED2', bottom: '#CDBCAA' };
+export async function placeholderImage(input: PlaceholderInput): Promise<Buffer> {
+  const { index, slug, category } = input;
+  const size = input.size ?? placeholderShape(index);
 
-  // The hanger sits a little above centre, where a garment's shoulders would.
-  const scale = Math.min(size.width, size.height) * 0.0042;
-  const centreX = size.width / 2;
-  const centreY = size.height * 0.46;
+  const name =
+    (slug ? BY_SLUG[slug] : undefined) ??
+    (category && NO_DRAWING.has(category) ? 'no-photo' : undefined) ??
+    (category ? BY_CATEGORY[category] : undefined) ??
+    EVERY[index % EVERY.length] ??
+    'garment-smart-casual';
 
-  const svg = `
-    <svg width="${size.width}" height="${size.height}" xmlns="http://www.w3.org/2000/svg">
-      <defs>
-        <linearGradient id="wash" x1="0" y1="0" x2="0.35" y2="1">
-          <stop offset="0%" stop-color="${wash.top}"/>
-          <stop offset="100%" stop-color="${wash.bottom}"/>
-        </linearGradient>
-      </defs>
-      <rect width="100%" height="100%" fill="url(#wash)"/>
-      <g
-        transform="translate(${centreX} ${centreY}) scale(${scale}) translate(-48 -48)"
-        fill="none"
-        stroke="#2D2926"
-        stroke-opacity="0.14"
-        stroke-width="3"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-      >
-        <path d="M48 30a7 7 0 1 1 7 7c-4 0-7 2-7 6v3"/>
-        <path d="M48 46 16 68c-3 2-2 6 2 6h60c4 0 5-4 2-6L48 46Z"/>
-      </g>
-    </svg>`;
+  const art = await readFile(join(assets, `${name}.png`));
 
-  return sharp(Buffer.from(svg)).jpeg({ quality: 84 }).toBuffer();
+  return sharp(art)
+    .resize(size.width, size.height, { fit: 'cover', position: 'centre' })
+    .jpeg({ quality: 86 })
+    .toBuffer();
+}
+
+/** The gold circle with a storefront in it, for a shop with no logo yet. */
+export async function placeholderStoreLogo(): Promise<Buffer> {
+  const art = await readFile(join(assets, 'store-logo.png'));
+  return sharp(art)
+    .resize(512, 512, { fit: 'contain', background: '#FAF8F5' })
+    .jpeg({ quality: 88 })
+    .toBuffer();
 }
 
 export function createSeedUploader(options: {
