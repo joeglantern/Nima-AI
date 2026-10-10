@@ -32,6 +32,23 @@ export type Auth = ReturnType<typeof createAuth>;
 export function createAuth({ env, prisma, mailer }: CreateAuthOptions) {
   const isDevelopment = env.NODE_ENV === 'development';
 
+  /**
+   * Whether the session cookie is marked Secure.
+   *
+   * Read from the scheme Nima is actually served over rather than from the
+   * environment name, because that is what the flag describes. The two come
+   * apart when a production build is reached over a tunnel on localhost for
+   * testing: the cookie would be marked Secure, which is a promise the
+   * connection is not keeping.
+   *
+   * This only ever relaxes for a loopback address. Any other host without
+   * https keeps the Secure flag and so fails loudly, which is the right
+   * outcome: it means someone is about to serve real sessions in the clear.
+   */
+  const publicUrl = env.BETTER_AUTH_URL;
+  const isLoopback = /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:|\/|$)/.test(publicUrl);
+  const useSecureCookies = publicUrl.startsWith('https://') || !isLoopback;
+
   return betterAuth({
     appName: 'Nima',
     secret: env.BETTER_AUTH_SECRET,
@@ -78,7 +95,7 @@ export function createAuth({ env, prisma, mailer }: CreateAuthOptions) {
       // Behind a reverse proxy in production, so the forwarded headers
       // decide https.
       trustedProxyHeaders: !isDevelopment,
-      useSecureCookies: !isDevelopment,
+      useSecureCookies,
       cookiePrefix: 'nima',
       database: { joins: true },
       /**
