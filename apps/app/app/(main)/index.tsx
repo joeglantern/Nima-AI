@@ -19,7 +19,7 @@ import { ApiError, api, type FeedItem } from '../../src/lib/api';
 import { useTheme } from '../../src/theme/index';
 
 export default function ForYouScreen() {
-  const { colors, gutter, isWide } = useTheme();
+  const { colors, gutter, isWide, floatingClearance } = useTheme();
   const queryClient = useQueryClient();
   const { requireAccount } = useAuthGate();
   const router = useRouter();
@@ -171,7 +171,7 @@ export default function ForYouScreen() {
       showsVerticalScrollIndicator={false}
       contentContainerStyle={{
         paddingTop: 12,
-        paddingBottom: 48,
+        paddingBottom: floatingClearance,
         maxWidth: isWide ? 620 : undefined,
         width: '100%',
         alignSelf: 'center',

@@ -211,14 +211,14 @@ class FingoGateway implements PaymentGateway {
 /**
  * The gateway used before Fingo credentials exist.
  *
- * It reports that the prompt was sent and then does nothing. No webhook
- * arrives, so nothing is ever marked paid, which is the honest behaviour: the
- * checkout flow can be walked end to end and reviewed, and no order quietly
- * claims money that was never taken. A developer moves an order along with
- * the seeded webhook helper or by hand.
+ * `configured` is false, and that is the whole protection. `CheckoutService`
+ * refuses to start a payment against an unconfigured gateway, and the
+ * checkout feature flag is off besides, so no order can be placed that
+ * nobody can pay for.
  *
- * It refuses to exist in production. Shipping with this in place would mean
- * taking orders nobody can pay for.
+ * What it must never do is pretend. It does not fake a webhook, it does not
+ * mark anything paid, and it cannot verify a signature, so nothing can be
+ * settled through it either.
  */
 class SandboxGateway implements PaymentGateway {
   readonly name = 'SANDBOX' as const;
@@ -242,12 +242,10 @@ export function createPaymentGateway(env: Env): PaymentGateway {
     return new FingoGateway(env.FINGO_API_KEY, env.FINGO_WEBHOOK_SECRET, env.FINGO_BASE_URL);
   }
 
-  if (env.NODE_ENV === 'production') {
-    throw new Error(
-      'FINGO_API_KEY and FINGO_WEBHOOK_SECRET are required in production. ' +
-        'Without them nobody can pay, and the sandbox gateway must never run here.',
-    );
-  }
-
+  // Deliberately not a boot failure, even in production. Everything except
+  // paying works without a payment provider, and an API that refuses to
+  // start cannot serve the shop, the stylist or a single try-on. The gateway
+  // reports itself unconfigured instead, which is what actually stops an
+  // order being taken.
   return new SandboxGateway();
 }

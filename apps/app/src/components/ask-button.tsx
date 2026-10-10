@@ -28,6 +28,8 @@ export function AskNimaButton() {
         position: 'absolute',
         right: 16,
         bottom: insets.bottom + 20,
+        // Nothing underneath it should be tappable through the gap.
+        zIndex: 10,
       }}
       pointerEvents="box-none"
     >

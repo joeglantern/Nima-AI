@@ -10,7 +10,6 @@
  * change a setting and set an item to public.
  */
 
-import type { Prisma } from '@nima/db';
 import {
   createWardrobeItemSchema,
   idSchema,
@@ -19,6 +18,7 @@ import {
   updateWardrobeItemSchema,
   wardrobeItemSchema,
 } from '@nima/contracts';
+import type { Prisma } from '@nima/db';
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 import { z } from 'zod';
 import { errors } from '../../lib/errors.js';

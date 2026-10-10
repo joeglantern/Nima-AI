@@ -169,8 +169,8 @@ export default function SettingsScreen() {
           <Group title="About">
             <Field label="Version" value="0.1.0, in development" />
             <Body tone="muted">
-              Nima shows you how something looks, not how it will fit. Check the seller's size
-              guide before you buy.
+              Nima shows you how something looks, not how it will fit. Check the seller's size guide
+              before you buy.
             </Body>
           </Group>
 
@@ -196,17 +196,17 @@ export default function SettingsScreen() {
         title="Delete your account"
       >
         <Body tone="muted">
-          This cannot be undone. Everything you have made is removed, including the photographs
-          you uploaded.
+          This cannot be undone. Everything you have made is removed, including the photographs you
+          uploaded.
         </Body>
 
         <View style={{ gap: 10, marginTop: 16 }}>
+          <Button label="Yes, delete it" loading={leave.isPending} onPress={() => leave.mutate()} />
           <Button
-            label="Yes, delete it"
-            loading={leave.isPending}
-            onPress={() => leave.mutate()}
+            label="Keep my account"
+            variant="quiet"
+            onPress={() => setConfirmingLeave(false)}
           />
-          <Button label="Keep my account" variant="quiet" onPress={() => setConfirmingLeave(false)} />
         </View>
 
         {leave.isError ? (

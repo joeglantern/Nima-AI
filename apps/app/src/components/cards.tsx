@@ -78,10 +78,18 @@ export function ProductCard({ product }: { product: ProductCardData }) {
           ) : null}
         </View>
 
-        <View style={{ gap: 2 }}>
-          <Body numberOfLines={1}>{product.title}</Body>
+        <View style={{ gap: 3 }}>
+          {/*
+            Two lines, with the height reserved whether or not the second is
+            used. A one line title next to a two line one leaves the prices
+            at different heights, and a grid whose prices do not line up
+            reads as broken long before anyone works out why.
+          */}
+          <Body numberOfLines={2} style={{ fontSize: 15, lineHeight: 20, minHeight: 40 }}>
+            {product.title}
+          </Body>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            <Price cents={product.priceFromCents} />
+            <Price cents={product.priceFromCents} style={{ fontSize: 15 }} />
             {!product.inStock ? <Caption tone="critical">Sold out</Caption> : null}
           </View>
           <Caption numberOfLines={1}>{product.store.name}</Caption>
@@ -176,7 +184,8 @@ export function LookCard({ look, onLike, onSave, onComment, variant = 'feed' }: 
 
       {feed ? (
         <>
-          <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 12 }}>
+          {/* Equal widths, so the row reads as one control and not three. */}
+          <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 10 }}>
             <ActionChip
               label={look.likedByMe ? 'Loved' : 'Love it'}
               tint="love"
@@ -254,12 +263,13 @@ function ActionChip({
         alignItems: 'center',
         justifyContent: 'center',
         gap: 3,
-        paddingHorizontal: 12,
+        flex: 1,
+        paddingHorizontal: 8,
         paddingVertical: 9,
         borderRadius: radius.chip,
         backgroundColor: fill,
         opacity: pressed ? 0.75 : 1,
-        minWidth: 84,
+        maxWidth: 120,
       })}
     >
       {icon}

@@ -26,7 +26,7 @@ const CATEGORIES = [
 ] as const;
 
 export default function ShopScreen() {
-  const { colors, gutter, gridColumns, radius } = useTheme();
+  const { colors, gutter, gridColumns, radius, floatingClearance } = useTheme();
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState<string | undefined>();
 
@@ -60,7 +60,7 @@ export default function ShopScreen() {
       // The grid is rebuilt when the query resolves, so the one cell has to
       // know it is stale.
       extraData={items}
-      contentContainerStyle={{ paddingBottom: 48 }}
+      contentContainerStyle={{ paddingBottom: floatingClearance }}
       onEndReachedThreshold={0.6}
       onEndReached={() => {
         if (products.hasNextPage && !products.isFetchingNextPage) void products.fetchNextPage();
@@ -121,7 +121,16 @@ export default function ShopScreen() {
             data={CATEGORIES}
             keyExtractor={(item) => item.label}
             showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ paddingHorizontal: gutter, gap: 8, paddingRight: gutter + 8 }}
+            // Snapping means a pill is never left cut in half at the edge,
+            // which is what made this row look unfinished on a phone.
+            decelerationRate="fast"
+            snapToAlignment="start"
+            contentContainerStyle={{
+              paddingLeft: gutter,
+              paddingRight: gutter,
+              gap: 8,
+              alignItems: 'center',
+            }}
             renderItem={({ item }) => {
               const active = category === item.value;
 

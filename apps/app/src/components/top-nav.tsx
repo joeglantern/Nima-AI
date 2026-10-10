@@ -31,9 +31,14 @@ function isActive(pathname: string, href: string): boolean {
 }
 
 export function TopPills() {
-  const { colors, radius } = useTheme();
+  const { colors, radius, width } = useTheme();
   const pathname = usePathname();
   const router = useRouter();
+
+  // Three pills, a gap between each, and a basket that may or may not be
+  // there. On a 360 wide phone the generous padding from the screens runs
+  // the last pill off the edge, so it tightens rather than clipping.
+  const tight = width < 400;
 
   return (
     <View style={{ justifyContent: 'center' }}>
@@ -42,8 +47,12 @@ export function TopPills() {
           flexDirection: 'row',
           justifyContent: 'center',
           alignItems: 'center',
-          gap: 8,
+          gap: tight ? 2 : 8,
           paddingVertical: 10,
+          // Room for the basket button, which is pinned to the right, so a
+          // wide active pill never slides underneath it.
+          paddingLeft: 12,
+          paddingRight: 48,
         }}
         accessibilityRole="tablist"
       >
@@ -57,7 +66,7 @@ export function TopPills() {
               accessibilityRole="tab"
               accessibilityState={{ selected: active }}
               style={{
-                paddingHorizontal: 22,
+                paddingHorizontal: tight ? 14 : 22,
                 paddingVertical: 9,
                 borderRadius: radius.pill,
                 backgroundColor: active ? colors.accent : 'transparent',
@@ -76,7 +85,7 @@ export function TopPills() {
       </View>
 
       {/* Pinned to the right so the pills stay centred, as in the screens. */}
-      <View style={{ position: 'absolute', right: 12 }} pointerEvents="box-none">
+      <View style={{ position: 'absolute', right: 10 }} pointerEvents="box-none">
         <BasketButton />
       </View>
     </View>

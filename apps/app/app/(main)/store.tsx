@@ -45,7 +45,7 @@ const TABS = [
 ] as const;
 
 export default function StoreScreen() {
-  const { colors, gutter, radius } = useTheme();
+  const { colors, gutter, radius, width, floatingClearance } = useTheme();
   const { requireAccount } = useAuthGate();
   const [tab, setTab] = useState<(typeof TABS)[number]['key']>('looks');
 
@@ -71,14 +71,16 @@ export default function StoreScreen() {
     <ScrollView
       style={{ width: '100%' }}
       showsVerticalScrollIndicator={false}
-      contentContainerStyle={{ paddingBottom: 56, width: '100%' }}
+      contentContainerStyle={{ paddingBottom: floatingClearance, width: '100%' }}
     >
       <View style={{ paddingHorizontal: gutter, paddingTop: 8, gap: 18 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 14 }}>
+        <View
+          style={{ flexDirection: 'row', alignItems: 'flex-start', gap: width < 400 ? 10 : 14 }}
+        >
           <View
             style={{
-              width: 88,
-              height: 88,
+              width: width < 400 ? 72 : 88,
+              height: width < 400 ? 72 : 88,
               borderRadius: 999,
               backgroundColor: colors.sunk,
               overflow: 'hidden',
@@ -91,7 +93,15 @@ export default function StoreScreen() {
                 contentFit="cover"
                 accessibilityLabel="Your photo"
               />
-            ) : null}
+            ) : (
+              // An empty circle reads as a picture that failed to load. An
+              // initial reads as a person who has not added one yet.
+              <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+                <Title style={{ fontSize: 34, lineHeight: 40, color: colors.muted }}>
+                  {(isGuest ? 'N' : (user?.name ?? 'Y')).trim().charAt(0).toUpperCase()}
+                </Title>
+              </View>
+            )}
           </View>
 
           {/* The screens centre the name over the email and the credit pill. */}
@@ -192,8 +202,12 @@ export default function StoreScreen() {
               }}
             >
               <BodyStrong
-                style={{ fontSize: 14, color: selected ? colors.onPrimary : colors.ink }}
+                style={{
+                  fontSize: width < 400 ? 12.5 : 14,
+                  color: selected ? colors.onPrimary : colors.ink,
+                }}
                 numberOfLines={1}
+                adjustsFontSizeToFit
               >
                 {entry.label}
               </BodyStrong>

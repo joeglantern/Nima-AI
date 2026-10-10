@@ -27,6 +27,14 @@ interface Theme {
   gutter: number;
   /** Columns for the shop grid at this width. */
   gridColumns: number;
+  /**
+   * How much room to leave at the bottom of a scrolling screen.
+   *
+   * The Ask Nima button floats over everything. Without this the last row of
+   * a grid sits underneath it, which is the single most common way a mobile
+   * layout looks unfinished.
+   */
+  floatingClearance: number;
 }
 
 const ThemeContext = createContext<Theme | null>(null);
@@ -51,6 +59,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       width,
       gutter: layout === 'phone' ? 16 : 24,
       gridColumns: layout === 'desktop' ? (width >= 1600 ? 5 : 4) : layout === 'tablet' ? 3 : 2,
+      floatingClearance: 96,
     };
   }, [scheme, width]);
 
