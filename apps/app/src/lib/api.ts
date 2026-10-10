@@ -238,6 +238,37 @@ export const api = {
   tryOns: (params: { cursor?: string; limit?: number } = {}) =>
     request<Page<TryOnJob>>('/v1/tryon', { query: params }),
 
+  askNima: (body: {
+    message: string;
+    threadId?: string;
+    context?: { productId?: string; lookId?: string; occasion?: string };
+  }) =>
+    request<{ threadId: string; messageId: string; accepted: true }>('/v1/stylist/ask', {
+      method: 'POST',
+      body,
+    }),
+
+  stylistPrompts: () =>
+    request<{ items: Array<{ label: string; message: string; icon: string | null }> }>(
+      '/v1/stylist/prompts',
+    ),
+
+  stylistThreads: () =>
+    request<Page<{ id: string; title: string | null; updatedAt: string; lastMessage: string | null }>>(
+      '/v1/stylist/threads',
+    ),
+
+  stylistThread: (id: string) =>
+    request<{
+      messages: Array<{
+        id: string;
+        role: 'USER' | 'ASSISTANT' | 'TOOL' | 'SYSTEM';
+        content: string;
+        products: ProductCard[];
+        createdAt: string;
+      }>;
+    }>(`/v1/stylist/threads/${id}`),
+
   credits: () =>
     request<{
       balance: number;

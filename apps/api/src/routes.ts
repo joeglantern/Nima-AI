@@ -19,10 +19,14 @@ import { lookRoutes } from './modules/looks/routes.js';
 import { profileRoutes } from './modules/profile/routes.js';
 import { creditRoutes } from './modules/credits/routes.js';
 import { tryOnRoutes } from './modules/tryon/routes.js';
+import { stylistRoutes } from './modules/stylist/routes.js';
 import { TryOnService } from './services/tryon.js';
+import { StylistService } from './services/stylist/index.js';
+import { createLlmProvider } from './services/llm.js';
 
 export const registerRoutes: FastifyPluginAsync = async (app) => {
   const tryOn = new TryOnService(app, app.queues);
+  const stylist = new StylistService(app, createLlmProvider(app.env));
 
   const modules: FastifyPluginAsyncZod[] = [
     sessionRoutes,
@@ -33,6 +37,7 @@ export const registerRoutes: FastifyPluginAsync = async (app) => {
     profileRoutes,
     creditRoutes,
     tryOnRoutes(tryOn),
+    stylistRoutes(stylist),
   ];
 
   for (const module of modules) {

@@ -17,6 +17,7 @@ import { Slot } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../src/theme/index';
 import { Sidebar, TopPills } from '../../src/components/top-nav';
+import { AskNimaButton } from '../../src/components/ask-button';
 import { useRealtimeConnection } from '../../src/lib/realtime';
 
 export default function MainLayout() {
@@ -40,6 +41,7 @@ export default function MainLayout() {
         <View style={{ flex: 1, width: '100%' }}>
           <Slot />
         </View>
+        <AskNimaButton />
       </View>
     );
   }
@@ -61,6 +63,7 @@ export default function MainLayout() {
         >
           <Slot />
         </View>
+        <AskNimaButton />
       </View>
     </View>
   );

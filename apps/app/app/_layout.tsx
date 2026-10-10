@@ -8,7 +8,7 @@
 
 import { useEffect, useState } from 'react';
 import { View } from 'react-native';
-import { Stack, useRouter } from 'expo-router';
+import { Stack, usePathname, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
 import * as SystemUI from 'expo-system-ui';
@@ -112,12 +112,14 @@ export default function RootLayout() {
 function Shell({ showWelcome }: { showWelcome: boolean }) {
   const { colors, scheme } = useTheme();
   const router = useRouter();
+  const pathname = usePathname();
 
-  // First launch opens on the welcome screen. After that, straight into the
-  // feed, signed in or not.
+  // First launch opens on the welcome screen, but only when the app was
+  // opened normally. Someone following a shared link to a look lands on that
+  // look, which is the whole point of sharing one.
   useEffect(() => {
-    if (showWelcome) router.replace('/welcome');
-  }, [showWelcome, router]);
+    if (showWelcome && pathname === '/') router.replace('/welcome');
+  }, [showWelcome, pathname, router]);
 
   useEffect(() => {
     void SystemUI.setBackgroundColorAsync(colors.ground);
