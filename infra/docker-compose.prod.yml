@@ -35,7 +35,7 @@ services:
     # Loopback only, and on a port the host is not already using, so psql
     # over an SSH tunnel still works for a human.
     ports:
-      - "127.0.0.1:${POSTGRES_PORT:-5462}:5432"
+      - "127.0.0.1:${POSTGRES_HOST_PORT:-5462}:5432"
     shm_size: 512mb
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
@@ -81,8 +81,8 @@ services:
       GARAGE_RPC_SECRET: ${GARAGE_RPC_SECRET}
       GARAGE_ADMIN_TOKEN: ${GARAGE_ADMIN_TOKEN}
     ports:
-      - "127.0.0.1:${GARAGE_PORT:-3962}:3900"
-      - "127.0.0.1:${GARAGE_ADMIN_PORT:-3965}:3903"
+      - "127.0.0.1:${GARAGE_HOST_PORT:-3962}:3900"
+      - "127.0.0.1:${GARAGE_ADMIN_HOST_PORT:-3965}:3903"
 
   migrate:
     build:
@@ -111,7 +111,10 @@ services:
       REDIS_URL: redis://valkey:6379
       S3_ENDPOINT: http://garage:3900
     ports:
-      - "127.0.0.1:${API_PORT:-3340}:3333"
+      # API_HOST_PORT, not API_PORT: the app reads API_PORT for the port it
+      # listens on inside the container, and one name meaning two things is
+      # how a service ends up published somewhere nobody expected.
+      - "127.0.0.1:${API_HOST_PORT:-3340}:3333"
     depends_on:
       postgres:
         condition: service_healthy
