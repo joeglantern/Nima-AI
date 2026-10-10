@@ -2,7 +2,7 @@
  * Health and readiness.
  *
  *   /health        is the process alive         (no dependencies touched)
- *   /health/ready  can it serve traffic         (database, Valkey, storage)
+ *   /health/ready  can it serve traffic         (database, Valkey, storage, email)
  *
  * Uptime Kuma watches /health/ready. The reverse proxy watches /health.
  */
@@ -52,6 +52,7 @@ export const healthRoutes: FastifyPluginAsyncZod = async (app) => {
               database: checkSchema,
               redis: checkSchema,
               storage: checkSchema,
+              email: checkSchema,
             }),
           }),
           503: z.object({
@@ -60,6 +61,7 @@ export const healthRoutes: FastifyPluginAsyncZod = async (app) => {
               database: checkSchema,
               redis: checkSchema,
               storage: checkSchema,
+              email: checkSchema,
             }),
           }),
         },
@@ -80,7 +82,7 @@ export const healthRoutes: FastifyPluginAsyncZod = async (app) => {
         }
       };
 
-      const [database, redis, storage] = await Promise.all([
+      const [database, redis, storage, email] = await Promise.all([
         timed(async () => {
           await app.prisma.$queryRaw`SELECT 1`;
         }),
@@ -92,18 +94,32 @@ export const healthRoutes: FastifyPluginAsyncZod = async (app) => {
         timed(async () => {
           await app.storage.exists('health-check');
         }),
+        /*
+         * Email is checked because nothing else notices it is broken.
+         *
+         * Nobody can sign in without a code, and a mail server that has
+         * stopped accepting connections looks exactly like a healthy one
+         * from every other endpoint. This opens a connection and
+         * authenticates without sending anything.
+         */
+        timed(async () => {
+          const reachable = await app.mailer.verify();
+          if (!reachable) throw new Error('The mail server would not accept a connection');
+        }),
       ]);
 
-      const checks = { database, redis, storage };
+      const checks = { database, redis, storage, email };
 
-      // The database and Valkey are required. Storage being down degrades
-      // uploads but the feed still works, so it does not fail readiness.
+      // The database and Valkey are required. Storage and email degrade:
+      // without storage nobody can upload but the feed still works, and
+      // without email nobody new can sign in but everyone already signed in
+      // carries on. Neither should take the whole service out of the pool.
       if (!database.ok || !redis.ok) {
         return reply.status(503).send({ status: 'down' as const, checks });
       }
 
       return reply.send({
-        status: storage.ok ? ('ok' as const) : ('degraded' as const),
+        status: storage.ok && email.ok ? ('ok' as const) : ('degraded' as const),
         checks,
       });
     },
