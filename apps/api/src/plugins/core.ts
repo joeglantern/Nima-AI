@@ -57,7 +57,9 @@ export default fp<CorePluginOptions>(
     app.decorate('prisma', prisma);
     app.decorate('redis', redis);
     app.decorate('redisSub', redisSub);
-    app.decorate('mailer', options.mailer ?? createMailer(env));
+    // The mailer logs through the app, so a refused code shows up in the
+    // same place as everything else rather than nowhere.
+    app.decorate('mailer', options.mailer ?? createMailer(env, app.log));
     app.decorate('storage', options.storage ?? createStorage(env));
 
     app.addHook('onClose', async () => {

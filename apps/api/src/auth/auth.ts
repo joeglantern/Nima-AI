@@ -20,6 +20,7 @@ import { prismaAdapter } from 'better-auth/adapters/prisma';
 import { anonymous, emailOTP, magicLink } from 'better-auth/plugins';
 import type { Mailer } from '../lib/mailer.js';
 import { linkAnonymousAccount } from './link-anonymous.js';
+import { recordMailAttempt, recordMailFailure } from './mail-outcome.js';
 
 export interface CreateAuthOptions {
   env: Env;
@@ -150,7 +151,18 @@ export function createAuth({ env, prisma, mailer }: CreateAuthOptions) {
         allowedAttempts: 5,
         sendVerificationOnSignUp: true,
         async sendVerificationOTP({ email, otp, type }) {
-          await mailer.sendOtp({ to: email, code: otp, purpose: type });
+          // Better Auth swallows whatever happens in here, so the outcome
+          // is recorded against the request and the route reads it after.
+          recordMailAttempt();
+
+          try {
+            await mailer.sendOtp({ to: email, code: otp, purpose: type });
+          } catch (error) {
+            recordMailFailure(
+              error instanceof Error ? error.message : 'That code could not be sent',
+            );
+            throw error;
+          }
         },
       }),
 
@@ -158,7 +170,16 @@ export function createAuth({ env, prisma, mailer }: CreateAuthOptions) {
       magicLink({
         expiresIn: 600,
         async sendMagicLink({ email, url }) {
-          await mailer.sendMagicLink({ to: email, url });
+          recordMailAttempt();
+
+          try {
+            await mailer.sendMagicLink({ to: email, url });
+          } catch (error) {
+            recordMailFailure(
+              error instanceof Error ? error.message : 'That link could not be sent',
+            );
+            throw error;
+          }
         },
       }),
     ],

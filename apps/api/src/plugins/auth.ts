@@ -16,6 +16,7 @@ import { fromNodeHeaders } from 'better-auth/node';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import fp from 'fastify-plugin';
 import { type Auth, createAuth } from '../auth/auth.js';
+import { withMailOutcome } from '../auth/mail-outcome.js';
 import { errors } from '../lib/errors.js';
 
 export interface RequestUser {
@@ -77,13 +78,39 @@ export default fp(
               : JSON.stringify(request.body)
             : undefined;
 
-        const response = await auth.handler(
-          new Request(url.toString(), {
-            method: request.method,
-            headers,
-            ...(body !== undefined ? { body } : {}),
-          }),
-        );
+        const { response, mail } = await withMailOutcome(async (outcome) => ({
+          response: await auth.handler(
+            new Request(url.toString(), {
+              method: request.method,
+              headers,
+              ...(body !== undefined ? { body } : {}),
+            }),
+          ),
+          mail: outcome,
+        }));
+
+        /*
+         * Do not report success for a code that was never sent.
+         *
+         * Better Auth catches and logs anything thrown while sending and
+         * answers `{ success: true }` either way. For a sign in code that
+         * is the difference between somebody retrying and somebody giving
+         * up on the app, so a failed send becomes a failed request.
+         */
+        if (mail.failure && response.status < 400) {
+          request.log.error(
+            { path: url.pathname, reason: mail.failure },
+            'An email failed to send, so the request is being failed',
+          );
+
+          return reply.status(502).send({
+            error: {
+              code: 'email_not_sent',
+              message: 'We could not send that email. Try again in a moment.',
+              requestId: request.id,
+            },
+          });
+        }
 
         reply.status(response.status);
         response.headers.forEach((value, key) => {
