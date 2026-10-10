@@ -111,7 +111,7 @@ export default function StoreScreen() {
           </View>
 
           <Pressable
-            onPress={() => requireAccount('Create an account to change your settings')}
+            onPress={() => router.push('/settings')}
             accessibilityRole="button"
             accessibilityLabel="Settings"
             style={{ alignItems: 'center', gap: 4, paddingTop: 4, width: 48 }}

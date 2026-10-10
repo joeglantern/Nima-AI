@@ -1,0 +1,147 @@
+# Nima in production.
+#
+# This file is written to share a host with other projects, which is where it
+# runs today. Two rules follow from that and neither is negotiable:
+#
+#   1. **Nothing is published on a public interface.** Every port is bound to
+#      127.0.0.1, and the host's nginx is the only thing the internet talks
+#      to. A database reachable from the internet is a database that will be
+#      found.
+#   2. **Everything is named and scoped to this project.** Its own compose
+#      project name, its own network, its own volumes. Nothing here can
+#      collide with, or be reached by, the other stacks on the box.
+#
+#   docker compose -f infra/docker-compose.prod.yml --env-file .env.prod up -d
+#
+# Ports are set in the env file so a host that already uses one can move it
+# without editing this file.
+
+name: nima
+
+x-database-url: &database-url postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg17
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_INITDB_ARGS: "--data-checksums"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro
+    # Loopback only, and on a port the host is not already using, so psql
+    # over an SSH tunnel still works for a human.
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-5462}:5432"
+    shm_size: 512mb
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  valkey:
+    image: valkey/valkey:8-alpine
+    restart: unless-stopped
+    command:
+      [
+        "valkey-server",
+        "--appendonly",
+        "yes",
+        "--save",
+        "300",
+        "10",
+        "--maxmemory",
+        "512mb",
+        "--maxmemory-policy",
+        "noeviction",
+      ]
+    volumes:
+      - valkey_data:/data
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 12
+
+  garage:
+    # Photographs, product images and generated try-ons. Garage rather than
+    # MinIO because MinIO no longer ships a maintained community edition.
+    image: dxflrs/garage:v2.1.0
+    restart: unless-stopped
+    volumes:
+      - garage_meta:/var/lib/garage/meta
+      - garage_data:/var/lib/garage/data
+      - ./garage/garage.prod.toml:/etc/garage.toml:ro
+    environment:
+      # Kept out of the config file so the file can live in the repository.
+      GARAGE_RPC_SECRET: ${GARAGE_RPC_SECRET}
+      GARAGE_ADMIN_TOKEN: ${GARAGE_ADMIN_TOKEN}
+    ports:
+      - "127.0.0.1:${GARAGE_PORT:-3962}:3900"
+      - "127.0.0.1:${GARAGE_ADMIN_PORT:-3965}:3903"
+
+  migrate:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile
+      target: migrate
+    environment:
+      DATABASE_URL: *database-url
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  api:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile
+      target: api
+    restart: unless-stopped
+    env_file: ../.env.prod
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: 3333
+      DATABASE_URL: *database-url
+      REDIS_URL: redis://valkey:6379
+      S3_ENDPOINT: http://garage:3900
+    ports:
+      - "127.0.0.1:${API_PORT:-3340}:3333"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      valkey:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+
+  worker:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile
+      target: worker
+    restart: unless-stopped
+    env_file: ../.env.prod
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: *database-url
+      REDIS_URL: redis://valkey:6379
+      S3_ENDPOINT: http://garage:3900
+    depends_on:
+      postgres:
+        condition: service_healthy
+      valkey:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+
+volumes:
+  postgres_data:
+  valkey_data:
+  garage_meta:
+  garage_data:

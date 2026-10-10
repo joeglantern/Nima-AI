@@ -233,3 +233,68 @@ export function order(storage: Storage, row: OrderRow) {
     canReview: row.deliveredAt !== null || row.completedAt !== null,
   };
 }
+
+interface WardrobeRow {
+  id: string;
+  label: string | null;
+  category: string;
+  slot: string;
+  colours: string[];
+  tags: string[];
+  originalKey: string;
+  cutoutKey: string | null;
+  processing: string;
+  visibility: string;
+  createdAt: Date;
+}
+
+/**
+ * Something a person owns.
+ *
+ * The photograph is private media even when the item is public, because a
+ * wardrobe shot is taken in someone's bedroom. The cut out is preferred once
+ * it exists, and the original stands in until then so an item is never a
+ * blank square while the worker catches up.
+ */
+export async function wardrobeItem(storage: Storage, row: WardrobeRow) {
+  return {
+    id: row.id,
+    label: row.label,
+    category: row.category as never,
+    slot: row.slot as never,
+    colours: row.colours,
+    tags: row.tags,
+    image: await privateImage(storage, row.cutoutKey ?? row.originalKey),
+    processing: row.processing === 'PENDING',
+    visibility: row.visibility as never,
+    createdAt: row.createdAt.toISOString(),
+  };
+}
+
+interface LookbookRow {
+  id: string;
+  title: string;
+  description: string | null;
+  occasion: string | null;
+  coverKey: string | null;
+  visibility: string;
+  startsOn: Date | null;
+  endsOn: Date | null;
+  updatedAt: Date;
+  _count?: { entries: number };
+}
+
+export function lookbook(storage: Storage, row: LookbookRow) {
+  return {
+    id: row.id,
+    title: row.title,
+    description: row.description,
+    occasion: row.occasion,
+    cover: publicImage(storage, row.coverKey),
+    visibility: row.visibility as never,
+    entryCount: row._count?.entries ?? 0,
+    startsOn: row.startsOn ? row.startsOn.toISOString().slice(0, 10) : null,
+    endsOn: row.endsOn ? row.endsOn.toISOString().slice(0, 10) : null,
+    updatedAt: row.updatedAt.toISOString(),
+  };
+}

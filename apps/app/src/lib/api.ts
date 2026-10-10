@@ -314,6 +314,11 @@ export const api = {
       note: string;
     }>('/v1/credits/packs', { query: { platform } }),
 
+  requestDeletion: () =>
+    request<{ requestedAt: string; graceDays: number; message: string }>('/v1/profile/delete', {
+      method: 'POST',
+    }),
+
   cart: () => request<Cart>('/v1/cart'),
 
   cartCount: () => request<{ count: number }>('/v1/cart/count'),

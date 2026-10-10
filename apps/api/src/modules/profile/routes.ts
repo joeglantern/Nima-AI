@@ -27,6 +27,9 @@ import { FileTooLargeError, UnsupportedMediaError } from '../../lib/storage.js';
 import { completionOf } from './completion.js';
 import { suggestHandle } from './handle.js';
 
+/** Long enough to change your mind, short enough to mean it. */
+const DELETION_GRACE_DAYS = 14;
+
 export const profileRoutes: FastifyPluginAsyncZod = async (app) => {
   // ------------------------------------------------------------- profile ---
 
@@ -436,6 +439,50 @@ export const profileRoutes: FastifyPluginAsyncZod = async (app) => {
       }
 
       return reply.status(204).send(null);
+    },
+  );
+
+  app.post(
+    '/profile/delete',
+    {
+      preHandler: app.requireAccount,
+      config: { rateLimit: { max: 4, timeWindow: '1 hour' } },
+      schema: {
+        tags: ['profile'],
+        summary: 'Ask for your account to be deleted',
+        description:
+          'Marks the account and signs the person out. The nightly job removes the rows ' +
+          'and the files after a grace period, so a mistake made at midnight is recoverable ' +
+          'in the morning. Orders are kept: a shop has to account for what it sold.',
+        response: {
+          200: z.object({
+            requestedAt: z.string(),
+            graceDays: z.number().int(),
+            message: z.string(),
+          }),
+        },
+      },
+    },
+    async (request) => {
+      const user = request.requireUser();
+      const requestedAt = new Date();
+
+      await app.prisma.user.update({
+        where: { id: user.id },
+        data: { deletionRequestedAt: requestedAt },
+      });
+
+      // Every session, not just this device. Somebody deleting their account
+      // from a phone does not expect to still be signed in on a laptop.
+      await app.prisma.session.deleteMany({ where: { userId: user.id } });
+
+      request.log.info({ userId: user.id }, 'An account was marked for deletion');
+
+      return {
+        requestedAt: requestedAt.toISOString(),
+        graceDays: DELETION_GRACE_DAYS,
+        message: `Your account will be deleted in ${DELETION_GRACE_DAYS} days. Sign in again before then to stop it.`,
+      };
     },
   );
 };
