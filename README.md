@@ -137,4 +137,6 @@ least once. They are not style preferences.
   brand book
 - [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md), setting up and working day to day
 - [docs/DECISIONS.md](docs/DECISIONS.md), why things are the way they are
+- [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md), running it on the VPS it shares
+  with other projects
 - [docs/legacy/](docs/legacy/), audits of the three previous codebases

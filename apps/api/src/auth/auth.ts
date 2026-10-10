@@ -75,11 +75,24 @@ export function createAuth({ env, prisma, mailer }: CreateAuthOptions) {
     },
 
     advanced: {
-      // Behind Caddy in production, so the proxy headers decide https.
+      // Behind a reverse proxy in production, so the forwarded headers
+      // decide https.
       trustedProxyHeaders: !isDevelopment,
       useSecureCookies: !isDevelopment,
       cookiePrefix: 'nima',
       database: { joins: true },
+      /**
+       * Where the caller's address comes from.
+       *
+       * Without this every request behind the proxy looks like it came from
+       * the proxy, and rate limiting falls back to one shared bucket: a
+       * single person hammering sign in locks out everybody else. The header
+       * is only trusted because nothing reaches this process except through
+       * the proxy on the same host.
+       */
+      ipAddress: {
+        ipAddressHeaders: ['x-forwarded-for', 'x-real-ip'],
+      },
     },
 
     socialProviders: {
