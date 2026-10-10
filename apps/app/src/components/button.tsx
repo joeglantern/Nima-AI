@@ -14,6 +14,7 @@ import {
   View,
   type ViewStyle,
 } from 'react-native';
+import { elevation } from '../theme/elevation';
 import { useTheme } from '../theme/index';
 import { BodyStrong } from './text';
 
@@ -82,13 +83,10 @@ export function Button({
           // like a pile of widgets.
           ...(variant === 'quiet' || isDisabled
             ? {}
-            : {
-                shadowColor: variant === 'primary' ? colors.primary : '#2D2926',
-                shadowOpacity: pressed ? 0.1 : 0.18,
-                shadowRadius: pressed ? 6 : 14,
-                shadowOffset: { width: 0, height: pressed ? 2 : 6 },
-                elevation: pressed ? 2 : 5,
-              }),
+            : elevation('floating', {
+                colour: variant === 'primary' ? colors.primary : '#2D2926',
+                pressed,
+              })),
         },
         style,
       ]}

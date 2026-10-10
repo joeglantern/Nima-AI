@@ -11,6 +11,7 @@ import { usePathname, useRouter } from 'expo-router';
 import { Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
+import { elevation } from '../theme/elevation';
 import { useTheme } from '../theme/index';
 import { BodyStrong } from './text';
 
@@ -46,11 +47,7 @@ export function AskNimaButton() {
           borderRadius: radius.pill,
           backgroundColor: colors.primary,
           opacity: pressed ? 0.9 : 1,
-          shadowColor: '#000',
-          shadowOpacity: 0.18,
-          shadowRadius: 14,
-          shadowOffset: { width: 0, height: 6 },
-          elevation: 6,
+          ...elevation('floating', { colour: colors.primary, pressed }),
         })}
       >
         <Svg width={20} height={20} viewBox="0 0 24 24">

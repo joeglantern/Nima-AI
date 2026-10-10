@@ -20,6 +20,7 @@ import { Mascot } from '../src/components/mascot';
 import { Body, Caption, Display, Label } from '../src/components/text';
 import { sendEmailCode, signInWithApple, signInWithGoogle, verifyEmailCode } from '../src/lib/auth';
 import { markWelcomeSeen } from '../src/lib/first-run';
+import { elevation } from '../src/theme/elevation';
 import { useTheme } from '../src/theme/index';
 
 export default function WelcomeScreen() {
@@ -111,11 +112,7 @@ export default function WelcomeScreen() {
           borderBottomRightRadius: isWide ? 32 : 0,
           marginBottom: isWide ? 32 : 0,
           // The sheet lifts off the cream rather than being pasted onto it.
-          shadowColor: '#2D2926',
-          shadowOpacity: 0.22,
-          shadowRadius: 28,
-          shadowOffset: { width: 0, height: -10 },
-          elevation: 16,
+          ...elevation('sheet', { up: true }),
         }}
       >
         <View

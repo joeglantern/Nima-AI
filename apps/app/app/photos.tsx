@@ -243,8 +243,10 @@ function PhotoGroup({
             width: 108,
             height: 144,
             borderRadius: radius.image,
+            // Not dashed: Android draws a dashed border solid as soon as
+            // there is a corner radius, so the same tile would be dashed in
+            // a browser and solid on a phone.
             borderWidth: 1.5,
-            borderStyle: 'dashed',
             borderColor: pressed ? colors.accent : colors.line,
             backgroundColor: pressed ? colors.accentSoft : colors.sunk,
             alignItems: 'center',

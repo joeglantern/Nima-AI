@@ -20,6 +20,7 @@ import { Button } from '../../src/components/button';
 import { type EmptyArt, EmptyState } from '../../src/components/empty-state';
 import { Body, BodyStrong, Caption, Eyebrow, Micro, Price, Title } from '../../src/components/text';
 import { api } from '../../src/lib/api';
+import { elevation } from '../../src/theme/elevation';
 import { useTheme } from '../../src/theme/index';
 
 const TABS = [
@@ -176,11 +177,7 @@ export default function StoreScreen() {
           // White, so the row reads as a control sitting on the page rather
           // than a dent in it. This is the one place the screens use a shadow.
           backgroundColor: colors.surface,
-          shadowColor: '#2D2926',
-          shadowOpacity: 0.05,
-          shadowRadius: 10,
-          shadowOffset: { width: 0, height: 3 },
-          elevation: 2,
+          ...elevation('raised'),
         }}
         accessibilityRole="tablist"
       >
@@ -207,7 +204,6 @@ export default function StoreScreen() {
                   color: selected ? colors.onPrimary : colors.ink,
                 }}
                 numberOfLines={1}
-                adjustsFontSizeToFit
               >
                 {entry.label}
               </BodyStrong>

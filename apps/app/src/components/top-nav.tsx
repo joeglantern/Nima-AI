@@ -84,8 +84,24 @@ export function TopPills() {
         })}
       </View>
 
-      {/* Pinned to the right so the pills stay centred, as in the screens. */}
-      <View style={{ position: 'absolute', right: 10 }} pointerEvents="box-none">
+      {/*
+        Pinned to the right so the pills stay centred, as in the screens.
+
+        Every edge is given a value on purpose. An absolute box with only
+        `right` set lands at the top of its parent under Yoga and at its
+        static position in a browser, so the same markup put this button in
+        two different places on a phone and on the web.
+      */}
+      <View
+        style={{
+          position: 'absolute',
+          top: 0,
+          bottom: 0,
+          right: 10,
+          justifyContent: 'center',
+        }}
+        pointerEvents="box-none"
+      >
         <BasketButton />
       </View>
     </View>
