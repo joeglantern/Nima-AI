@@ -10,7 +10,6 @@
  */
 
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { Image } from 'expo-image';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
@@ -25,6 +24,7 @@ import {
 import Svg, { Path } from 'react-native-svg';
 import { useAuthGate } from '../src/components/auth-gate';
 import { ProductCard } from '../src/components/cards';
+import { Mascot } from '../src/components/mascot';
 import { Body, Caption, Eyebrow, Title } from '../src/components/text';
 import { ApiError, api, type ProductCard as ProductCardData } from '../src/lib/api';
 import { useServerFrame } from '../src/lib/realtime';
@@ -214,12 +214,7 @@ export default function AskScreen() {
           {turns.length === 0 ? (
             <View style={{ gap: 18, paddingTop: 24 }}>
               <View style={{ alignItems: 'center', gap: 14 }}>
-                <Image
-                  source={require('../assets/mascot.png')}
-                  style={{ width: 96, height: 96 }}
-                  contentFit="contain"
-                  accessibilityLabel="Nima"
-                />
+                <Mascot size={108} mood="happy" sparkles={false} />
                 <Body tone="muted" align="center" style={{ maxWidth: 320 }}>
                   Tell me where you are going, or what you already own, and I will work with that.
                 </Body>

@@ -64,16 +64,31 @@ export function Button({
         {
           backgroundColor: background,
           borderRadius: radius.pill,
-          paddingVertical: 16,
+          paddingVertical: 17,
           paddingHorizontal: 24,
           flexDirection: 'row',
           alignItems: 'center',
           justifyContent: 'center',
           gap: 10,
           alignSelf: full ? 'stretch' : 'flex-start',
-          opacity: isDisabled ? 0.55 : pressed ? 0.88 : 1,
+          opacity: isDisabled ? 0.45 : 1,
           borderWidth: variant === 'quiet' ? 1 : 0,
           borderColor: colors.line,
+          // Pressing moves it, rather than only fading it. A button that
+          // only changes opacity reads as disabled for the moment it is held.
+          transform: [{ scale: pressed && !isDisabled ? 0.985 : 1 }],
+          // The main action sits above the page. The quiet one does not,
+          // because a shadow on an outline is what makes a screen look
+          // like a pile of widgets.
+          ...(variant === 'quiet' || isDisabled
+            ? {}
+            : {
+                shadowColor: variant === 'primary' ? colors.primary : '#2D2926',
+                shadowOpacity: pressed ? 0.1 : 0.18,
+                shadowRadius: pressed ? 6 : 14,
+                shadowOffset: { width: 0, height: pressed ? 2 : 6 },
+                elevation: pressed ? 2 : 5,
+              }),
         },
         style,
       ]}
@@ -83,6 +98,11 @@ export function Button({
     >
       {loading ? (
         <ActivityIndicator color={foreground} />
+      ) : variant === 'provider' && icon ? (
+        <>
+          <View style={{ position: 'absolute', left: 24 }}>{icon}</View>
+          <BodyStrong style={{ color: foreground }}>{label}</BodyStrong>
+        </>
       ) : (
         <>
           {icon ? <View>{icon}</View> : null}

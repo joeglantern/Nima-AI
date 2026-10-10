@@ -9,7 +9,6 @@
  * this screen has to be obvious rather than hidden.
  */
 
-import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Platform, Pressable, View } from 'react-native';
@@ -17,6 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 import { Button } from '../src/components/button';
 import { EmailSteps } from '../src/components/email-steps';
+import { Mascot } from '../src/components/mascot';
 import { Body, Caption, Display, Label } from '../src/components/text';
 import { sendEmailCode, signInWithApple, signInWithGoogle, verifyEmailCode } from '../src/lib/auth';
 import { markWelcomeSeen } from '../src/lib/first-run';
@@ -51,34 +51,44 @@ export default function WelcomeScreen() {
 
   return (
     <View style={{ flex: 1, width: '100%', backgroundColor: colors.ground }}>
-      {/* The top half: who this is */}
+      {/*
+        The top half: who this is.
+
+        Three blocks with air between them rather than one evenly spaced
+        column. The wordmark sits high, the character takes the middle, and
+        the promise sits just above the sheet, so the eye travels down to
+        the buttons instead of stopping in a gap.
+      */}
       <View
         style={{
           flex: 1,
           alignItems: 'center',
-          justifyContent: 'center',
-          paddingTop: insets.top + 24,
+          justifyContent: 'space-between',
+          paddingTop: insets.top + 34,
+          paddingBottom: 30,
           paddingHorizontal: 24,
-          gap: 28,
         }}
       >
-        <View style={{ alignItems: 'center', gap: 6 }}>
-          <Display>Nima</Display>
+        <View style={{ alignItems: 'center', gap: 10 }}>
+          <Display style={{ fontSize: 56, lineHeight: 62 }}>Nima</Display>
           <Label>AI stylist</Label>
         </View>
 
-        <Image
-          source={require('../assets/mascot.png')}
-          style={{ width: 180, height: 180 }}
-          contentFit="contain"
-          accessibilityLabel="Nima, drawn as a friendly character"
-        />
+        {/* Takes the slack, so the gap above and below it is even. */}
+        <View style={{ flex: 1, justifyContent: 'center', paddingVertical: 8 }}>
+          <Mascot size={200} mood="delighted" />
+        </View>
 
-        <View style={{ alignItems: 'center', gap: 4 }}>
-          <Body style={{ fontFamily: 'CormorantGaramond_500Medium', fontSize: 22 }}>
+        <View style={{ alignItems: 'center', gap: 6 }}>
+          <Body
+            align="center"
+            style={{ fontFamily: 'CormorantGaramond_600SemiBold', fontSize: 26, lineHeight: 32 }}
+          >
             Your personal AI stylist
           </Body>
-          <Body tone="muted">See yourself in every outfit</Body>
+          <Body tone="muted" align="center">
+            See yourself in every outfit
+          </Body>
         </View>
       </View>
 
@@ -88,29 +98,35 @@ export default function WelcomeScreen() {
           // The deep brown from the opening screen, not the burgundy: it is
           // what makes the cream above it feel lit rather than tinted.
           backgroundColor: colors.espresso,
-          borderTopLeftRadius: radius.sheet,
-          borderTopRightRadius: radius.sheet,
-          paddingTop: 14,
-          paddingBottom: insets.bottom + 24,
-          paddingHorizontal: 20,
+          borderTopLeftRadius: 32,
+          borderTopRightRadius: 32,
+          paddingTop: 18,
+          paddingBottom: insets.bottom + 28,
+          paddingHorizontal: 22,
           gap: 12,
           width: '100%',
           maxWidth: isWide ? 520 : undefined,
           alignSelf: 'center',
-          borderBottomLeftRadius: isWide ? radius.sheet : 0,
-          borderBottomRightRadius: isWide ? radius.sheet : 0,
+          borderBottomLeftRadius: isWide ? 32 : 0,
+          borderBottomRightRadius: isWide ? 32 : 0,
           marginBottom: isWide ? 32 : 0,
+          // The sheet lifts off the cream rather than being pasted onto it.
+          shadowColor: '#2D2926',
+          shadowOpacity: 0.22,
+          shadowRadius: 28,
+          shadowOffset: { width: 0, height: -10 },
+          elevation: 16,
         }}
       >
         <View
           style={{
             alignSelf: 'center',
-            width: 44,
+            width: 48,
             height: 5,
             borderRadius: 999,
             backgroundColor: colors.onEspresso,
-            opacity: 0.5,
-            marginBottom: 14,
+            opacity: 0.4,
+            marginBottom: 18,
           }}
         />
 
@@ -162,9 +178,14 @@ export default function WelcomeScreen() {
         <Pressable
           onPress={() => void leave()}
           accessibilityRole="button"
-          style={{ paddingVertical: 14, alignItems: 'center' }}
+          style={({ pressed }) => ({
+            paddingVertical: 16,
+            marginTop: 4,
+            alignItems: 'center',
+            opacity: pressed ? 0.6 : 1,
+          })}
         >
-          <Body style={{ color: colors.onEspresso, opacity: 0.9 }}>Look around first</Body>
+          <Body style={{ color: colors.onEspresso, opacity: 0.75 }}>Look around first</Body>
         </Pressable>
       </View>
     </View>

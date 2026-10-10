@@ -16,7 +16,6 @@ import { Stack, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
-import { EmptyState } from '../src/components/empty-state';
 import { Body, BodyStrong, Caption, Micro, Title } from '../src/components/text';
 import { api } from '../src/lib/api';
 import { useTheme } from '../src/theme/index';
@@ -163,7 +162,9 @@ export default function PhotosScreen() {
         />
 
         {items.length === 0 && !photos.isLoading ? (
-          <EmptyState art="sparkle" message="Add one photo and you can try anything on." />
+          <Caption align="center" style={{ paddingTop: 4 }}>
+            One photo is enough to start. You can add the other later.
+          </Caption>
         ) : null}
       </ScrollView>
     </>
@@ -188,7 +189,16 @@ function PhotoGroup({
   const { colors, radius } = useTheme();
 
   return (
-    <View style={{ gap: 12 }}>
+    // A card, so the two groups read as two things rather than as a list of
+    // headings with a dashed box adrift beside each one.
+    <View
+      style={{
+        gap: 14,
+        padding: 16,
+        borderRadius: radius.card,
+        backgroundColor: colors.surface,
+      }}
+    >
       <View style={{ gap: 2 }}>
         <BodyStrong>{title}</BodyStrong>
         <Caption>{hint}</Caption>
@@ -229,17 +239,18 @@ function PhotoGroup({
           onPress={onAdd}
           disabled={busy}
           accessibilityLabel={`Add a ${title.toLowerCase()} photo`}
-          style={{
+          style={({ pressed }) => ({
             width: 108,
             height: 144,
             borderRadius: radius.image,
-            borderWidth: 1,
+            borderWidth: 1.5,
             borderStyle: 'dashed',
-            borderColor: colors.line,
+            borderColor: pressed ? colors.accent : colors.line,
+            backgroundColor: pressed ? colors.accentSoft : colors.sunk,
             alignItems: 'center',
             justifyContent: 'center',
             gap: 8,
-          }}
+          })}
         >
           {busy ? (
             <ActivityIndicator color={colors.primary} />
