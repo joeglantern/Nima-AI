@@ -196,6 +196,60 @@ the honest outcome: nothing was paid.
 
 ---
 
+## When the phone stops updating
+
+The browser keeps working and the phone sits on an old build. It is almost
+never the bundler cache, so `--clear` does not help: that clears Metro's
+cache, and the problem is at the other end of a connection that is no
+longer there.
+
+Two things cause it, and both are invisible from the laptop.
+
+**Metro was restarted.** Expo Go holds a websocket to the dev server for
+hot reloads. Stop Metro and that socket dies. The app carries on running
+the bundle it already has, and because it talks to the API over plain HTTP
+it keeps working perfectly, which is what makes this so confusing: nothing
+looks broken, it is just frozen in time. Expo Go does not always
+reconnect, particularly if it was backgrounded while the server was down.
+
+**The laptop's address changed.** Expo Go remembers a URL like
+`http://192.168.1.5:8081`. A reconnected router hands out a different
+address and that URL now points at nothing.
+
+To tell which, look at who has been calling the API:
+
+```bash
+grep -o '"ip": "[^"]*"' <api log> | sort | uniq -c
+```
+
+Requests from `192.168.x.x` are the phone. If the last one is hours old,
+the phone is not reaching this machine at all and no amount of clearing
+will change that. Close the project in Expo Go and open it again from the
+QR code, which carries the current address.
+
+To stop caring about any of it:
+
+```bash
+pnpm dev:tunnel
+```
+
+That serves through a tunnel instead of the local network, so the address
+never changes and the firewall never matters. It is slower to start and a
+little slower to reload, which is the whole trade.
+
+One more thing worth knowing: the inbound firewall rules on this machine
+are for `C:\program files
+odejs
+ode.exe`, and Metro runs from
+`C:
+vm4w
+odejs
+ode.exe`. Different binary, no rule. It has been
+working anyway, but on a network Windows calls Public that is the first
+thing to suspect if the phone cannot reach the server at all.
+
+---
+
 ## Debugging
 
 **The API will not start.** Check `pnpm stack:up` ran and the ports above are
