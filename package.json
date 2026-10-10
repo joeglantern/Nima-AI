@@ -21,7 +21,8 @@
     "db:studio": "pnpm --filter @nima/db studio",
     "stack:up": "docker compose -f infra/docker-compose.dev.yml up -d",
     "stack:down": "docker compose -f infra/docker-compose.dev.yml down",
-    "stack:logs": "docker compose -f infra/docker-compose.dev.yml logs -f"
+    "stack:logs": "docker compose -f infra/docker-compose.dev.yml logs -f",
+    "live": "bash scripts/live.sh"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.3.14",

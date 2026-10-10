@@ -125,6 +125,7 @@ least once. They are not style preferences.
 | `pnpm lint` / `pnpm lint:fix` | Biome |
 | `pnpm db:migrate` / `db:seed` / `db:studio` | Database |
 | `pnpm stack:up` / `stack:down` / `stack:logs` | Local services |
+| `pnpm live` | Run the app against the deployed backend, over a tunnel |
 | `pnpm --filter @nima/api smoke` | End to end against a running API |
 | `pnpm --filter @nima/api test:checkout` | The money path, with a stub provider |
 

@@ -83,6 +83,34 @@ docker compose -f infra/docker-compose.prod.yml --env-file .env.prod \
 
 ---
 
+## Reaching it before there is a domain
+
+There is no certificate yet, so the API is not published on a public
+address. Putting it on one over plain HTTP would send the sign in code and
+the session cookie across the network in the clear, which is not worth the
+convenience.
+
+Instead, tunnel to it:
+
+```bash
+pnpm live
+```
+
+That opens `ssh -L 3340:127.0.0.1:3340` to the server and starts Expo with
+`EXPO_PUBLIC_API_URL` pointed down it. The app then runs against the real
+database, the real queue and the real mailbox, with nothing exposed and
+nothing to undo later.
+
+The session cookie is marked Secure from the scheme rather than from
+`NODE_ENV`, so it is not marked Secure over the tunnel and the browser
+keeps it. On any non loopback host without https it stays marked and sign in
+fails loudly, which is the behaviour you want: it means real sessions were
+about to go out unencrypted.
+
+A phone cannot reach the tunnel. For that, finish the step below.
+
+---
+
 ## The front door
 
 nginx on the host is shared with every other project, so this part needs
@@ -101,6 +129,12 @@ same way every other site on the box is set up.
 **DNS has to exist first.** certbot proves the domain over HTTP, so
 `nima.afosihub.com` must already be an A record pointing at `156.67.25.84`.
 Without it certbot fails and leaves the site on plain HTTP.
+
+If you would rather not wait for DNS, `nima.156-67-25-84.sslip.io` resolves
+to that address on its own, needs no record anywhere, and certbot will issue
+for it. Three other services on this host already use that pattern. Put it
+in `server_name` in place of the domain, and set `API_URL`,
+`BETTER_AUTH_URL`, `S3_PUBLIC_URL` and `WEB_ORIGINS` to match.
 
 The config forwards the upgrade headers, because the try-on progress socket
 is the thing that stops the app looking stuck, and raises the read timeout to
