@@ -80,12 +80,11 @@ export function ProductCard({ product }: { product: ProductCardData }) {
 
         <View style={{ gap: 3 }}>
           {/*
-            Two lines, with the height reserved whether or not the second is
-            used. A one line title next to a two line one leaves the prices
-            at different heights, and a grid whose prices do not line up
-            reads as broken long before anyone works out why.
+            Two lines before it truncates. No reserved height: the tiles are
+            a masonry and never line up anyway, so holding space for a second
+            line only opens a gap under the short titles.
           */}
-          <Body numberOfLines={2} style={{ fontSize: 15, lineHeight: 20, minHeight: 40 }}>
+          <Body numberOfLines={2} style={{ fontSize: 15, lineHeight: 20 }}>
             {product.title}
           </Body>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>

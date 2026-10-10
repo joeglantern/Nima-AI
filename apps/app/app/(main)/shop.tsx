@@ -115,27 +115,29 @@ export default function ShopScreen() {
             </View>
           </View>
 
-          <FlatList
-            horizontal
-            style={{ width: '100%', flexGrow: 0 }}
-            data={CATEGORIES}
-            keyExtractor={(item) => item.label}
-            showsHorizontalScrollIndicator={false}
-            // Snapping means a pill is never left cut in half at the edge,
-            // which is what made this row look unfinished on a phone.
-            decelerationRate="fast"
-            snapToAlignment="start"
-            contentContainerStyle={{
-              paddingLeft: gutter,
-              paddingRight: gutter,
+          {/*
+            Wrapped, not scrolled.
+
+            A horizontal row of seven pills always leaves one cut in half at
+            the right edge, and a pill sliced down the middle is the single
+            thing that made this screen look unfinished on a phone. Seven of
+            them wrap to two lines at phone width and sit on one line from
+            tablet up, and nothing is ever clipped.
+          */}
+          <View
+            style={{
+              flexDirection: 'row',
+              flexWrap: 'wrap',
               gap: 8,
-              alignItems: 'center',
+              paddingHorizontal: gutter,
             }}
-            renderItem={({ item }) => {
+          >
+            {CATEGORIES.map((item) => {
               const active = category === item.value;
 
               return (
                 <Pressable
+                  key={item.label}
                   onPress={() => setCategory(item.value)}
                   accessibilityRole="button"
                   accessibilityState={{ selected: active }}
@@ -155,8 +157,8 @@ export default function ShopScreen() {
                   </BodyStrong>
                 </Pressable>
               );
-            }}
-          />
+            })}
+          </View>
         </View>
       }
       renderItem={() => {
