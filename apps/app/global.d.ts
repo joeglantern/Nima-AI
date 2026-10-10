@@ -1,5 +1,5 @@
 /**
- * NativeWind compiles global.css at build time. TypeScript needs to be told
- * that importing it is legitimate.
+ * Metro bundles a plain stylesheet for the web build. TypeScript needs to
+ * be told that importing one is legitimate.
  */
 declare module '*.css';

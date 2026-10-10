@@ -1,38 +1,36 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
 /*
- * Web only. Native gets these from the theme provider.
+ * Web only. Native gets all of this from the theme provider.
  *
- * The page background is painted here so the area outside the app shell,
- * visible on a wide screen, is the brand ground rather than white.
+ * Plain CSS, not Tailwind. The app styles itself in JavaScript so that the
+ * phone and the browser read from one source, and the only thing left for
+ * a stylesheet is the page around the app shell, which does not exist on a
+ * phone.
  */
-@layer base {
-  :root {
-    color-scheme: light dark;
-  }
 
+:root {
+  color-scheme: light dark;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  /* The area beside the app on a wide screen, which would be white. */
+  background-color: #faf8f5;
+}
+
+@media (prefers-color-scheme: dark) {
   html,
   body,
   #root {
-    height: 100%;
-    width: 100%;
-    max-width: 100%;
-    overflow-x: hidden;
-    background-color: #faf8f5;
+    background-color: #1a1614;
   }
+}
 
-  @media (prefers-color-scheme: dark) {
-    html,
-    body,
-    #root {
-      background-color: #1a1614;
-    }
-  }
-
-  /* The app owns its own scrolling, so the document should not bounce. */
-  body {
-    overscroll-behavior: none;
-  }
+/* The app owns its own scrolling, so the document should not bounce. */
+body {
+  overscroll-behavior: none;
 }

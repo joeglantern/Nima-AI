@@ -201,3 +201,34 @@ checkout` is false until Fingo credentials exist, and the API refuses to boot
 in production without them rather than falling back to a gateway that takes
 orders nobody can pay.
 
+---
+
+## 15. No NativeWind. Styles live in JavaScript, from one theme
+
+**Why:** it made the phone and the browser render differently, and the app
+was not using it for anything.
+
+NativeWind was set up at the start and then never used: not one class name
+was written, because the theme hook turned out to be a better fit for a
+palette that has to answer to a brand book. What it was still doing was
+replacing the JSX runtime through Babel, and that wrapper did not pass
+through a `style` given as a function.
+
+React Native Web resolved those on its own, so the browser looked right.
+On a phone every `Pressable` with a `style={({ pressed }) => ...}` lost its
+styling completely: no background, no padding, no corner radius, no
+centring. That is most of the controls in the app. The opening screen's
+three sign in buttons rendered as three lines of dark text on a dark sheet.
+
+Two lessons, both paid for:
+
+- **A dependency that is configured but unused is not free.** This one was
+  invisible in the source and decisive in the output.
+- **The browser is not the phone.** Every screen in this project had been
+  reviewed in a browser and none on a device, so a whole class of bug had
+  nowhere to show up. Check both.
+
+Styling is plain React Native objects from `src/theme`, which both
+platforms read the same way. `global.css` stays as plain CSS for the one
+thing that only exists on the web: the page around the app shell.
+
