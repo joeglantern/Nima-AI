@@ -1,0 +1,43 @@
+#!/bin/sh
+#
+# Refuse a commit message that reads as machine written.
+#
+# Install once per clone:
+#   git config core.hooksPath .githooks
+#
+# Four rules, each of which has had to be undone by hand at least once:
+#
+#   1. No mention of the tool that helped write the code. The commit log is
+#      about the change, not about how it was typed.
+#   2. No em dashes. House style everywhere, including here.
+#   3. No emoji.
+#   4. No "generated with" or "co-authored by" trailers.
+
+message_file="$1"
+message=$(cat "$message_file")
+problem=""
+
+if printf '%s' "$message" | grep -qiE 'claude|anthropic|copilot|chatgpt|openai|cursor\.so'; then
+  problem="${problem}  the name of an authoring tool\n"
+fi
+
+if printf '%s' "$message" | grep -qiE '^(co-authored-by|generated with|🤖)'; then
+  problem="${problem}  an attribution trailer\n"
+fi
+
+if printf '%s' "$message" | grep -q '—'; then
+  problem="${problem}  an em dash, use a comma, a colon or a full stop\n"
+fi
+
+if printf '%s' "$message" | grep -qP '[\x{1F300}-\x{1FAFF}\x{2600}-\x{27BF}\x{2B00}-\x{2BFF}\x{FE0F}]' 2>/dev/null; then
+  problem="${problem}  an emoji\n"
+fi
+
+if [ -n "$problem" ]; then
+  printf '\nThis commit message contains:\n'
+  printf "$problem"
+  printf '\nWrite what changed and why. Nothing else belongs in the log.\n\n'
+  exit 1
+fi
+
+exit 0

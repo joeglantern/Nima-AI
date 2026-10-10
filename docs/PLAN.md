@@ -1,4 +1,4 @@
-# Nima AI — Technical Plan (v3)
+# Nima AI: Technical Plan (v3)
 
 _Updated 2026-09-21. Inputs: `NIMA AI BRIEF.pdf`, the Canva design (11 screens), and research on current open-source models and integrations._
 
@@ -88,7 +88,7 @@ The App Store and Google Play developer accounts already exist, so they cost not
 | Analytics | Our own `events` table + roll-ups (also powers seller analytics), optionally **Umami** for web traffic | MIT |
 | Try-on images | **Google Gemini API** (`@google/genai`) | Paid per image. The only paid AI service |
 | Deploy | **Docker Compose + Caddy** (automatic HTTPS) | Apache-2.0 |
-| CI | GitHub Actions (free for public repos, and generous free minutes for private ones), or Woodpecker CI self-hosted | — |
+| CI | GitHub Actions (free for public repos, and generous free minutes for private ones), or Woodpecker CI self-hosted | none |
 | App | **Expo SDK + Expo Router**: iOS, Android and **web** from one codebase | MIT |
 | Styling | **NativeWind** (Tailwind for RN) with responsive `sm: md: lg: xl:` prefixes | MIT |
 | Monorepo | **Turborepo + pnpm** | MIT |
@@ -138,7 +138,7 @@ The same recipe powered item try-on, outfit/look images, camera Quick Try-On, re
 2. The photo check runs. Credits are debited and a job queued, in one transaction.
 3. A worker on the VPS resizes the images, builds the prompt and calls Gemini (Flash or Pro), with fallback and one retry.
 4. The result is stored privately in Garage. The worker pushes `tryon.done` over WebSocket. Credits are refunded if it fails.
-5. The notice **"Visualization only — check the seller's size guide"** is always shown.
+5. The notice **"Visualization only, check the seller's size guide"** is always shown.
 
 **Accessories** (jewellery, sunglasses) use the **upper-body photo**. Same pipeline, labelled "beta" until the quality is confirmed.
 
@@ -153,7 +153,7 @@ The same recipe powered item try-on, outfit/look images, camera Quick Try-On, re
 | Wardrobe photo tagging (category, colour, pattern) | **Qwen3-VL-4B** (or Florence-2 for speed) | Apache-2.0 / MIT | VPS CPU, as an async job |
 | Embeddings (products, looks, wardrobe, taste) | **Marqo-FashionSigLIP** | Apache-2.0 | VPS CPU → pgvector HNSW |
 | Background removal | **BiRefNet** (via rembg with `birefnet-general` explicitly selected; **rembg's default model needs a paid license**) | MIT | VPS CPU, a few seconds per image |
-| Ghost mannequin (seller photos) | **Gemini image** (paid), like the old app. Charged to seller credits | — | Gemini API |
+| Ghost mannequin (seller photos) | **Gemini image** (paid), like the old app. Charged to seller credits | none | Gemini API |
 | Moderation (NSFW on uploads) | Open NSFW classifier (e.g. Falconsai ViT, Apache-2.0) + Qwen3-VL check | Apache-2.0 | VPS CPU |
 
 **Making a CPU LLM feel fast:**
@@ -310,7 +310,7 @@ nima/
   2. A VPS worker calls Gemini and stores the private result.
   3. WebSocket `tryon.done`. Credits are refunded on failure.
   - "Change the top" chains a child job from the previous result.
-  - The notice **"Visualization only — check the seller's size guide"** is always shown.
+  - The notice **"Visualization only, check the seller's size guide"** is always shown.
 - **Ask Nima:**
   1. The LLM extracts intent and filters.
   2. Tools run: `search_products`, `get_wardrobe`, `get_style_profile`, `find_complements`, `create_look`, `start_tryon`, `add_to_lookbook`.

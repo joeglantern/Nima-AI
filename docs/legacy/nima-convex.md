@@ -44,7 +44,7 @@ All paths below are relative to `reference/Nima-Convex/` unless stated.
 
 ## 1. Purpose, structure, versions
 
-**Purpose.** "Nima — your personal AI stylist. See yourself in every outfit." Users onboard with a selfie plus style picks. Nima then:
+**Purpose.** "Nima, your personal AI stylist. See yourself in every outfit." Users onboard with a selfie plus style picks. Nima then:
 - generates 3 AI outfits rendered on the user's own body;
 - lets them chat for occasion outfits, try on single items, and snap items in-store (QuickTry);
 - lets them save to lookbooks, share socially, and buy from Kenyan sellers.
@@ -108,10 +108,10 @@ middleware.ts   WorkOS authkitMiddleware + public path allowlist
 | Payments | **Fingo Pay** (M-Pesa STK push) | `POST https://api.fingopay.io/v1/mpesa/charge`, Bearer `FINGO_LIVE_KEY`, `Idempotency-Key`. Amount in cents (KES×100). Webhook `POST /webhooks/fingo` (Convex), proxied from `shopnima.ai/api/fingo/webhook` (`app/api/fingo/webhook/route.ts`). HMAC-SHA256 `X-Fingo-Signature: t=..,v1=..`, 300 s tolerance. Merchant ref prefixes: `nima_cr_` credits, `nima_ord_` orders, `nima_sub_` seller subscriptions. | Transaction fees |
 | Email | **Resend** (`RESEND_API_KEY`, `EMAIL_FROM`) | Only one template: seller new-order email (`convex/emails/templates.ts`) | Free tier / paid |
 | Push | **Expo Push** (`exp.host/--/api/v2/push/send`) | 9 notification types in `convex/notifications/actions.ts`. Tokens in `push_tokens`. Web never registers. | Free |
-| Web push | `web-push` + `public/sw.js` + `app/actions.ts` | Next.js docs boilerplate. SW never registered; subscription held in a module variable. **Dead.** | — |
+| Web push | `web-push` + `public/sw.js` + `app/actions.ts` | Next.js docs boilerplate. SW never registered; subscription held in a module variable. **Dead.** | none |
 | Analytics | **PostHog** (`NEXT_PUBLIC_POSTHOG_KEY/HOST`) | `components/PostHogProvider.tsx`, ~30 events in `lib/analytics.ts` | Free tier / paid |
-| Logistics | **None** | No Pick Up Mtaani, Sendy, or G4S. Flat shipping fee. | — |
-| Images CDN | Next/Image remote patterns for convex.cloud, unsplash, Google avatars, WorkOS CDN | | — |
+| Logistics | **None** | No Pick Up Mtaani, Sendy, or G4S. Flat shipping fee. | none |
+| Images CDN | Next/Image remote patterns for convex.cloud, unsplash, Google avatars, WorkOS CDN | | none |
 
 **Environment variables referenced (names only; no values in the repo):**
 - `OPENAI_API_KEY`, `GOOGLE_AI_STUDIO_KEY`, `VERCEL_AI_GATEWAY_API_KEY`
@@ -339,8 +339,8 @@ Conventions: all tables carry Convex `_id` and `_creationTime`, and most have `c
 | Product autofill (seller/admin) | `convex/sellers/actions.ts`, `convex/admin/aiActions.ts` | gpt-4o `generateObject`, temp 0.3 | "Fashion expert and product cataloging specialist". Zod schema incl. `suggestedPriceRange` in KES. |
 | Visual search attribute extractor | `convex/search/visualSearch.ts` | gpt-4o `generateObject` | Category, colours, style, gender, description. Then a heuristic catalog score. |
 | Seller AI business analyst | `app/api/seller-chat/route.ts` (system prompt builder ~line 133), context in `convex/sellers/aiChat.ts` | gpt-4o-mini, temp 0.4, 800 tokens | Seller KPIs plus anonymised platform trends. Privacy rules: never reveal which seller sells what, no PII. |
-| Formality keyword taxonomy (non-LLM) | `convex/chat/mutations.ts` (`FORMALITY_KEYWORDS`, `getRequiredFormalityFromOccasion`, `isCompleteOutfit`), duplicated in `convex/recommendations/mutations.ts` | — | Useful heuristics for candidate filtering before any LLM or embedding step. |
-| Wrapped copy (non-LLM) | `convex/wrapped/constants.ts` | — | Style eras, personality types, quarterly moods, 2025 trend lists. |
+| Formality keyword taxonomy (non-LLM) | `convex/chat/mutations.ts` (`FORMALITY_KEYWORDS`, `getRequiredFormalityFromOccasion`, `isCompleteOutfit`), duplicated in `convex/recommendations/mutations.ts` | none | Useful heuristics for candidate filtering before any LLM or embedding step. |
+| Wrapped copy (non-LLM) | `convex/wrapped/constants.ts` | none | Style eras, personality types, quarterly moods, 2025 trend lists. |
 
 ---
 
