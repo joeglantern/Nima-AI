@@ -75,8 +75,8 @@ export default function ProfileScreen() {
         queryClient.invalidateQueries({ queryKey: ['profile'] }),
         queryClient.invalidateQueries({ queryKey: ['bootstrap'] }),
       ]);
-      if (firstTime || !router.canGoBack()) router.replace('/');
-      else router.back();
+      if (router.canGoBack()) router.back();
+      else router.replace('/');
     },
     onError: (error) => {
       setProblem(error instanceof ApiError ? error.message : 'That did not save. Try again.');

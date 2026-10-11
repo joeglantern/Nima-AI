@@ -144,7 +144,8 @@ function Shell({ showWelcome }: { showWelcome: boolean }) {
   }, [userId]);
 
   /*
-   * The first thing after creating an account is a name and a handle.
+   * The first thing after creating an account is the setup list: a name and
+   * handle, a few style answers, a photo to be dressed, a password if wanted.
    *
    * Once, per account, and not while the welcome screen is still up, since
    * that screen is about to move to the feed itself and would replace this.
@@ -157,7 +158,7 @@ function Shell({ showWelcome }: { showWelcome: boolean }) {
 
   useEffect(() => {
     if (!viewer || viewer.isAnonymous || viewer.handle !== null) return;
-    if (pathname === '/welcome' || pathname === '/profile') return;
+    if (pathname === '/welcome' || pathname === '/setup' || pathname === '/profile') return;
     if (offeredSetupTo.current === viewer.id) return;
     offeredSetupTo.current = viewer.id;
 
@@ -165,7 +166,7 @@ function Shell({ showWelcome }: { showWelcome: boolean }) {
     void hasBeenOfferedProfile(viewer.id).then((offered) => {
       if (stale || offered) return;
       void markProfileOffered(viewer.id);
-      router.push('/profile?setup=1');
+      router.push('/setup');
     });
 
     return () => {
@@ -196,6 +197,9 @@ function Shell({ showWelcome }: { showWelcome: boolean }) {
         <Stack.Screen name="style" options={{ presentation: 'modal' }} />
         <Stack.Screen name="photos" options={{ presentation: 'modal' }} />
         <Stack.Screen name="settings" options={{ presentation: 'card' }} />
+        <Stack.Screen name="setup" options={{ presentation: 'card' }} />
+        <Stack.Screen name="password" options={{ presentation: 'card' }} />
+        <Stack.Screen name="u/[handle]" options={{ presentation: 'card' }} />
         <Stack.Screen name="cart" options={{ presentation: 'modal' }} />
         <Stack.Screen name="checkout" options={{ presentation: 'card' }} />
       </Stack>

@@ -11,6 +11,7 @@ import { ActivityIndicator, FlatList, Pressable, TextInput, View } from 'react-n
 import Svg, { Circle, Path } from 'react-native-svg';
 import { ProductCard } from '../../src/components/cards';
 import { EmptyState } from '../../src/components/empty-state';
+import { PeopleResults } from '../../src/components/people-results';
 import { BodyStrong, Caption } from '../../src/components/text';
 import { api, type ProductCard as ProductCardData } from '../../src/lib/api';
 import { useTheme } from '../../src/theme/index';
@@ -31,10 +32,15 @@ export default function ShopScreen() {
   const [category, setCategory] = useState<string | undefined>();
 
   const products = useInfiniteQuery({
-    queryKey: ['products', query, category],
+    queryKey: ['products', query.startsWith('@') ? '' : query, category],
     initialPageParam: undefined as string | undefined,
     queryFn: ({ pageParam }) =>
-      api.products({ q: query || undefined, category, cursor: pageParam, limit: 20 }),
+      api.products({
+        q: query.startsWith('@') ? undefined : query || undefined,
+        category,
+        cursor: pageParam,
+        limit: 20,
+      }),
     getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
   });
 
@@ -101,7 +107,7 @@ export default function ShopScreen() {
               <TextInput
                 value={query}
                 onChangeText={setQuery}
-                placeholder="Search Nima"
+                placeholder="Search clothes, or @people"
                 placeholderTextColor={colors.muted}
                 returnKeyType="search"
                 style={{
@@ -114,6 +120,8 @@ export default function ShopScreen() {
               />
             </View>
           </View>
+
+          <PeopleResults query={query} />
 
           {/*
             Wrapped, not scrolled.
