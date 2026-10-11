@@ -39,3 +39,4 @@ apps/app/dist-web/
 apps/app/.expo/
 .garment-sheet.png
 .shots/
+.look-candidates/

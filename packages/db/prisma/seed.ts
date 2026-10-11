@@ -9,11 +9,13 @@
  * Safe to run repeatedly: everything is keyed by a stable slug or handle.
  */
 
+import { readFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { config as loadDotenv } from 'dotenv';
 import { type GarmentSlot, PrismaClient, type ProductCategory } from '../generated/client/index.js';
 import { catalogueFrom } from './catalogue.js';
+import { SEED_LOOKS, type SeedLook } from './looks.js';
 import {
   availableGarments,
   createSeedUploader,
@@ -234,7 +236,7 @@ async function main(): Promise<void> {
   if (process.argv.includes('--replace-catalogue')) await replaceCatalogue();
 
   // A demo shopper. Sign in as this person with an email code in development.
-  const shopper = await prisma.user.upsert({
+  await prisma.user.upsert({
     where: { email: 'wanjiru@example.com' },
     create: {
       email: 'wanjiru@example.com',
@@ -395,92 +397,10 @@ async function main(): Promise<void> {
     }
   }
 
-  // A couple of public looks so the feed has something in it.
-  const kanzu = await prisma.store.findUniqueOrThrow({
-    where: { slug: 'kanzu-collective' },
-    include: { products: { include: { variants: true } } },
-  });
-  const sote = await prisma.store.findUniqueOrThrow({
-    where: { slug: 'sote-street' },
-    include: { products: { include: { variants: true } } },
-  });
-
-  const shirt = kanzu.products.find((p) => p.slug === 'ankara-panel-shirt');
-  const trouser = kanzu.products.find((p) => p.slug === 'linen-drawstring-trouser');
-  const tee = sote.products.find((p) => p.slug === 'boxy-logo-tee');
-  const cargo = sote.products.find((p) => p.slug === 'cargo-utility-pant');
-  const sneaker = sote.products.find((p) => p.slug === 'suede-court-sneaker');
-
-  const existingLooks = await prisma.look.count({ where: { source: 'CURATED' } });
-
-  if (existingLooks === 0 && shirt && trouser && tee && cargo && sneaker) {
-    const saturdayCover = 'seed/looks/saturday-in-town.jpg';
-    await upload(
-      saturdayCover,
-      await placeholderImage({
-        index: 0,
-        slug: 'look-saturday',
-        size: { width: 1080, height: 1350 },
-      }),
-    );
-
-    await prisma.look.create({
-      data: {
-        ownerId: shopper.id,
-        coverKey: saturdayCover,
-        width: 1080,
-        height: 1350,
-        title: 'Saturday in town',
-        caption: 'Print on top, something quiet underneath.',
-        nimaSays: 'The rust in the print picks up the sand linen. Easy, and it photographs well.',
-        source: 'CURATED',
-        visibility: 'PUBLIC',
-        publishedAt: new Date(),
-        likeCount: 12,
-        saveCount: 4,
-        items: {
-          create: [
-            { slot: 'TOP', productId: shirt.id, position: 0 },
-            { slot: 'BOTTOM', productId: trouser.id, position: 1 },
-          ],
-        },
-      },
-    });
-
-    const weekendCover = 'seed/looks/weekend-uniform.jpg';
-    await upload(
-      weekendCover,
-      await placeholderImage({
-        index: 1,
-        slug: 'look-weekend',
-        size: { width: 1080, height: 1350 },
-      }),
-    );
-
-    await prisma.look.create({
-      data: {
-        ownerId: shopper.id,
-        coverKey: weekendCover,
-        width: 1080,
-        height: 1350,
-        title: 'Weekend uniform',
-        caption: 'Boxy tee, cargo, gum sole.',
-        nimaSays: 'Keep the tee tucked at the front so the cargo waist still reads.',
-        source: 'CURATED',
-        visibility: 'PUBLIC',
-        publishedAt: new Date(),
-        likeCount: 31,
-        saveCount: 9,
-        items: {
-          create: [
-            { slot: 'TOP', productId: tee.id, position: 0 },
-            { slot: 'BOTTOM', productId: cargo.id, position: 1 },
-            { slot: 'SHOES', productId: sneaker.id, position: 2 },
-          ],
-        },
-      },
-    });
-  }
+  // The feed's sample looks: real outfit photographs, each with a few pieces
+  // from the sample shops linked underneath. Rebuilt whenever the set of
+  // photographs changes, or with --replace-looks.
+  await seedLooks(process.argv.includes('--replace-looks'));
 
   const counts = {
     users: await prisma.user.count(),
@@ -498,3 +418,108 @@ main()
     process.exit(1);
   })
   .finally(() => prisma.$disconnect());
+
+/** Which shop category a look's slot draws its linked pieces from. */
+const CATEGORY_FOR_SLOT: Record<SeedLook['slots'][number], ProductCategory> = {
+  TOP: 'TOP',
+  BOTTOM: 'BOTTOM',
+  FULL_BODY: 'DRESS',
+  OUTERWEAR: 'OUTERWEAR',
+  SHOES: 'SHOES',
+  BAG: 'BAG',
+  JEWELLERY: 'JEWELLERY',
+};
+
+interface LookCredit {
+  file: string;
+  author: string;
+  licence: string;
+  page: string;
+}
+
+/**
+ * The curated looks, from seed-assets/looks.
+ *
+ * They belong to nobody: a look without an owner is Nima's own, which is
+ * what the feed shows as curated. Every caption ends with the photograph's
+ * credit, because the licence asks for it and because it is right.
+ */
+async function seedLooks(force: boolean): Promise<void> {
+  const folder = join(dirname(fileURLToPath(import.meta.url)), 'seed-assets', 'looks');
+  const credits = JSON.parse(await readFile(join(folder, 'manifest.json'), 'utf8')) as LookCredit[];
+
+  const existing = await prisma.look.findMany({
+    where: { source: 'CURATED' },
+    select: { coverKey: true },
+  });
+  const wanted = new Set(SEED_LOOKS.map((look) => `seed/looks/${look.file}`));
+  const current =
+    existing.length === wanted.size && existing.every((look) => wanted.has(look.coverKey ?? ''));
+  if (current && !force) return;
+
+  await prisma.look.deleteMany({ where: { source: 'CURATED' } });
+
+  const products = await prisma.product.findMany({
+    where: { status: 'ACTIVE' },
+    select: { id: true, category: true },
+    orderBy: { createdAt: 'asc' },
+  });
+  const byCategory = new Map<ProductCategory, string[]>();
+  for (const product of products) {
+    byCategory.set(product.category, [...(byCategory.get(product.category) ?? []), product.id]);
+  }
+
+  // Spread across the catalogue rather than linking the same piece everywhere.
+  const turn = new Map<ProductCategory, number>();
+  const pick = (category: ProductCategory): string | null => {
+    const pool = byCategory.get(category) ?? [];
+    if (pool.length === 0) return null;
+    const next = turn.get(category) ?? 0;
+    turn.set(category, next + 1);
+    return pool[next % pool.length] ?? null;
+  };
+
+  // Newest first in the feed, so the order of the list is the order shown.
+  const now = Date.now();
+
+  for (const [index, look] of SEED_LOOKS.entries()) {
+    const credit = credits.find((entry) => entry.file === look.file);
+    const key = `seed/looks/${look.file}`;
+    await upload(key, await readFile(join(folder, look.file)));
+
+    const items = look.slots
+      .map((slot) => ({ slot, productId: pick(CATEGORY_FOR_SLOT[slot]) }))
+      .filter((item): item is { slot: SeedLook['slots'][number]; productId: string } =>
+        Boolean(item.productId),
+      );
+
+    await prisma.look.create({
+      data: {
+        ownerId: null,
+        coverKey: key,
+        width: 1080,
+        height: 1350,
+        title: look.title,
+        caption: credit
+          ? `${look.caption}\n\nPhoto: ${credit.author}, ${credit.licence}, via Wikimedia Commons.`
+          : look.caption,
+        nimaSays: look.nimaSays,
+        source: 'CURATED',
+        visibility: 'PUBLIC',
+        publishedAt: new Date(now - index * 47 * 60 * 1000),
+        createdAt: new Date(now - index * 47 * 60 * 1000),
+        likeCount: look.likes,
+        saveCount: Math.round(look.likes / 4),
+        items: {
+          create: items.map((item, position) => ({
+            slot: item.slot as GarmentSlot,
+            productId: item.productId,
+            position,
+          })),
+        },
+      },
+    });
+  }
+
+  console.info(`Looks: ${SEED_LOOKS.length} curated looks with photographs`);
+}
