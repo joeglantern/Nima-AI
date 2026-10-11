@@ -6,31 +6,22 @@
  * change a piece.
  */
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import {
-  ActivityIndicator,
-  Platform,
-  Pressable,
-  ScrollView,
-  Share,
-  useWindowDimensions,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, useWindowDimensions, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
-import { useAuthGate } from '../../src/components/auth-gate';
 import { Button } from '../../src/components/button';
 import { Body, BodyStrong, Caption, Eyebrow, Micro, Price, Title } from '../../src/components/text';
-import { ApiError, api } from '../../src/lib/api';
+import { TryOnResultSheet, useTryOn } from '../../src/components/try-on';
+import { api } from '../../src/lib/api';
+import { shareLook } from '../../src/lib/share';
 import { useTheme } from '../../src/theme/index';
 
 export default function LookScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { colors, gutter, radius, isWide } = useTheme();
   const { width } = useWindowDimensions();
-  const { requireAccount } = useAuthGate();
-  const queryClient = useQueryClient();
   const router = useRouter();
 
   const look = useQuery({
@@ -39,36 +30,9 @@ export default function LookScreen() {
     enabled: Boolean(id),
   });
 
-  const recreate = useMutation({
-    mutationFn: () => api.startTryOn({ kind: 'RECREATE', lookId: String(id) }),
-    onError: (error) => {
-      if (error instanceof ApiError && error.needsAccount) {
-        requireAccount('Create an account to wear this yourself');
-      }
-    },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['bootstrap'] }),
-  });
+  const tryOn = useTryOn('Create an account to wear this yourself');
 
-  const share = useMutation({
-    mutationFn: async () => {
-      const link = await api.shareLink(String(id));
-
-      if (Platform.OS === 'web') {
-        const navigatorWithShare = globalThis.navigator as Navigator & {
-          share?: (data: { title?: string; text?: string; url?: string }) => Promise<void>;
-        };
-
-        if (navigatorWithShare?.share) {
-          await navigatorWithShare.share({ title: 'Nima', text: link.message, url: link.url });
-        } else {
-          await globalThis.navigator?.clipboard?.writeText(link.url);
-        }
-        return;
-      }
-
-      await Share.share({ message: link.message, url: link.url });
-    },
-  });
+  const share = useMutation({ mutationFn: () => shareLook(String(id)) });
 
   if (look.isLoading) {
     return (
@@ -168,17 +132,18 @@ export default function LookScreen() {
 
             {item.canRecreate ? (
               <Button
-                label="See this on me"
-                loading={recreate.isPending}
-                onPress={() => recreate.mutate()}
+                label={tryOn.busy ? 'Nima is dressing you' : 'See this on me'}
+                loading={tryOn.busy}
+                onPress={() => tryOn.start({ kind: 'RECREATE', lookId: item.id })}
               />
             ) : null}
+            {tryOn.progress ? <Caption align="center">{tryOn.progress}</Caption> : null}
+            {tryOn.problem ? (
+              <Body tone="critical" align="center">
+                {tryOn.problem}
+              </Body>
+            ) : null}
 
-            {/*
-              Sharing uses whatever the person already uses, which here is
-              almost always WhatsApp, rather than a Nima only inbox. The
-              message comes from the server so the wording stays in one place.
-            */}
             <Button
               label="Share this look"
               variant="quiet"
@@ -265,6 +230,8 @@ export default function LookScreen() {
           </View>
         </View>
       </ScrollView>
+
+      <TryOnResultSheet tryOn={tryOn} label={item.title ?? 'this look'} />
     </>
   );
 }

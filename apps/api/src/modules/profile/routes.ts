@@ -354,7 +354,7 @@ export const profileRoutes: FastifyPluginAsyncZod = async (app) => {
         ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
         include: {
           owner: { include: { profile: true, store: true } },
-          _count: { select: { items: true } },
+          _count: { select: { items: true, comments: { where: { hiddenAt: null } } } },
         },
       });
 

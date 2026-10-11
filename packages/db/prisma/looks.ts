@@ -20,6 +20,8 @@ export interface SeedLook {
   nimaSays: string;
   slots: Array<'TOP' | 'BOTTOM' | 'FULL_BODY' | 'OUTERWEAR' | 'SHOES' | 'BAG' | 'JEWELLERY'>;
   likes: number;
+  /** Where you would wear it. The circles across the top of For You. */
+  occasions: string[];
 }
 
 export const SEED_LOOKS: SeedLook[] = [
@@ -31,6 +33,7 @@ export const SEED_LOOKS: SeedLook[] = [
       'A single bold colour head to toe reads as tailoring, not costume. Keep the jewellery tiny.',
     slots: ['FULL_BODY', 'JEWELLERY'],
     likes: 214,
+    occasions: ['celebration', 'date night'],
   },
   {
     file: 'look-01.jpg',
@@ -40,6 +43,7 @@ export const SEED_LOOKS: SeedLook[] = [
       'When the print is busy, let the silhouette be simple and put the volume in one place.',
     slots: ['FULL_BODY', 'JEWELLERY'],
     likes: 132,
+    occasions: ['celebration', 'weekend'],
   },
   {
     file: 'look-02.jpg',
@@ -48,6 +52,7 @@ export const SEED_LOOKS: SeedLook[] = [
     nimaSays: 'A black top under a print this strong gives the eye somewhere to rest.',
     slots: ['TOP', 'BOTTOM', 'JEWELLERY'],
     likes: 176,
+    occasions: ['date night', 'celebration'],
   },
   {
     file: 'look-03.jpg',
@@ -57,6 +62,7 @@ export const SEED_LOOKS: SeedLook[] = [
       'Horizontal stripes on a full skirt look best with something cropped and plain on top.',
     slots: ['TOP', 'BOTTOM', 'JEWELLERY'],
     likes: 98,
+    occasions: ['holiday', 'weekend'],
   },
   {
     file: 'look-04.jpg',
@@ -65,6 +71,7 @@ export const SEED_LOOKS: SeedLook[] = [
     nimaSays: 'One printed piece on a neutral base is the easiest way to wear print to the office.',
     slots: ['OUTERWEAR', 'TOP', 'BOTTOM'],
     likes: 241,
+    occasions: ['office'],
   },
   {
     file: 'look-05.jpg',
@@ -73,6 +80,7 @@ export const SEED_LOOKS: SeedLook[] = [
     nimaSays: 'A nipped waist and a skirt that stops at the knee flatters almost everyone.',
     slots: ['FULL_BODY', 'SHOES'],
     likes: 87,
+    occasions: ['date night'],
   },
   {
     file: 'look-06.jpg',
@@ -82,6 +90,7 @@ export const SEED_LOOKS: SeedLook[] = [
       'Matching your trousers to one colour in the print on your top ties the whole thing together.',
     slots: ['TOP', 'BOTTOM', 'OUTERWEAR'],
     likes: 153,
+    occasions: ['weekend'],
   },
   {
     file: 'look-07.jpg',
@@ -90,6 +99,7 @@ export const SEED_LOOKS: SeedLook[] = [
     nimaSays: 'The belt is doing the work here. A full skirt needs a defined waist.',
     slots: ['FULL_BODY', 'BAG'],
     likes: 189,
+    occasions: ['celebration', 'weekend'],
   },
   {
     file: 'look-08.jpg',
@@ -99,6 +109,7 @@ export const SEED_LOOKS: SeedLook[] = [
       'Coordinate the palette, not the pattern. It looks planned without looking like a uniform.',
     slots: ['TOP', 'FULL_BODY'],
     likes: 305,
+    occasions: ['wedding', 'celebration'],
   },
   {
     file: 'look-09.jpg',
@@ -108,6 +119,7 @@ export const SEED_LOOKS: SeedLook[] = [
       'Statement beads and a strong colour belong together. Keep the hair and make-up clean.',
     slots: ['TOP', 'JEWELLERY'],
     likes: 121,
+    occasions: ['celebration'],
   },
   {
     file: 'look-10.jpg',
@@ -116,6 +128,7 @@ export const SEED_LOOKS: SeedLook[] = [
     nimaSays: 'Two solid colours and one beaded detail. Simple enough to wear on a Tuesday.',
     slots: ['TOP', 'BOTTOM', 'SHOES'],
     likes: 94,
+    occasions: ['office', 'weekend'],
   },
   {
     file: 'look-11.jpg',
@@ -124,6 +137,7 @@ export const SEED_LOOKS: SeedLook[] = [
     nimaSays: 'At a wedding, one dramatic element is enough. Here it is the train.',
     slots: ['FULL_BODY', 'JEWELLERY'],
     likes: 267,
+    occasions: ['wedding'],
   },
   {
     file: 'look-12.jpg',
@@ -132,6 +146,7 @@ export const SEED_LOOKS: SeedLook[] = [
     nimaSays: 'A fitted mermaid cut makes a sweet floral print feel grown up.',
     slots: ['FULL_BODY'],
     likes: 198,
+    occasions: ['wedding', 'celebration'],
   },
   {
     file: 'look-13.jpg',
@@ -140,6 +155,7 @@ export const SEED_LOOKS: SeedLook[] = [
     nimaSays: 'Layering something sheer over print softens it without hiding it.',
     slots: ['FULL_BODY', 'OUTERWEAR'],
     likes: 176,
+    occasions: ['celebration', 'date night'],
   },
   {
     file: 'look-14.jpg',
@@ -148,6 +164,7 @@ export const SEED_LOOKS: SeedLook[] = [
     nimaSays: 'A two-piece in one print can be worn together, or split up with plain pieces.',
     slots: ['TOP', 'BOTTOM'],
     likes: 143,
+    occasions: ['date night', 'holiday'],
   },
   {
     file: 'look-15.jpg',
@@ -157,6 +174,7 @@ export const SEED_LOOKS: SeedLook[] = [
       'Print in black and white is the quietest way to wear pattern. It goes with everything.',
     slots: ['FULL_BODY', 'JEWELLERY'],
     likes: 112,
+    occasions: ['office'],
   },
   {
     file: 'look-16.jpg',
@@ -165,6 +183,7 @@ export const SEED_LOOKS: SeedLook[] = [
     nimaSays: 'A long open layer makes jeans and a tee look like a decision.',
     slots: ['OUTERWEAR', 'TOP', 'SHOES'],
     likes: 76,
+    occasions: ['weekend'],
   },
   {
     file: 'look-17.jpg',
@@ -173,6 +192,7 @@ export const SEED_LOOKS: SeedLook[] = [
     nimaSays: 'Big sleeves want a slim skirt. Volume in one place only.',
     slots: ['TOP', 'BOTTOM', 'JEWELLERY'],
     likes: 229,
+    occasions: ['weekend', 'office'],
   },
   {
     file: 'look-18.jpg',
@@ -181,6 +201,7 @@ export const SEED_LOOKS: SeedLook[] = [
     nimaSays: 'A good white blouse earns its place by being worn three different ways.',
     slots: ['TOP', 'JEWELLERY'],
     likes: 184,
+    occasions: ['weekend', 'date night'],
   },
   {
     file: 'look-19.jpg',
@@ -189,6 +210,7 @@ export const SEED_LOOKS: SeedLook[] = [
     nimaSays: 'A kaftan is the most comfortable thing you can wear that still looks dressed.',
     slots: ['FULL_BODY'],
     likes: 89,
+    occasions: ['holiday'],
   },
   {
     file: 'look-20.jpg',
@@ -197,6 +219,7 @@ export const SEED_LOOKS: SeedLook[] = [
     nimaSays: 'A bright skirt with a white top is summer in two pieces. Add texture with the bag.',
     slots: ['TOP', 'BOTTOM', 'BAG'],
     likes: 312,
+    occasions: ['weekend', 'holiday'],
   },
   {
     file: 'look-21.jpg',
@@ -205,6 +228,7 @@ export const SEED_LOOKS: SeedLook[] = [
     nimaSays: 'When the dress is a graphic, the shape can be as simple as a shift.',
     slots: ['FULL_BODY'],
     likes: 158,
+    occasions: ['office', 'celebration'],
   },
   {
     file: 'look-22.jpg',
@@ -213,6 +237,7 @@ export const SEED_LOOKS: SeedLook[] = [
     nimaSays: 'A wrap worn on one shoulder gives you drape and a clean line on the other side.',
     slots: ['FULL_BODY', 'JEWELLERY'],
     likes: 104,
+    occasions: ['celebration'],
   },
   {
     file: 'look-23.jpg',
@@ -221,6 +246,7 @@ export const SEED_LOOKS: SeedLook[] = [
     nimaSays: 'Deep red reads rich in photographs. Cream accents keep it from looking heavy.',
     slots: ['FULL_BODY', 'JEWELLERY'],
     likes: 276,
+    occasions: ['wedding'],
   },
   {
     file: 'look-24.jpg',
@@ -229,6 +255,7 @@ export const SEED_LOOKS: SeedLook[] = [
     nimaSays: 'Matching the headwrap to the blouse makes a strong colour look effortless.',
     slots: ['TOP', 'JEWELLERY'],
     likes: 233,
+    occasions: ['wedding'],
   },
   {
     file: 'look-25.jpg',
@@ -237,6 +264,7 @@ export const SEED_LOOKS: SeedLook[] = [
     nimaSays: 'A soft colour still feels like an occasion when the texture is lace.',
     slots: ['TOP', 'JEWELLERY'],
     likes: 247,
+    occasions: ['wedding'],
   },
   {
     file: 'look-26.jpg',
@@ -245,6 +273,7 @@ export const SEED_LOOKS: SeedLook[] = [
     nimaSays: 'Trim along the hem and sleeves gives a plain dress a lot of personality.',
     slots: ['FULL_BODY'],
     likes: 119,
+    occasions: ['weekend', 'holiday'],
   },
   {
     file: 'look-27.jpg',
@@ -253,5 +282,6 @@ export const SEED_LOOKS: SeedLook[] = [
     nimaSays: 'An oversized floral on a loose cut is the comfortable way to wear a big print.',
     slots: ['FULL_BODY', 'JEWELLERY'],
     likes: 137,
+    occasions: ['weekend'],
   },
 ];

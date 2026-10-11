@@ -471,6 +471,10 @@ model Look {
   width         Int?
   height        Int?
 
+  /// Where you would wear it: wedding, office, weekend. The circles across
+  /// the top of For You filter on these.
+  occasions     String[]   @default([])
+
   /// Set when this look was recreated from another one.
   recreatedFromId String?
   recreatedFrom Look?      @relation("Recreations", fields: [recreatedFromId], references: [id], onDelete: SetNull)
@@ -498,6 +502,7 @@ model Look {
   @@index([ownerId, createdAt])
   @@index([visibility, publishedAt])
   @@index([source, publishedAt])
+  @@index([occasions], type: Gin)
   @@map("looks")
 }
 

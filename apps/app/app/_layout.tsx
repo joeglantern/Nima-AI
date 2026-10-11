@@ -8,6 +8,7 @@
 
 import {
   CormorantGaramond_500Medium,
+  CormorantGaramond_500Medium_Italic,
   CormorantGaramond_600SemiBold,
   useFonts as useCormorant,
 } from '@expo-google-fonts/cormorant-garamond';
@@ -59,6 +60,7 @@ const queryClient = new QueryClient({
 export default function RootLayout() {
   const [cormorantLoaded] = useCormorant({
     CormorantGaramond_500Medium,
+    CormorantGaramond_500Medium_Italic,
     CormorantGaramond_600SemiBold,
   });
   const [dmSansLoaded] = useDMSans({

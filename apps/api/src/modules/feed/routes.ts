@@ -10,11 +10,11 @@
  * never gates.
  */
 
-import { feedItemSchema, feedQuerySchema } from '@nima/contracts';
+import { feedItemSchema, feedQuerySchema, imageSchema } from '@nima/contracts';
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 import { z } from 'zod';
 import { decodeCursor, encodeCursor } from '../../lib/pagination.js';
-import { lookCard, productCard } from '../../lib/presenters.js';
+import { lookCard, productCard, publicImage } from '../../lib/presenters.js';
 import { recordEvent } from '../../services/events.js';
 import { FeedService } from '../../services/feed.js';
 
@@ -122,7 +122,68 @@ export const feedRoutes: FastifyPluginAsyncZod = async (app) => {
       };
     },
   );
+
+  app.get(
+    '/feed/occasions',
+    {
+      schema: {
+        tags: ['feed'],
+        summary: 'The occasion circles across the top of For You',
+        response: {
+          200: z.object({
+            items: z.array(
+              z.object({ key: z.string(), label: z.string(), image: imageSchema.nullable() }),
+            ),
+          }),
+        },
+      },
+    },
+    async () => {
+      // The best loved public look for each occasion is its cover.
+      const covers = await Promise.all(
+        OCCASIONS.map((occasion) =>
+          app.prisma.look.findFirst({
+            where: {
+              visibility: 'PUBLIC',
+              publishedAt: { not: null },
+              coverKey: { not: null },
+              occasions: { has: occasion.key },
+            },
+            orderBy: [{ likeCount: 'desc' }, { publishedAt: 'desc' }],
+            select: { coverKey: true, width: true, height: true },
+          }),
+        ),
+      );
+
+      return {
+        items: OCCASIONS.flatMap((occasion, index) => {
+          const cover = covers[index];
+          if (!cover) return [];
+          return [
+            {
+              key: occasion.key,
+              label: occasion.label,
+              image: publicImage(app.storage, cover.coverKey, cover.width, cover.height),
+            },
+          ];
+        }),
+      };
+    },
+  );
 };
+
+/**
+ * The circles across the top of For You, in the order they are shown. Each
+ * one is only offered when there is something behind it.
+ */
+const OCCASIONS = [
+  { key: 'wedding', label: 'Weddings' },
+  { key: 'office', label: 'Office' },
+  { key: 'weekend', label: 'Weekend' },
+  { key: 'date night', label: 'Date night' },
+  { key: 'celebration', label: 'Celebrations' },
+  { key: 'holiday', label: 'Holiday' },
+] as const;
 
 /**
  * One nudge at a time, in the order that unlocks the most value: finish the

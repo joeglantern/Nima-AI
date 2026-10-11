@@ -455,7 +455,17 @@ async function seedLooks(force: boolean): Promise<void> {
   const wanted = new Set(SEED_LOOKS.map((look) => `seed/looks/${look.file}`));
   const current =
     existing.length === wanted.size && existing.every((look) => wanted.has(look.coverKey ?? ''));
-  if (current && !force) return;
+  if (current && !force) {
+    // Same photographs: only bring the tags up to date, so likes and
+    // comments people have left on them survive.
+    for (const look of SEED_LOOKS) {
+      await prisma.look.updateMany({
+        where: { source: 'CURATED', coverKey: `seed/looks/${look.file}` },
+        data: { occasions: look.occasions },
+      });
+    }
+    return;
+  }
 
   await prisma.look.deleteMany({ where: { source: 'CURATED' } });
 
@@ -504,6 +514,7 @@ async function seedLooks(force: boolean): Promise<void> {
           ? `${look.caption}\n\nPhoto: ${credit.author}, ${credit.licence}, via Wikimedia Commons.`
           : look.caption,
         nimaSays: look.nimaSays,
+        occasions: look.occasions,
         source: 'CURATED',
         visibility: 'PUBLIC',
         publishedAt: new Date(now - index * 47 * 60 * 1000),

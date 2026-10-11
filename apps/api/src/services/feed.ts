@@ -34,7 +34,7 @@ export interface FeedOptions {
 type LookWithRelations = Prisma.LookGetPayload<{
   include: {
     owner: { include: { profile: true; store: true } };
-    _count: { select: { items: true } };
+    _count: { select: { items: true; comments: { where: { hiddenAt: null } } } };
     items: { include: { product: { select: { tags: true; occasions: true; category: true } } } };
   };
 }>;
@@ -68,8 +68,18 @@ export class FeedService {
         : {}),
       ...(blocked.size ? { ownerId: { notIn: [...blocked] } } : {}),
       ...(options.surface === 'following' && follows.size ? { ownerId: { in: [...follows] } } : {}),
+      // Tagged on the look itself. A look nobody tagged falls back on the
+      // pieces in it.
       ...(options.occasion
-        ? { items: { some: { product: { occasions: { has: options.occasion } } } } }
+        ? {
+            OR: [
+              { occasions: { has: options.occasion } },
+              {
+                occasions: { isEmpty: true },
+                items: { some: { product: { occasions: { has: options.occasion } } } },
+              },
+            ],
+          }
         : {}),
     };
 
@@ -81,7 +91,7 @@ export class FeedService {
       take: Math.min(options.limit * 4, 120),
       include: {
         owner: { include: { profile: true, store: true } },
-        _count: { select: { items: true } },
+        _count: { select: { items: true, comments: { where: { hiddenAt: null } } } },
         items: {
           include: { product: { select: { tags: true, occasions: true, category: true } } },
         },

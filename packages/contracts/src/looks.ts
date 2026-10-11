@@ -53,6 +53,8 @@ export const lookCardSchema = z.object({
   author: lookAuthorSchema.nullable(),
   itemCount: z.number().int(),
   likeCount: z.number().int(),
+  /** Zero where the list did not count them. */
+  commentCount: z.number().int().default(0),
   likedByMe: z.boolean(),
   savedByMe: z.boolean(),
   canRecreate: z.boolean(),

@@ -134,7 +134,7 @@ interface LookRow {
   likeCount: number;
   createdAt: Date;
   owner?: AuthorRow | null;
-  _count?: { items: number };
+  _count?: { items: number; comments?: number };
 }
 
 export function lookCard(
@@ -153,6 +153,7 @@ export function lookCard(
     author: lookAuthor(storage, look.owner ?? null),
     itemCount: look._count?.items ?? 0,
     likeCount: look.likeCount,
+    commentCount: look._count?.comments ?? 0,
     likedByMe: viewer.likedByMe ?? false,
     savedByMe: viewer.savedByMe ?? false,
     // A look can be recreated when it is public and has at least one item.

@@ -17,10 +17,9 @@ import { ActivityIndicator, Pressable, ScrollView, useWindowDimensions, View } f
 import Svg, { Path } from 'react-native-svg';
 import { useAuthGate } from '../../src/components/auth-gate';
 import { Button } from '../../src/components/button';
-import { Sheet } from '../../src/components/sheet';
-import { Body, BodyStrong, Caption, Eyebrow, Micro, Price, Title } from '../../src/components/text';
+import { Body, BodyStrong, Caption, Micro, Price, Title } from '../../src/components/text';
+import { TryOnResultSheet, useTryOn } from '../../src/components/try-on';
 import { ApiError, api } from '../../src/lib/api';
-import { useServerFrame } from '../../src/lib/realtime';
 import { useTheme } from '../../src/theme/index';
 
 export default function ProductScreen() {
@@ -33,10 +32,6 @@ export default function ProductScreen() {
 
   const [variantId, setVariantId] = useState<string | null>(null);
   const [added, setAdded] = useState(false);
-  const [jobId, setJobId] = useState<string | null>(null);
-  const [resultUrl, setResultUrl] = useState<string | null>(null);
-  const [savedLookId, setSavedLookId] = useState<string | null>(null);
-  const [progress, setProgress] = useState<string | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
 
   const product = useQuery({
@@ -71,76 +66,7 @@ export default function ProductScreen() {
     },
   });
 
-  // The result arrives on the socket, not from polling.
-  useServerFrame('tryon.progress', (frame) => {
-    if (frame.jobId === jobId) setProgress(frame.note ?? 'Working on it');
-  });
-
-  useServerFrame('tryon.done', (frame) => {
-    if (frame.jobId !== jobId) return;
-    setResultUrl(frame.imageUrl);
-    setSavedLookId(null);
-    setProgress(null);
-    void queryClient.invalidateQueries({ queryKey: ['bootstrap'] });
-  });
-
-  useServerFrame('tryon.failed', (frame) => {
-    if (frame.jobId !== jobId) return;
-    setJobId(null);
-    setProgress(null);
-    setProblem(frame.reason);
-    void queryClient.invalidateQueries({ queryKey: ['bootstrap'] });
-  });
-
-  const tryOn = useMutation({
-    mutationFn: () =>
-      api.startTryOn({
-        kind: 'SINGLE_ITEM',
-        items: [
-          {
-            slot: slotFor(product.data?.category),
-            productId: String(id),
-            ...(variantId ? { variantId } : {}),
-          },
-        ],
-      }),
-    onSuccess: (response) => {
-      setJobId(response.job.id);
-      setProgress('Nima is dressing you');
-      setProblem(null);
-    },
-    onError: (error) => {
-      if (!(error instanceof ApiError)) {
-        setProblem('Something went wrong. Try again.');
-        return;
-      }
-
-      if (error.needsAccount) {
-        requireAccount('Create an account to try this on yourself');
-      } else if (error.needsPhoto) {
-        setProblem('Add a photo of yourself first, then try again.');
-      } else if (error.needsCredits) {
-        setProblem(error.message);
-      } else {
-        setProblem(error.message);
-      }
-    },
-  });
-
-  // Keeping the picture makes it a private look, with this piece in it.
-  const keep = useMutation({
-    mutationFn: () => {
-      if (!jobId) throw new Error('There is nothing to save yet');
-      return api.publishTryOn(jobId, { visibility: 'PRIVATE' });
-    },
-    onSuccess: (result) => {
-      setSavedLookId(result.lookId);
-      void queryClient.invalidateQueries({ queryKey: ['tryons'] });
-    },
-    onError: (error) => {
-      setProblem(error instanceof Error ? error.message : 'That did not save');
-    },
-  });
+  const tryOn = useTryOn();
 
   if (product.isLoading) {
     return (
@@ -270,9 +196,20 @@ export default function ProductScreen() {
             ) : null}
 
             <Button
-              label={tryOn.isPending || jobId ? 'Nima is dressing you' : 'See it on me'}
-              loading={tryOn.isPending || Boolean(jobId && !resultUrl)}
-              onPress={() => tryOn.mutate()}
+              label={tryOn.busy ? 'Nima is dressing you' : 'See it on me'}
+              loading={tryOn.busy}
+              onPress={() =>
+                tryOn.start({
+                  kind: 'SINGLE_ITEM',
+                  items: [
+                    {
+                      slot: slotFor(item.category),
+                      productId: item.id,
+                      ...(variantId ? { variantId } : {}),
+                    },
+                  ],
+                })
+              }
             />
 
             {/*
@@ -291,10 +228,10 @@ export default function ProductScreen() {
               />
             ) : null}
 
-            {progress ? <Caption align="center">{progress}</Caption> : null}
-            {problem ? (
+            {tryOn.progress ? <Caption align="center">{tryOn.progress}</Caption> : null}
+            {(problem ?? tryOn.problem) ? (
               <Body tone="critical" align="center">
-                {problem}
+                {problem ?? tryOn.problem}
               </Body>
             ) : null}
 
@@ -328,63 +265,7 @@ export default function ProductScreen() {
         </View>
       </ScrollView>
 
-      {/* The result */}
-      <Sheet
-        open={Boolean(resultUrl)}
-        onClose={() => {
-          setResultUrl(null);
-          setJobId(null);
-        }}
-        title="Here you are"
-      >
-        {resultUrl ? (
-          <Image
-            source={{ uri: resultUrl }}
-            style={{ width: '100%', aspectRatio: 3 / 4, borderRadius: radius.image }}
-            contentFit="cover"
-            accessibilityLabel={`You wearing ${item.title}`}
-          />
-        ) : null}
-
-        <View
-          style={{
-            backgroundColor: colors.secondarySoft,
-            borderRadius: radius.image,
-            padding: 14,
-            gap: 4,
-            marginTop: 8,
-          }}
-        >
-          <Eyebrow tone="secondary">{bootstrap.data?.fitNotice.title ?? 'About the fit'}</Eyebrow>
-          <Caption tone="ink">
-            {bootstrap.data?.fitNotice.body ??
-              "Nima shows you how something looks, not how it will fit. Check the seller's size guide."}
-          </Caption>
-        </View>
-
-        {savedLookId ? (
-          <Button
-            label="Open it in my looks"
-            onPress={() => {
-              const lookId = savedLookId;
-              setResultUrl(null);
-              setJobId(null);
-              router.push({ pathname: '/look/[id]', params: { id: lookId } });
-            }}
-          />
-        ) : (
-          <Button label="Save to my looks" loading={keep.isPending} onPress={() => keep.mutate()} />
-        )}
-        <Button
-          label={savedLookId ? 'Done' : 'Try something else'}
-          variant="quiet"
-          onPress={() => {
-            // Both, or the try-on button stays stuck on "Nima is dressing you".
-            setResultUrl(null);
-            setJobId(null);
-          }}
-        />
-      </Sheet>
+      <TryOnResultSheet tryOn={tryOn} label={item.title} />
     </>
   );
 }

@@ -13,6 +13,7 @@
 import type {
   cartSchema,
   checkoutSchema,
+  commentSchema,
   creditBalanceSchema,
   feedItemSchema,
   lookbookEntrySchema,
@@ -46,6 +47,12 @@ export type LookCardData = Extract<FeedItem, { kind: 'look' }>['look'];
 export type ProductCard = Infer<typeof productCardSchema>;
 export type ProductDetail = Infer<typeof productDetailSchema>;
 export type LookDetail = Infer<typeof lookDetailSchema>;
+export type Comment = Infer<typeof commentSchema>;
+export interface Occasion {
+  key: string;
+  label: string;
+  image: { url: string; width: number | null; height: number | null } | null;
+}
 export type PublicProfile = Infer<typeof publicProfileSchema>;
 export type StyleProfile = Infer<typeof styleProfileSchema>;
 export type UserPhoto = Infer<typeof userPhotoSchema>;
@@ -228,7 +235,16 @@ export const api = {
     surface?: 'foryou' | 'explore' | 'following';
     cursor?: string;
     limit?: number;
+    occasion?: string;
   }) => request<Page<FeedItem>>('/v1/feed', { query: params }),
+
+  occasions: () => request<{ items: Occasion[] }>('/v1/feed/occasions'),
+
+  comments: (lookId: string, cursor?: string) =>
+    request<Page<Comment>>(`/v1/looks/${lookId}/comments`, { query: { cursor, limit: 30 } }),
+
+  addComment: (lookId: string, body: string) =>
+    request<Comment>(`/v1/looks/${lookId}/comments`, { method: 'POST', body: { body } }),
 
   products: (params: {
     q?: string;
