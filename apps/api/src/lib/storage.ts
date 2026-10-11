@@ -196,7 +196,7 @@ export function createStorage(env: Env): Storage {
         });
 
         return {
-          uploadUrl: `${reachableUrl(env.API_URL).replace(/\/$/, '')}/v1/uploads/${token}`,
+          uploadUrl: `${reachableUrl(env.API_URL).replace(/\/$/, '')}/v1/uploads?t=${token}`,
           storageKey,
           headers: { 'Content-Type': input.contentType },
           expiresInSeconds,

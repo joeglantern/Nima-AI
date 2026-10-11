@@ -387,7 +387,7 @@ export const profileRoutes: FastifyPluginAsyncZod = async (app) => {
   );
 
   app.put(
-    '/uploads/:token',
+    '/uploads',
     {
       config: { rateLimit: { max: 60, timeWindow: '1 minute' } },
       schema: {
@@ -395,13 +395,14 @@ export const profileRoutes: FastifyPluginAsyncZod = async (app) => {
         summary: 'Upload the bytes for a ticket',
         description:
           'Only used when the server keeps storage private. The PUT body is the image, ' +
-          'with the Content-Type the ticket was issued for.',
-        params: z.object({ token: z.string().min(16).max(2000) }),
+          'with the Content-Type the ticket was issued for. The token is in the query ' +
+          'string because it is longer than a path segment is allowed to be.',
+        querystring: z.object({ t: z.string().min(16).max(2000) }),
         response: { 200: z.object({ storageKey: z.string() }) },
       },
     },
     async (request) => {
-      const claim = verifyMediaToken(app.env.BETTER_AUTH_SECRET, request.params.token);
+      const claim = verifyMediaToken(app.env.BETTER_AUTH_SECRET, request.query.t);
       if (!claim || claim.u !== 'up' || !claim.c || !claim.m) throw errors.unauthorized();
 
       const body = request.body;
