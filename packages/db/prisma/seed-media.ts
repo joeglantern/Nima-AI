@@ -6,76 +6,25 @@
  * cannot see whether the masonry reads, whether a tile fights the title
  * under it, or whether a dress and a pair of shoes tell apart at a glance.
  *
- * So it uses the illustrated garments in `seed-assets/`, which were drawn
- * for this and are obviously drawings. They are not photographs and must
- * never be passed off as a seller's product. They live behind a `seed/`
- * key, the seed is the only thing that writes them, and `docs/ASSETS.md`
- * says why that line matters in a shopping app.
+ * So it uses the photographs in `seed-assets/garments/`, collected by
+ * `scripts/fetch-garments.mjs` from the Metropolitan Museum's Open Access
+ * collection. All of it is CC0, so there is no attribution condition, and
+ * `manifest.json` beside them records where each one came from anyway.
+ *
+ * They are photographs of real garments, which is the point: a shop full
+ * of real clothes is the only way to see what the shop looks like. They
+ * are still not a seller's product photography, they live behind a `seed/`
+ * key, and the seed is the only thing that writes one. See docs/ASSETS.md.
  */
 
-import { readFile } from 'node:fs/promises';
+import { readdir, readFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import sharp from 'sharp';
 
 const assets = join(dirname(fileURLToPath(import.meta.url)), 'seed-assets');
-
-/**
- * Which drawing stands in for which product.
- *
- * By slug where there is an obvious match, so the ankara shirt gets the
- * ankara shirt, and by category otherwise. Getting this right is most of
- * what makes the seeded shop look like a shop.
- */
-const BY_SLUG: Record<string, string> = {
-  'ankara-panel-shirt': 'garment-heritage',
-  'linen-drawstring-trouser': 'garment-minimal',
-  'kitenge-wrap-dress': 'garment-elegant',
-  // Both of these are in the streetwear outfit, which is where they came
-  // from, so sharing a drawing is the truthful answer rather than a clash.
-  'boxy-logo-tee': 'garment-streetwear',
-  'cargo-utility-pant': 'garment-streetwear',
-  'suede-court-sneaker': 'garment-sporty',
-  // The two curated looks on the feed, which are whole outfits.
-  'look-saturday': 'garment-smart-casual',
-  'look-weekend': 'garment-vintage',
-};
-
-/**
- * Categories with no drawing of their own.
- *
- * The sheet is eight outfits, so there is nothing for sunglasses, a bag or
- * a necklace. Putting a jumper behind "Round frame sunglasses" is worse
- * than admitting there is no picture: the faint outline says "no photo
- * yet", which is true, and it is the same placeholder a real listing gets
- * before the seller uploads anything.
- */
-const NO_DRAWING = new Set(['EYEWEAR', 'JEWELLERY', 'BAG', 'HEADWEAR', 'ACCESSORY']);
-
-const BY_CATEGORY: Record<string, string> = {
-  TOP: 'garment-smart-casual',
-  BOTTOM: 'garment-streetwear',
-  DRESS: 'garment-elegant',
-  OUTERWEAR: 'garment-bold',
-  SHOES: 'garment-sporty',
-  BAG: 'no-photo',
-  JEWELLERY: 'no-photo',
-  EYEWEAR: 'no-photo',
-  HEADWEAR: 'no-photo',
-  ACCESSORY: 'no-photo',
-};
-
-const EVERY = [
-  'garment-smart-casual',
-  'garment-streetwear',
-  'garment-heritage',
-  'garment-minimal',
-  'garment-elegant',
-  'garment-sporty',
-  'garment-bold',
-  'garment-vintage',
-];
+const garments = join(assets, 'garments');
 
 /**
  * The shapes a photograph comes in.
@@ -97,36 +46,61 @@ export function placeholderShape(index: number): { width: number; height: number
   return SHAPES[index % SHAPES.length] ?? { width: 900, height: 1200 };
 }
 
+export interface GarmentFile {
+  file: string;
+  category: string;
+}
+
+/** Every photograph that was collected, grouped by what it is. */
+export async function availableGarments(): Promise<GarmentFile[]> {
+  let names: string[] = [];
+
+  try {
+    names = (await readdir(garments)).filter((name) => name.endsWith('.jpg')).sort();
+  } catch {
+    return [];
+  }
+
+  return names.map((file) => ({
+    file,
+    // top-03.jpg -> TOP
+    category: (file.split('-')[0] ?? 'top').toUpperCase(),
+  }));
+}
+
 export interface PlaceholderInput {
   index: number;
-  slug?: string;
-  category?: string;
+  /** A file from `availableGarments`. */
+  file?: string;
   size?: { width: number; height: number };
 }
 
 /**
- * One stand in photograph.
+ * One photograph, cut to the shape asked for.
  *
- * The drawing is covered to the shape asked for rather than stretched, and
- * taken from the middle, which is where the garment sits on every one of
- * these tiles.
+ * Covered rather than stretched, and the crop follows the garment instead
+ * of the middle of the frame, because a museum photograph often leaves
+ * room above a hem that a product tile should not keep.
  */
 export async function placeholderImage(input: PlaceholderInput): Promise<Buffer> {
-  const { index, slug, category } = input;
-  const size = input.size ?? placeholderShape(index);
+  const size = input.size ?? placeholderShape(input.index);
+  const name = input.file ?? 'no-photo.png';
+  const where = input.file ? garments : assets;
 
-  const name =
-    (slug ? BY_SLUG[slug] : undefined) ??
-    (category && NO_DRAWING.has(category) ? 'no-photo' : undefined) ??
-    (category ? BY_CATEGORY[category] : undefined) ??
-    EVERY[index % EVERY.length] ??
-    'garment-smart-casual';
-
-  const art = await readFile(join(assets, `${name}.png`));
+  const art = await readFile(join(where, name));
 
   return sharp(art)
-    .resize(size.width, size.height, { fit: 'cover', position: 'centre' })
-    .jpeg({ quality: 86 })
+    .resize(size.width, size.height, { fit: 'cover', position: 'attention' })
+    .jpeg({ quality: 84 })
+    .toBuffer();
+}
+
+/** The faint outline that means a listing has no picture yet. */
+export async function noPhotoImage(size = { width: 900, height: 1200 }): Promise<Buffer> {
+  const art = await readFile(join(assets, 'no-photo.png'));
+  return sharp(art)
+    .resize(size.width, size.height, { fit: 'contain', background: '#FAF8F5' })
+    .jpeg({ quality: 84 })
     .toBuffer();
 }
 

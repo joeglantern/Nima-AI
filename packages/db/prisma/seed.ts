@@ -13,7 +13,14 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { config as loadDotenv } from 'dotenv';
 import { type GarmentSlot, PrismaClient, type ProductCategory } from '../generated/client/index.js';
-import { createSeedUploader, placeholderImage, placeholderShape } from './seed-media.js';
+import { catalogueFrom } from './catalogue.js';
+import {
+  availableGarments,
+  createSeedUploader,
+  noPhotoImage,
+  placeholderImage,
+  placeholderShape,
+} from './seed-media.js';
 
 // Configuration lives in one .env at the repository root.
 loadDotenv({
@@ -163,8 +170,68 @@ const SAMPLE_STORES = [
   },
 ];
 
+/**
+ * Hands out a photograph per category, in order, without repeating one
+ * until the category runs out. A shop where two listings share a picture
+ * looks like a mistake, and it is the first thing anybody notices.
+ */
+function createPicturePool(files: Array<{ file: string; category: string }>) {
+  const byCategory = new Map<string, string[]>();
+
+  for (const entry of files) {
+    const bucket = byCategory.get(entry.category);
+    if (bucket) bucket.push(entry.file);
+    else byCategory.set(entry.category, [entry.file]);
+  }
+
+  const used = new Map<string, number>();
+
+  return function pictureFor(category: string): string | null {
+    const bucket = byCategory.get(category.toUpperCase());
+    if (!bucket || bucket.length === 0) return null;
+
+    const at = used.get(category) ?? 0;
+    used.set(category, at + 1);
+    return bucket[at % bucket.length] ?? null;
+  };
+}
+
+/**
+ * Clear the sample catalogue so it can be seeded afresh.
+ *
+ *   tsx prisma/seed.ts --replace-catalogue
+ *
+ * Only what the seed itself created: the products of the sample stores and
+ * the curated looks built from them. Anything a real person did with those
+ * products is respected. A product that was ordered is archived rather than
+ * deleted, because an order has to keep pointing at what was sold.
+ */
+async function replaceCatalogue(): Promise<void> {
+  const sampleStores = await prisma.store.findMany({
+    where: { owner: { email: { in: SAMPLE_STORES.map((store) => `${store.slug}@example.com`) } } },
+    select: { id: true },
+  });
+  const storeIds = sampleStores.map((store) => store.id);
+  if (storeIds.length === 0) return;
+
+  await prisma.look.deleteMany({ where: { source: 'CURATED' } });
+  await prisma.cartItem.deleteMany({ where: { product: { storeId: { in: storeIds } } } });
+
+  const archived = await prisma.product.updateMany({
+    where: { storeId: { in: storeIds }, orderItems: { some: {} } },
+    data: { status: 'ARCHIVED' },
+  });
+  const removed = await prisma.product.deleteMany({
+    where: { storeId: { in: storeIds }, orderItems: { none: {} } },
+  });
+
+  console.info(`Catalogue cleared: ${removed.count} removed, ${archived.count} archived (ordered)`);
+}
+
 async function main(): Promise<void> {
   console.info('Seeding Nima development data');
+
+  if (process.argv.includes('--replace-catalogue')) await replaceCatalogue();
 
   // A demo shopper. Sign in as this person with an email code in development.
   const shopper = await prisma.user.upsert({
@@ -199,7 +266,33 @@ async function main(): Promise<void> {
     include: { profile: true },
   });
 
-  for (const storeSeed of SAMPLE_STORES) {
+  /*
+   * The catalogue.
+   *
+   * The seven written by hand stay, because their copy says something a
+   * generator cannot. Everything else is built from the photographs that
+   * were collected, split between the two shops, so the grid, the filters
+   * and the feed have enough to work with to be judged at all.
+   */
+  const photographs = await availableGarments();
+  const pictureFor = createPicturePool(photographs);
+
+  // The written ones take the first picture in their category; the rest
+  // follow. `catalogueFrom` turns what is left into listings.
+  const written = SAMPLE_STORES.reduce((count, store) => count + store.products.length, 0);
+  const extra = catalogueFrom(photographs.slice(written));
+
+  console.info(
+    `  ${photographs.length} photographs, ${written} written listings, ${extra.length} generated`,
+  );
+
+  // Alternating, so neither shop ends up with one category.
+  const storesWithExtras = SAMPLE_STORES.map((store, index) => ({
+    ...store,
+    products: [...store.products, ...extra.filter((_, at) => at % SAMPLE_STORES.length === index)],
+  }));
+
+  for (const storeSeed of storesWithExtras) {
     const owner = await prisma.user.upsert({
       where: { email: `${storeSeed.slug}@example.com` },
       create: {
@@ -275,14 +368,13 @@ async function main(): Promise<void> {
         // the picture has downloaded, which is what keeps the masonry from
         // jumping as the page fills.
         const shape = placeholderShape(imageIndex);
+        const picture = pictureFor(product.category);
+
         await upload(
           key,
-          await placeholderImage({
-            index: imageIndex,
-            slug: product.slug,
-            category: product.category,
-            size: shape,
-          }),
+          picture
+            ? await placeholderImage({ index: imageIndex, file: picture, size: shape })
+            : await noPhotoImage(shape),
         );
         imageIndex += 1;
 

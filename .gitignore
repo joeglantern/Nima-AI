@@ -37,3 +37,5 @@ pnpm-debug.log*
 # Expo build output
 apps/app/dist-web/
 apps/app/.expo/
+.garment-sheet.png
+.shots/

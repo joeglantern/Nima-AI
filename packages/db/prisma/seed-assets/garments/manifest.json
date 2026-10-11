@@ -1,0 +1,564 @@
+{
+  "note": "Development seed imagery from the Metropolitan Museum Open Access collection, all CC0. Not product photography: real pictures come from sellers.",
+  "fetched": "2026-10-10T21:41:53.047Z",
+  "images": [
+    {
+      "file": "top-01.jpg",
+      "category": "TOP",
+      "title": "Blouse",
+      "maker": "Indian",
+      "date": "late 19th century",
+      "licence": "CC0 1.0",
+      "source": "https://www.metmuseum.org/art/collection/search/157713"
+    },
+    {
+      "file": "top-02.jpg",
+      "category": "TOP",
+      "title": "Blouse",
+      "maker": "probably American",
+      "date": "1890–99",
+      "licence": "CC0 1.0",
+      "source": "https://www.metmuseum.org/art/collection/search/103114"
+    },
+    {
+      "file": "top-03.jpg",
+      "category": "TOP",
+      "title": "Blouse",
+      "maker": "American",
+      "date": "ca. 1890",
+      "licence": "CC0 1.0",
+      "source": "https://www.metmuseum.org/art/collection/search/103252"
+    },
+    {
+      "file": "top-04.jpg",
+      "category": "TOP",
+      "title": "Shirt",
+      "maker": "American or European",
+      "date": "1880",
+      "licence": "CC0 1.0",
+      "source": "https://www.metmuseum.org/art/collection/search/84219"
+    },
+    {
+      "file": "top-05.jpg",
+      "category": "TOP",
+      "title": "Shirt",
+      "maker": "American",
+      "date": "19th century",
+      "licence": "CC0 1.0",
+      "source": "https://www.metmuseum.org/art/collection/search/80714"
+    },
+    {
+      "file": "top-06.jpg",
+      "category": "TOP",
+      "title": "Shirt",
+      "maker": "French",
+      "date": "ca. 1780",
+      "licence": "CC0 1.0",
+      "source": "https://www.metmuseum.org/art/collection/search/159171"
+    },
+    {
+      "file": "top-07.jpg",
+      "category": "TOP",
+      "title": "Shirt",
+      "maker": "Elizabeth Wild Hitchings",
+      "date": "1816–17",
+      "licence": "CC0 1.0",
+      "source": "https://www.metmuseum.org/art/collection/search/155804"
+    },
+    {
+      "file": "top-08.jpg",
+      "category": "TOP",
+      "title": "Shirt",
+      "maker": "American",
+      "date": "ca. 1860",
+      "licence": "CC0 1.0",
+      "source": "https://www.metmuseum.org/art/collection/search/159178"
+    },
+    {
+      "file": "top-09.jpg",
+      "category": "TOP",
+      "title": "Shirt",
+      "maker": "American",
+      "date": "mid-19th century",
+      "licence": "CC0 1.0",
+      "source": "https://www.metmuseum.org/art/collection/search/90676"
+    },
+    {
+      "file": "top-10.jpg",
+      "category": "TOP",
+      "title": "Shirt",
+      "maker": "American",
+      "date": "late 19th century",
+      "licence": "CC0 1.0",
+      "source": "https://www.metmuseum.org/art/collection/search/91151"
+    },
+    {
+      "file": "bottom-01.jpg",
+      "category": "BOTTOM",
+      "title": "Cage crinoline",
+      "maker": "Worcester Skirt Company",
+      "date": "1862–63",
+      "licence": "CC0 1.0",
+      "source": "https://www.metmuseum.org/art/collection/search/157055"
+    },
+    {
+      "file": "bottom-02.jpg",
+      "category": "BOTTOM",
+      "title": "Corset",
+      "maker": "Worcester Skirt Company",
+      "date": "1861–63",
+      "licence": "CC0 1.0",
+      "source": "https://www.metmuseum.org/art/collection/search/158002"
+    },
+    {
+      "file": "bottom-03.jpg",
+      "category": "BOTTOM",
+      "title": "Corset",
+      "maker": "Worcester Skirt Company",
+      "date": "1866–67",
+      "licence": "CC0 1.0",
+      "source": "https://www.metmuseum.org/art/collection/search/158003"
+    },
+    {
+      "file": "bottom-04.jpg",
+      "category": "BOTTOM",
+      "title": "Corset",
+      "maker": "Worcester Skirt Company",
+      "date": "ca. 1862",
+      "licence": "CC0 1.0",
+      "source": "https://www.metmuseum.org/art/collection/search/175650"
+    },
+    {
+      "file": "bottom-05.jpg",
+      "category": "BOTTOM",
+      "title": "Corset",
+      "maker": "Worcester Skirt Company",
+      "date": "ca. 1869",
+      "licence": "CC0 1.0",
+      "source": "https://www.metmuseum.org/art/collection/search/175652"
+    },
+    {
+      "file": "bottom-06.jpg",
+      "category": "BOTTOM",
+      "title": "Skirt",
+      "maker": "French",
+      "date": "1840–60",
+      "licence": "CC0 1.0",
+      "source": "https://www.metmuseum.org/art/collection/search/173861"
+    },
+    {
+      "file": "bottom-07.jpg",
+      "category": "BOTTOM",
+      "title": "Skirt",
+      "maker": "probably French",
+      "date": "1893–95",
+      "licence": "CC0 1.0",
+      "source": "https://www.metmuseum.org/art/collection/search/107089"
+    },
+    {
+      "file": "bottom-08.jpg",
+      "category": "BOTTOM",
+      "title": "Skirt",
+      "maker": "French",
+      "date": "late 18th century",
+      "licence": "CC0 1.0",
+      "source": "https://www.metmuseum.org/art/collection/search/90523"
+    },
+    {
+      "file": "dress-01.jpg",
+      "category": "DRESS",
+      "title": "Evening dress",
+      "maker": "American",
+      "date": "ca. 1872",
+      "licence": "CC0 1.0",
+      "source": "https://www.metmuseum.org/art/collection/search/158211"
+    },
+    {
+      "file": "dress-02.jpg",
+      "category": "DRESS",
+      "title": "Evening dress",
+      "maker": "Rouff",
+      "date": "ca. 1895",
+      "licence": "CC0 1.0",
+      "source": "https://www.metmuseum.org/art/collection/search/157153"
+    },
+    {
+      "file": "dress-03.jpg",
+      "category": "DRESS",
+      "title": "Evening dress",
+      "maker": "Lord & Taylor",
+      "date": "1900–1902",
+      "licence": "CC0 1.0",
+      "source": "https://www.metmuseum.org/art/collection/search/158114"
+    },
+    {
+      "file": "dress-04.jpg",
+      "category": "DRESS",
+      "title": "Evening dress",
+      "maker": "Hoschedé Rebours",
+      "date": "ca. 1885",
+      "licence": "CC0 1.0",
+      "source": "https://www.metmuseum.org/art/collection/search/158227"
+    },
+    {
+      "file": "dress-05.jpg",
+      "category": "DRESS",
+      "title": "Dress",
+      "maker": "American",
+      "date": "1886–88",
+      "licence": "CC0 1.0",
+      "source": "https://www.metmuseum.org/art/collection/search/159482"
+    },
+    {
+      "file": "dress-06.jpg",
+      "category": "DRESS",
+      "title": "Dress",
+      "maker": "American",
+      "date": "ca. 1855",
+      "licence": "CC0 1.0",
+      "source": "https://www.metmuseum.org/art/collection/search/159244"
+    },
+    {
+      "file": "dress-07.jpg",
+      "category": "DRESS",
+      "title": "Dress",
+      "maker": "American",
+      "date": "ca. 1885",
+      "licence": "CC0 1.0",
+      "source": "https://www.metmuseum.org/art/collection/search/157943"
+    },
+    {
+      "file": "dress-08.jpg",
+      "category": "DRESS",
+      "title": "Dress",
+      "maker": "American",
+      "date": "ca. 1890",
+      "licence": "CC0 1.0",
+      "source": "https://www.metmuseum.org/art/collection/search/159222"
+    },
+    {
+      "file": "dress-09.jpg",
+      "category": "DRESS",
+      "title": "Dress",
+      "maker": "British",
+      "date": "ca. 1820",
+      "licence": "CC0 1.0",
+      "source": "https://www.metmuseum.org/art/collection/search/82122"
+    },
+    {
+      "file": "dress-10.jpg",
+      "category": "DRESS",
+      "title": "Dress",
+      "maker": "French",
+      "date": "1840–60",
+      "licence": "CC0 1.0",
+      "source": "https://www.metmuseum.org/art/collection/search/159216"
+    },
+    {
+      "file": "dress-11.jpg",
+      "category": "DRESS",
+      "title": "Dress",
+      "maker": "American",
+      "date": "ca. 1885",
+      "licence": "CC0 1.0",
+      "source": "https://www.metmuseum.org/art/collection/search/157729"
+    },
+    {
+      "file": "dress-12.jpg",
+      "category": "DRESS",
+      "title": "Dress",
+      "maker": "American",
+      "date": "ca. 1835",
+      "licence": "CC0 1.0",
+      "source": "https://www.metmuseum.org/art/collection/search/159199"
+    },
+    {
+      "file": "outerwear-01.jpg",
+      "category": "OUTERWEAR",
+      "title": "Coat",
+      "maker": "American",
+      "date": "1880–89",
+      "licence": "CC0 1.0",
+      "source": "https://www.metmuseum.org/art/collection/search/159228"
+    },
+    {
+      "file": "outerwear-02.jpg",
+      "category": "OUTERWEAR",
+      "title": "Coat",
+      "maker": "American",
+      "date": "1868",
+      "licence": "CC0 1.0",
+      "source": "https://www.metmuseum.org/art/collection/search/157668"
+    },
+    {
+      "file": "outerwear-03.jpg",
+      "category": "OUTERWEAR",
+      "title": "Coat",
+      "maker": "Latvian",
+      "date": "ca. 1860",
+      "licence": "CC0 1.0",
+      "source": "https://www.metmuseum.org/art/collection/search/84280"
+    },
+    {
+      "file": "outerwear-04.jpg",
+      "category": "OUTERWEAR",
+      "title": "Coat",
+      "maker": "American",
+      "date": "1876",
+      "licence": "CC0 1.0",
+      "source": "https://www.metmuseum.org/art/collection/search/157728"
+    },
+    {
+      "file": "outerwear-05.jpg",
+      "category": "OUTERWEAR",
+      "title": "Coat",
+      "maker": "probably American",
+      "date": "19th century",
+      "licence": "CC0 1.0",
+      "source": "https://www.metmuseum.org/art/collection/search/81708"
+    },
+    {
+      "file": "outerwear-06.jpg",
+      "category": "OUTERWEAR",
+      "title": "Coat",
+      "maker": "French",
+      "date": "1882",
+      "licence": "CC0 1.0",
+      "source": "https://www.metmuseum.org/art/collection/search/159483"
+    },
+    {
+      "file": "outerwear-07.jpg",
+      "category": "OUTERWEAR",
+      "title": "Coat",
+      "maker": "Iida & Co./Takashimaya",
+      "date": "ca. 1900",
+      "licence": "CC0 1.0",
+      "source": "https://www.metmuseum.org/art/collection/search/83924"
+    },
+    {
+      "file": "outerwear-08.jpg",
+      "category": "OUTERWEAR",
+      "title": "Coat",
+      "maker": "French",
+      "date": "ca. 1845",
+      "licence": "CC0 1.0",
+      "source": "https://www.metmuseum.org/art/collection/search/83934"
+    },
+    {
+      "file": "shoes-01.jpg",
+      "category": "SHOES",
+      "title": "Shoes",
+      "maker": "Jeffers French Shoes",
+      "date": "1866",
+      "licence": "CC0 1.0",
+      "source": "https://www.metmuseum.org/art/collection/search/168730"
+    },
+    {
+      "file": "shoes-02.jpg",
+      "category": "SHOES",
+      "title": "Slippers",
+      "maker": "E.D. Burt & Co. Fine Shoes",
+      "date": "1865–85",
+      "licence": "CC0 1.0",
+      "source": "https://www.metmuseum.org/art/collection/search/156241"
+    },
+    {
+      "file": "shoes-03.jpg",
+      "category": "SHOES",
+      "title": "Shoes",
+      "maker": "probably French",
+      "date": "1875–95",
+      "licence": "CC0 1.0",
+      "source": "https://www.metmuseum.org/art/collection/search/157877"
+    },
+    {
+      "file": "shoes-04.jpg",
+      "category": "SHOES",
+      "title": "Shoes",
+      "maker": "British",
+      "date": "1790–1825",
+      "licence": "CC0 1.0",
+      "source": "https://www.metmuseum.org/art/collection/search/158357"
+    },
+    {
+      "file": "shoes-05.jpg",
+      "category": "SHOES",
+      "title": "Shoes",
+      "maker": "American",
+      "date": "1880–85",
+      "licence": "CC0 1.0",
+      "source": "https://www.metmuseum.org/art/collection/search/158097"
+    },
+    {
+      "file": "shoes-06.jpg",
+      "category": "SHOES",
+      "title": "Shoes",
+      "maker": "probably European",
+      "date": "1725–50",
+      "licence": "CC0 1.0",
+      "source": "https://www.metmuseum.org/art/collection/search/157858"
+    },
+    {
+      "file": "shoes-07.jpg",
+      "category": "SHOES",
+      "title": "Shoes",
+      "maker": "American",
+      "date": "1840–49",
+      "licence": "CC0 1.0",
+      "source": "https://www.metmuseum.org/art/collection/search/156322"
+    },
+    {
+      "file": "shoes-08.jpg",
+      "category": "SHOES",
+      "title": "Shoes",
+      "maker": "American",
+      "date": "1840–49",
+      "licence": "CC0 1.0",
+      "source": "https://www.metmuseum.org/art/collection/search/158267"
+    },
+    {
+      "file": "bag-01.jpg",
+      "category": "BAG",
+      "title": "Parasol",
+      "maker": "French",
+      "date": "1850–70",
+      "licence": "CC0 1.0",
+      "source": "https://www.metmuseum.org/art/collection/search/157849"
+    },
+    {
+      "file": "bag-02.jpg",
+      "category": "BAG",
+      "title": "Bag",
+      "maker": "Mexican",
+      "date": "fourth quarter 19th century",
+      "licence": "CC0 1.0",
+      "source": "https://www.metmuseum.org/art/collection/search/156685"
+    },
+    {
+      "file": "bag-03.jpg",
+      "category": "BAG",
+      "title": "Purse",
+      "maker": "Mexican",
+      "date": "late 19th century",
+      "licence": "CC0 1.0",
+      "source": "https://www.metmuseum.org/art/collection/search/156683"
+    },
+    {
+      "file": "bag-04.jpg",
+      "category": "BAG",
+      "title": "Purse",
+      "maker": "British",
+      "date": "last quarter 16th century",
+      "licence": "CC0 1.0",
+      "source": "https://www.metmuseum.org/art/collection/search/81553"
+    },
+    {
+      "file": "bag-05.jpg",
+      "category": "BAG",
+      "title": "Purse",
+      "maker": "Mexican",
+      "date": "late 19th century",
+      "licence": "CC0 1.0",
+      "source": "https://www.metmuseum.org/art/collection/search/156681"
+    },
+    {
+      "file": "bag-06.jpg",
+      "category": "BAG",
+      "title": "Purse",
+      "maker": "Mexican",
+      "date": "1800–1820",
+      "licence": "CC0 1.0",
+      "source": "https://www.metmuseum.org/art/collection/search/156689"
+    },
+    {
+      "file": "jewellery-01.jpg",
+      "category": "JEWELLERY",
+      "title": "Necklace",
+      "maker": "Chinese",
+      "date": "probably 19th century",
+      "licence": "CC0 1.0",
+      "source": "https://www.metmuseum.org/art/collection/search/141699"
+    },
+    {
+      "file": "jewellery-02.jpg",
+      "category": "JEWELLERY",
+      "title": "Necklace",
+      "maker": "Oceanic",
+      "date": "probably 19th century",
+      "licence": "CC0 1.0",
+      "source": "https://www.metmuseum.org/art/collection/search/141493"
+    },
+    {
+      "file": "jewellery-03.jpg",
+      "category": "JEWELLERY",
+      "title": "Necklace",
+      "maker": "African (Pokot peoples)",
+      "date": "probably 19th century",
+      "licence": "CC0 1.0",
+      "source": "https://www.metmuseum.org/art/collection/search/141551"
+    },
+    {
+      "file": "jewellery-04.jpg",
+      "category": "JEWELLERY",
+      "title": "Necklace",
+      "maker": "Greek",
+      "date": "1200–700 BCE",
+      "licence": "CC0 1.0",
+      "source": "https://www.metmuseum.org/art/collection/search/141742"
+    },
+    {
+      "file": "jewellery-05.jpg",
+      "category": "JEWELLERY",
+      "title": "Necklace",
+      "maker": "German",
+      "date": "ca. 1820",
+      "licence": "CC0 1.0",
+      "source": "https://www.metmuseum.org/art/collection/search/654848"
+    },
+    {
+      "file": "headwear-01.jpg",
+      "category": "HEADWEAR",
+      "title": "Hat",
+      "maker": "American",
+      "date": "1810–15",
+      "licence": "CC0 1.0",
+      "source": "https://www.metmuseum.org/art/collection/search/156945"
+    },
+    {
+      "file": "headwear-02.jpg",
+      "category": "HEADWEAR",
+      "title": "Hat",
+      "maker": "British",
+      "date": "ca. 1760–70",
+      "licence": "CC0 1.0",
+      "source": "https://www.metmuseum.org/art/collection/search/79632"
+    },
+    {
+      "file": "headwear-03.jpg",
+      "category": "HEADWEAR",
+      "title": "Hat",
+      "maker": "Mme. Mantel",
+      "date": "ca. 1885",
+      "licence": "CC0 1.0",
+      "source": "https://www.metmuseum.org/art/collection/search/156128"
+    },
+    {
+      "file": "headwear-04.jpg",
+      "category": "HEADWEAR",
+      "title": "Hat",
+      "maker": "British",
+      "date": "17th century",
+      "licence": "CC0 1.0",
+      "source": "https://www.metmuseum.org/art/collection/search/81227"
+    },
+    {
+      "file": "headwear-05.jpg",
+      "category": "HEADWEAR",
+      "title": "Hat",
+      "maker": "Mlle. Louise",
+      "date": "ca. 1890",
+      "licence": "CC0 1.0",
+      "source": "https://www.metmuseum.org/art/collection/search/156529"
+    }
+  ]
+}
