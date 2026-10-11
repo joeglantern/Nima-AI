@@ -101,7 +101,9 @@ export default function SettingsScreen() {
             </Svg>
           </Pressable>
 
-          <Title style={{ fontSize: 24, lineHeight: 28 }}>Settings</Title>
+          <Title style={{ fontSize: 24, lineHeight: 28, flex: 1 }} numberOfLines={1}>
+            Settings
+          </Title>
         </View>
 
         <ScrollView
