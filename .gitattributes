@@ -1,0 +1,13 @@
+# One line ending everywhere. The formatter wants LF, and a Windows checkout
+# with autocrlf was handing it CRLF, which it reported as every line changed.
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.gif binary
+*.ico binary
+*.ttf binary
+*.otf binary
+*.woff binary
+*.woff2 binary
