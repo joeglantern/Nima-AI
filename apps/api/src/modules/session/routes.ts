@@ -42,6 +42,8 @@ export const sessionRoutes: FastifyPluginAsyncZod = async (app) => {
               ghostMannequin: z.boolean(),
               promotions: z.boolean(),
             }),
+            /** Only buttons for ways in that are set up get shown. */
+            signIn: z.object({ google: z.boolean(), apple: z.boolean(), email: z.boolean() }),
             fitNotice: z.object({ title: z.string(), body: z.string() }),
           }),
         },
@@ -49,6 +51,12 @@ export const sessionRoutes: FastifyPluginAsyncZod = async (app) => {
     },
     async (request) => {
       const settings = await app.services.settings.get();
+
+      const signIn = {
+        google: Boolean(app.env.GOOGLE_CLIENT_ID && app.env.GOOGLE_CLIENT_SECRET),
+        apple: Boolean(app.env.APPLE_CLIENT_ID && app.env.APPLE_CLIENT_SECRET),
+        email: true,
+      };
 
       if (!request.user) {
         return {
@@ -60,6 +68,7 @@ export const sessionRoutes: FastifyPluginAsyncZod = async (app) => {
           },
           costs: settings.creditCosts as unknown as Record<string, number>,
           features: settings.features,
+          signIn,
           fitNotice,
         };
       }
@@ -93,6 +102,7 @@ export const sessionRoutes: FastifyPluginAsyncZod = async (app) => {
         },
         costs: settings.creditCosts as unknown as Record<string, number>,
         features: settings.features,
+        signIn,
         fitNotice,
       };
     },

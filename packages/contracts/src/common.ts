@@ -7,6 +7,17 @@
 
 import { z } from 'zod';
 
+/**
+ * What the session cookies are called: `nima.session_token` and friends.
+ *
+ * The server names them and the Expo auth client stores them, and the
+ * client only keeps cookies whose name starts with the prefix it was given.
+ * Left to its default it waits for `better-auth.*`, never sees one, and a
+ * phone that has just signed in throws the session away. So both ends read
+ * it from here.
+ */
+export const AUTH_COOKIE_PREFIX = 'nima';
+
 export const idSchema = z.string().min(20).max(40).describe('Opaque identifier');
 
 export const handleSchema = z

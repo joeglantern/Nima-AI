@@ -66,10 +66,29 @@ export const envSchema = z.object({
   S3_SECRET_ACCESS_KEY: z.string().min(1),
   S3_BUCKET: z.string().min(1).default('nima-media'),
   S3_PUBLIC_URL: z.url(),
+  /**
+   * Where callers reach the bucket, when that is not where the API does.
+   * In production the API talks to `garage:3900` on the Docker network,
+   * which means nothing to a phone, and the host is part of a signed URL.
+   * Set it and download and upload URLs are signed for this address.
+   */
+  S3_PRESIGN_ENDPOINT: z.url().optional(),
+  /**
+   * `redirect`: media links send the caller to a presigned bucket URL, which
+   * needs the bucket to be reachable from outside. `proxy`: the API serves
+   * the bytes and takes uploads itself, for a server whose bucket is not.
+   */
+  MEDIA_DELIVERY: z.enum(['redirect', 'proxy']).default('redirect'),
 
   // auth
   BETTER_AUTH_SECRET: z.string().min(32, 'Use at least 32 characters: openssl rand -base64 32'),
   BETTER_AUTH_URL: z.url(),
+  /**
+   * Accept sign ins from Expo Go, whose origin is an exp:// address. Always
+   * on in development. On a server, only while a build from Expo Go is being
+   * tested against it; a store build signs in as nima://.
+   */
+  TRUST_EXPO_GO: bool.default(false),
   GOOGLE_CLIENT_ID: z.string().optional(),
   GOOGLE_CLIENT_SECRET: z.string().optional(),
   APPLE_CLIENT_ID: z.string().optional(),

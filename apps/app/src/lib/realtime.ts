@@ -13,7 +13,7 @@ import { type ServerFrame, serverFrameSchema } from '@nima/contracts';
 import { useEffect, useRef } from 'react';
 import { AppState, type AppStateStatus, Platform } from 'react-native';
 import { authClient } from './auth';
-import { API_URL } from './config';
+import { API_URL, reachable } from './config';
 
 type Listener = (frame: ServerFrame) => void;
 
@@ -70,7 +70,6 @@ async function connect(): Promise<void> {
   }
 
   socket.onopen = () => {
-    attempt = 0;
     heartbeat = setInterval(() => {
       if (socket?.readyState === WebSocket.OPEN) {
         socket.send(JSON.stringify({ type: 'ping' }));
@@ -80,19 +79,29 @@ async function connect(): Promise<void> {
 
   socket.onmessage = (event) => {
     try {
-      const parsed = serverFrameSchema.safeParse(JSON.parse(String(event.data)));
-      if (parsed.success) emit(parsed.data);
+      const parsed = serverFrameSchema.safeParse(reachable(JSON.parse(String(event.data))));
+      if (!parsed.success) return;
+      // Accepted. Only now is it safe to forget the earlier failures: the
+      // server opens the socket before it checks the session, so a refused
+      // connection still fires onopen, and resetting there meant retrying
+      // once a second forever.
+      if (parsed.data.type === 'ready') attempt = 0;
+      emit(parsed.data);
     } catch {
       // A frame we cannot read is not worth crashing over.
     }
   };
 
-  socket.onclose = () => {
+  socket.onclose = (event) => {
     if (heartbeat) clearInterval(heartbeat);
     heartbeat = null;
     socket = null;
 
     if (closedOnPurpose) return;
+
+    // Refused for want of a session. Retrying will not change that; signing
+    // in will, and that reconnects through `reconnectRealtime`.
+    if (event.code === 4401) return;
 
     // 1s, 2s, 4s, up to 30s.
     attempt += 1;
@@ -101,6 +110,26 @@ async function connect(): Promise<void> {
   };
 
   socket.onerror = () => socket?.close();
+}
+
+let sessionUser: string | null | undefined;
+
+/**
+ * After signing in or out, so the socket carries the new session.
+ *
+ * Called with whoever is signed in now. The first call only records them;
+ * later calls reconnect when that has changed.
+ */
+export function reconnectRealtime(userId: string | null): void {
+  const previous = sessionUser;
+  sessionUser = userId;
+  if (previous === undefined || previous === userId) return;
+
+  closedOnPurpose = true;
+  socket?.close();
+  socket = null;
+  attempt = 0;
+  if (listeners.size > 0) void connect();
 }
 
 export function disconnectRealtime(): void {

@@ -53,6 +53,8 @@ export const updateProfileSchema = z.object({
   link: z.url().max(200).nullable().optional(),
   isPrivate: z.boolean().optional(),
   wardrobePublic: z.boolean().optional(),
+  /** A key from an AVATAR upload. Must belong to the caller. */
+  avatarKey: z.string().min(1).max(300).optional(),
 });
 
 export const handleAvailabilitySchema = z.object({

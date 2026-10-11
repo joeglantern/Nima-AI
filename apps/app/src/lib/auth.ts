@@ -7,6 +7,7 @@
  */
 
 import { expoClient } from '@better-auth/expo/client';
+import { AUTH_COOKIE_PREFIX } from '@nima/contracts';
 import { anonymousClient, emailOTPClient, magicLinkClient } from 'better-auth/client/plugins';
 import { createAuthClient } from 'better-auth/react';
 import { API_URL } from './config';
@@ -18,6 +19,8 @@ export const authClient = createAuthClient({
     expoClient({
       scheme: 'nima',
       storagePrefix: 'nima',
+      // Must match the server, or the client never stores the session.
+      cookiePrefix: AUTH_COOKIE_PREFIX,
       storage: sessionStorage,
     }),
     anonymousClient(),
@@ -26,7 +29,19 @@ export const authClient = createAuthClient({
   ],
 });
 
-export const { useSession, signOut } = authClient;
+export const { useSession } = authClient;
+
+/**
+ * Sign out, and straight back in as a guest.
+ *
+ * Nima works without an account, and a person who has just signed out is
+ * exactly that: a visitor. Without a guest session every like, save and
+ * cart change failed until the next launch, which is what used to happen.
+ */
+export async function signOut(): Promise<void> {
+  await authClient.signOut();
+  await authClient.signIn.anonymous();
+}
 
 /**
  * Make sure there is some session, creating a guest one if needed.

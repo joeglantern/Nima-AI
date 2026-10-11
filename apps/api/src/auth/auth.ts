@@ -14,6 +14,7 @@
  */
 
 import type { Env } from '@nima/config';
+import { AUTH_COOKIE_PREFIX } from '@nima/contracts';
 import type { PrismaClient } from '@nima/db';
 import { betterAuth } from 'better-auth';
 import { prismaAdapter } from 'better-auth/adapters/prisma';
@@ -67,7 +68,9 @@ export function createAuth({ env, prisma, mailer }: CreateAuthOptions) {
       'nima://*',
       'https://appleid.apple.com',
       // Expo Go during development only.
-      ...(isDevelopment ? ['exp://', 'exp://**', 'exp://192.168.*.*:*/**'] : []),
+      ...(isDevelopment || env.TRUST_EXPO_GO
+        ? ['exp://', 'exp://**', 'exp://192.168.*.*:*/**']
+        : []),
     ],
 
     session: {
@@ -97,7 +100,7 @@ export function createAuth({ env, prisma, mailer }: CreateAuthOptions) {
       // decide https.
       trustedProxyHeaders: !isDevelopment,
       useSecureCookies,
-      cookiePrefix: 'nima',
+      cookiePrefix: AUTH_COOKIE_PREFIX,
       database: { joins: true },
       /**
        * Where the caller's address comes from.

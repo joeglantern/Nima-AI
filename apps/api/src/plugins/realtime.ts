@@ -123,6 +123,20 @@ export default fp(
       const user = request.user;
 
       if (!user) {
+        // Names only, never values: enough to tell "no cookie at all" from
+        // "a cookie the session lookup did not accept".
+        const header = request.headers.cookie ?? '';
+        request.log.debug(
+          {
+            platform: request.headers['x-nima-platform'] ?? null,
+            cookieNames: header
+              .split(';')
+              .map((part) => part.split('=')[0]?.trim())
+              .filter(Boolean),
+          },
+          'A live connection arrived without a session',
+        );
+
         socket.send(
           JSON.stringify({
             type: 'error',

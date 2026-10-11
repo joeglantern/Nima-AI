@@ -12,6 +12,8 @@
  *   stores/{storeId}/products/{productId}/{id}.jpg
  */
 
+import type { Readable } from 'node:stream';
+import { signMediaToken } from './media-token.js';
 import { randomUUID } from 'node:crypto';
 import {
   DeleteObjectCommand,
@@ -22,6 +24,7 @@ import {
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import type { Env } from '@nima/config';
+import { reachableUrl, substituteHost } from './request-host.js';
 
 export type UploadPurpose =
   | 'USER_PHOTO'
@@ -76,10 +79,19 @@ export interface Storage {
   presignDownload(key: string, expiresInSeconds?: number): Promise<string>;
   /** Stable public URL for objects that are meant to be public. */
   publicUrl(key: string): string;
+  /** The object itself, for serving it through the API. */
+  stream(key: string): Promise<StoredObject>;
   exists(key: string): Promise<boolean>;
   get(key: string): Promise<Buffer>;
   put(key: string, body: Buffer, contentType: string): Promise<void>;
   remove(key: string): Promise<void>;
+}
+
+export interface StoredObject {
+  body: Readable;
+  contentType: string | null;
+  contentLength: number | null;
+  etag: string | null;
 }
 
 export class UnsupportedMediaError extends Error {}
@@ -112,23 +124,51 @@ function keyFor(input: PresignInput): string {
 }
 
 export function createStorage(env: Env): Storage {
-  const client = new S3Client({
-    region: env.S3_REGION,
-    endpoint: env.S3_ENDPOINT,
-    // The SDK adds a CRC32 checksum header by default. Presigned PUTs then
-    // fail against S3 compatible servers, because the browser never sends
-    // that header. Only calculate a checksum when the operation requires one.
-    requestChecksumCalculation: 'WHEN_REQUIRED',
-    responseChecksumValidation: 'WHEN_REQUIRED',
-    // Garage and most self hosted S3 servers need path style addressing.
-    forcePathStyle: true,
-    credentials: {
-      accessKeyId: env.S3_ACCESS_KEY_ID,
-      secretAccessKey: env.S3_SECRET_ACCESS_KEY,
-    },
-  });
+  const makeClient = (endpoint: string) =>
+    new S3Client({
+      region: env.S3_REGION,
+      endpoint,
+      // The SDK adds a CRC32 checksum header by default. Presigned PUTs then
+      // fail against S3 compatible servers, because the browser never sends
+      // that header. Only calculate a checksum when the operation requires one.
+      requestChecksumCalculation: 'WHEN_REQUIRED',
+      responseChecksumValidation: 'WHEN_REQUIRED',
+      // Garage and most self hosted S3 servers need path style addressing.
+      forcePathStyle: true,
+      credentials: {
+        accessKeyId: env.S3_ACCESS_KEY_ID,
+        secretAccessKey: env.S3_SECRET_ACCESS_KEY,
+      },
+    });
 
+  const client = makeClient(env.S3_ENDPOINT);
   const bucket = env.S3_BUCKET;
+
+  /*
+   * Signing happens on the API, but the URL is used by whoever asked. A
+   * phone on the LAN cannot reach a localhost endpoint, and the host is part
+   * of the signature, so a URL for a phone is signed by a client pointed at
+   * the address the phone used. One client per host, kept.
+   */
+  const signers = new Map<string, S3Client>();
+
+  const presigner = env.S3_PRESIGN_ENDPOINT ? makeClient(env.S3_PRESIGN_ENDPOINT) : null;
+
+  function signerForCaller(): S3Client {
+    if (presigner) return presigner;
+
+    const host = substituteHost(new URL(env.S3_ENDPOINT));
+    if (!host) return client;
+
+    let signer = signers.get(host);
+    if (!signer) {
+      const endpoint = new URL(env.S3_ENDPOINT);
+      endpoint.hostname = host;
+      signer = makeClient(endpoint.toString().replace(/\/$/, ''));
+      signers.set(host, signer);
+    }
+    return signer;
+  }
 
   return {
     limitFor: (purpose) => SIZE_LIMITS[purpose],
@@ -144,8 +184,27 @@ export function createStorage(env: Env): Storage {
       const storageKey = keyFor(input);
       const expiresInSeconds = 15 * 60;
 
+      // The bucket cannot be reached from outside, so the API takes the
+      // bytes. The link carries its own permission, like a presigned one.
+      if (env.MEDIA_DELIVERY === 'proxy') {
+        const token = signMediaToken(env.BETTER_AUTH_SECRET, {
+          k: storageKey,
+          u: 'up',
+          c: input.contentType,
+          m: limit,
+          e: Math.floor(Date.now() / 1000) + expiresInSeconds,
+        });
+
+        return {
+          uploadUrl: `${reachableUrl(env.API_URL).replace(/\/$/, '')}/v1/uploads/${token}`,
+          storageKey,
+          headers: { 'Content-Type': input.contentType },
+          expiresInSeconds,
+        };
+      }
+
       const uploadUrl = await getSignedUrl(
-        client,
+        signerForCaller(),
         new PutObjectCommand({
           Bucket: bucket,
           Key: storageKey,
@@ -164,13 +223,33 @@ export function createStorage(env: Env): Storage {
     },
 
     async presignDownload(key, expiresInSeconds = 60 * 60) {
-      return getSignedUrl(client, new GetObjectCommand({ Bucket: bucket, Key: key }), {
+      if (env.MEDIA_DELIVERY === 'proxy') {
+        const token = signMediaToken(env.BETTER_AUTH_SECRET, {
+          k: key,
+          u: 'dl',
+          e: Math.floor(Date.now() / 1000) + expiresInSeconds,
+        });
+        return `${this.publicUrl(key)}?t=${token}`;
+      }
+
+      return getSignedUrl(signerForCaller(), new GetObjectCommand({ Bucket: bucket, Key: key }), {
         expiresIn: expiresInSeconds,
       });
     },
 
     publicUrl(key) {
-      return `${env.S3_PUBLIC_URL.replace(/\/$/, '')}/${key}`;
+      return `${reachableUrl(env.S3_PUBLIC_URL).replace(/\/$/, '')}/${key}`;
+    },
+
+    async stream(key) {
+      const result = await client.send(new GetObjectCommand({ Bucket: bucket, Key: key }));
+      if (!result.Body) throw new Error(`Object ${key} is empty`);
+      return {
+        body: result.Body as Readable,
+        contentType: result.ContentType ?? null,
+        contentLength: result.ContentLength ?? null,
+        etag: result.ETag ?? null,
+      };
     },
 
     async exists(key) {

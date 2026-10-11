@@ -14,6 +14,7 @@ import {
   type ZodTypeProvider,
 } from 'fastify-type-provider-zod';
 import { registerErrorHandler } from './lib/errors.js';
+import { runWithRequestHost } from './lib/request-host.js';
 import { healthRoutes } from './modules/health/routes.js';
 import { webhookRoutes } from './modules/webhooks/routes.js';
 import authPlugin from './plugins/auth.js';
@@ -77,6 +78,12 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
   app.setSerializerCompiler(serializerCompiler);
 
   registerErrorHandler(app);
+
+  // Before anything builds a URL: which host did this caller use. See
+  // lib/request-host.ts for why a phone needs this and a browser does not.
+  app.addHook('onRequest', (request, _reply, done) => {
+    runWithRequestHost(request.hostname.replace(/:\d+$/, ''), done);
+  });
 
   await app.register(corePlugin, { ...options, env });
   await app.register(servicesPlugin);

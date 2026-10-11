@@ -22,6 +22,7 @@ import {
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 import { z } from 'zod';
 import { errors } from '../../lib/errors.js';
+import { verifyMediaToken } from '../../lib/media-token.js';
 import { privateImage, publicImage, storeCard } from '../../lib/presenters.js';
 import { FileTooLargeError, UnsupportedMediaError } from '../../lib/storage.js';
 import { completionOf } from './completion.js';
@@ -118,6 +119,53 @@ export const profileRoutes: FastifyPluginAsyncZod = async (app) => {
     },
   );
 
+  app.get(
+    '/profile',
+    {
+      preHandler: app.requireAccount,
+      schema: {
+        tags: ['profile'],
+        summary: 'Your own profile, as you would edit it',
+        description:
+          'Unlike the public shape this includes the email and the privacy settings. ' +
+          'Before a profile has been set up, every field is null and a handle is suggested.',
+        response: {
+          200: z.object({
+            handle: handleSchema.nullable(),
+            displayName: z.string().nullable(),
+            bio: z.string().nullable(),
+            link: z.string().nullable(),
+            avatar: z.object({ url: z.string() }).nullable(),
+            isPrivate: z.boolean(),
+            wardrobePublic: z.boolean(),
+            email: z.string().nullable(),
+            suggestedHandle: handleSchema.nullable(),
+          }),
+        },
+      },
+    },
+    async (request) => {
+      const user = request.requireUser();
+      const profile = await app.prisma.profile.findUnique({ where: { userId: user.id } });
+
+      // An email sign up arrives with no name, so the suggestion comes from
+      // the part of the address a person would recognise as theirs.
+      const seed = user.name || user.email?.split('@')[0] || 'nima';
+
+      return {
+        handle: profile?.handle ?? null,
+        displayName: profile?.displayName ?? (user.name || null),
+        bio: profile?.bio ?? null,
+        link: profile?.link ?? null,
+        avatar: profile?.avatarKey ? { url: app.storage.publicUrl(profile.avatarKey) } : null,
+        isPrivate: profile?.isPrivate ?? false,
+        wardrobePublic: profile?.wardrobePublic ?? false,
+        email: user.email,
+        suggestedHandle: profile ? null : await suggestHandle(app.prisma, seed),
+      };
+    },
+  );
+
   app.patch(
     '/profile',
     {
@@ -143,16 +191,28 @@ export const profileRoutes: FastifyPluginAsyncZod = async (app) => {
         }
       }
 
+      // Only a picture this person uploaded for this purpose, and only one
+      // that actually arrived.
+      if (body.avatarKey !== undefined) {
+        const owned = body.avatarKey.startsWith(`users/${user.id}/avatar/`);
+        if (!owned || !(await app.storage.exists(body.avatarKey))) {
+          throw errors.notFound('That photo');
+        }
+      }
+
       const profile = await app.prisma.profile.upsert({
         where: { userId: user.id },
         create: {
           userId: user.id,
-          handle: body.handle ?? (await suggestHandle(app.prisma, user.name)),
+          handle:
+            body.handle ??
+            (await suggestHandle(app.prisma, user.name || user.email?.split('@')[0] || 'nima')),
           displayName: body.displayName ?? user.name,
           bio: body.bio ?? null,
           link: body.link ?? null,
           isPrivate: body.isPrivate ?? false,
           wardrobePublic: body.wardrobePublic ?? false,
+          avatarKey: body.avatarKey ?? null,
         },
         update: {
           ...(body.handle !== undefined ? { handle: body.handle } : {}),
@@ -161,6 +221,7 @@ export const profileRoutes: FastifyPluginAsyncZod = async (app) => {
           ...(body.link !== undefined ? { link: body.link } : {}),
           ...(body.isPrivate !== undefined ? { isPrivate: body.isPrivate } : {}),
           ...(body.wardrobePublic !== undefined ? { wardrobePublic: body.wardrobePublic } : {}),
+          ...(body.avatarKey !== undefined ? { avatarKey: body.avatarKey } : {}),
         },
         include: { user: { include: { store: true } } },
       });
@@ -310,6 +371,56 @@ export const profileRoutes: FastifyPluginAsyncZod = async (app) => {
         if (error instanceof UnsupportedMediaError) throw errors.unsupportedMedia(error.message);
         throw error;
       }
+    },
+  );
+
+  /*
+   * The other half of an upload ticket in proxy mode. The ticket's link
+   * points here, and the token in it says which key, what type and how many
+   * bytes, signed. No session is needed: the token is the permission, just
+   * as the signature on a presigned bucket URL would be.
+   */
+  app.addContentTypeParser(
+    ['image/jpeg', 'image/png', 'image/webp', 'image/heic'],
+    { parseAs: 'buffer', bodyLimit: 25 * 1024 * 1024 },
+    (_request, body, done) => done(null, body),
+  );
+
+  app.put(
+    '/uploads/:token',
+    {
+      config: { rateLimit: { max: 60, timeWindow: '1 minute' } },
+      schema: {
+        tags: ['profile'],
+        summary: 'Upload the bytes for a ticket',
+        description:
+          'Only used when the server keeps storage private. The PUT body is the image, ' +
+          'with the Content-Type the ticket was issued for.',
+        params: z.object({ token: z.string().min(16).max(2000) }),
+        response: { 200: z.object({ storageKey: z.string() }) },
+      },
+    },
+    async (request) => {
+      const claim = verifyMediaToken(app.env.BETTER_AUTH_SECRET, request.params.token);
+      if (!claim || claim.u !== 'up' || !claim.c || !claim.m) throw errors.unauthorized();
+
+      const body = request.body;
+      if (!Buffer.isBuffer(body) || body.length === 0) {
+        throw errors.unsupportedMedia('Send the image as the request body');
+      }
+
+      const sent = (request.headers['content-type'] ?? '').split(';')[0]?.trim();
+      if (sent !== claim.c) {
+        throw errors.unsupportedMedia(`This link was issued for ${claim.c}, not ${sent || 'that'}`);
+      }
+
+      if (body.length > claim.m) {
+        const mb = (bytes: number) => Math.round(bytes / 1024 / 1024);
+        throw errors.tooLarge(`That image is ${mb(body.length)}MB. The limit is ${mb(claim.m)}MB.`);
+      }
+
+      await app.storage.put(claim.k, body, claim.c);
+      return { storageKey: claim.k };
     },
   );
 

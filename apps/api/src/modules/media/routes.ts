@@ -9,22 +9,28 @@
  *
  *   seed/...                  development placeholders
  *   stores/{id}/...           product and shop imagery, published by sellers
+ *   users/{id}/avatar/...     the picture next to someone's name
  *   users/{id}/...            only when it is the cover of a public look,
- *                             or the caller owns it
+ *                             the caller owns it, or the link carries a
+ *                             signed claim for exactly that key
  *
  * Everything else, in particular users/{id}/photos and users/{id}/tryons,
  * stays unreachable. A try-on is private until its owner shares it, and the
  * brief is explicit that this must never happen by accident.
  *
- * In production the same URLs sit behind a CDN, which caches the redirect
- * target rather than the image itself.
+ * How the bytes arrive depends on MEDIA_DELIVERY. `redirect` sends the
+ * caller to a short lived presigned bucket URL, which a CDN can sit in
+ * front of. `proxy` streams the object through the API, for a server whose
+ * bucket listens on loopback and cannot be reached any other way.
  */
 
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 import { z } from 'zod';
 import { errors } from '../../lib/errors.js';
+import { verifyMediaToken } from '../../lib/media-token.js';
 
 const PUBLIC_PREFIXES = ['seed/', 'stores/'];
+const AVATAR = /^users\/[^/]+\/avatar\//;
 
 export const mediaRoutes: FastifyPluginAsyncZod = async (app) => {
   app.get(
@@ -35,10 +41,15 @@ export const mediaRoutes: FastifyPluginAsyncZod = async (app) => {
         tags: ['shop'],
         summary: 'Fetch an image',
         description:
-          'Redirects to a short lived signed URL. Private media is refused unless the ' +
-          'caller owns it or it is part of something published.',
+          'Redirects to a short lived signed URL, or serves the bytes, depending on how the ' +
+          'server is set up. Private media is refused unless the caller owns it, it is part ' +
+          'of something published, or the link was issued for it.',
         params: z.object({ '*': z.string().min(1).max(300) }),
+        querystring: z.object({ t: z.string().max(2000).optional() }),
         response: {
+          // The bytes themselves, in proxy mode. Streams bypass the
+          // serialiser, so this only describes the route.
+          200: z.unknown().describe('The image'),
           302: z.null(),
           404: z.object({ error: z.object({ code: z.string(), message: z.string() }) }),
         },
@@ -50,11 +61,42 @@ export const mediaRoutes: FastifyPluginAsyncZod = async (app) => {
       // No traversal, no absolute paths.
       if (key.includes('..') || key.startsWith('/')) throw errors.notFound('That image');
 
-      const isPublicPrefix = PUBLIC_PREFIXES.some((prefix) => key.startsWith(prefix));
+      const isPublic = PUBLIC_PREFIXES.some((prefix) => key.startsWith(prefix)) || AVATAR.test(key);
 
-      if (!isPublicPrefix) {
-        const allowed = await canSeePersonalMedia(app, key, request.user?.id ?? null);
-        if (!allowed) throw errors.notFound('That image');
+      if (!isPublic) {
+        const claim = request.query.t
+          ? verifyMediaToken(app.env.BETTER_AUTH_SECRET, request.query.t)
+          : null;
+        const issuedForThis = claim !== null && claim.u === 'dl' && claim.k === key;
+
+        if (!issuedForThis) {
+          const allowed = await canSeePersonalMedia(app, key, request.user?.id ?? null);
+          if (!allowed) throw errors.notFound('That image');
+        }
+      }
+
+      if (app.env.MEDIA_DELIVERY === 'proxy') {
+        let object: Awaited<ReturnType<typeof app.storage.stream>>;
+        try {
+          object = await app.storage.stream(key);
+        } catch (error) {
+          if ((error as { name?: string }).name === 'NoSuchKey') {
+            throw errors.notFound('That image');
+          }
+          throw error;
+        }
+
+        // A public key never changes under the same name. A private link
+        // expires with its token, so it is cached for as long as it lasts.
+        reply.header(
+          'cache-control',
+          isPublic ? 'public, max-age=86400, stale-while-revalidate=604800' : 'private, max-age=3600',
+        );
+        if (object.contentType) reply.type(object.contentType);
+        if (object.contentLength !== null) reply.header('content-length', object.contentLength);
+        if (object.etag) reply.header('etag', object.etag);
+
+        return reply.send(object.body);
       }
 
       const url = await app.storage.presignDownload(key, 60 * 60);
