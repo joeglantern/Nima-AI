@@ -85,29 +85,46 @@ docker compose -f infra/docker-compose.prod.yml --env-file .env.prod \
 
 ## Reaching it before there is a domain
 
-There is no certificate yet, so the API is not published on a public
-address. Putting it on one over plain HTTP would send the sign in code and
-the session cookie across the network in the clear, which is not worth the
-convenience.
+There is no certificate yet, and the API is not published on a port. Putting
+it on one over plain HTTP would send the sign in code and the session cookie
+across the network in the clear, which is not worth the convenience.
 
-Instead, tunnel to it:
+So the server dials out instead. A Cloudflare quick tunnel runs as one more
+container in the stack, terminates https on Cloudflare's edge and hands the
+API a random `https://<words>.trycloudflare.com` address. Nothing listens on
+a public port, nothing on the host changes, and the other projects on it are
+not involved.
 
 ```bash
-pnpm live
+./scripts/live-url.sh          # start the tunnel, print the address
+./scripts/live-url.sh --show   # the current address
 ```
 
-That opens `ssh -L 3340:127.0.0.1:3340` to the server and starts Expo with
-`EXPO_PUBLIC_API_URL` pointed down it. The app then runs against the real
-database, the real queue and the real mailbox, with nothing exposed and
-nothing to undo later.
+The script writes the address into `.env.prod` everywhere the API needs to
+know its own public URL (`API_URL`, `BETTER_AUTH_URL`, `S3_PUBLIC_URL`,
+`WEB_ORIGINS`), switches media to `proxy` because the bucket is on loopback,
+trusts Expo Go origins for testing, and recreates `api` and `worker`. The
+address changes whenever the tunnel container restarts, which is why this
+is a script and not an edit.
 
-The session cookie is marked Secure from the scheme rather than from
-`NODE_ENV`, so it is not marked Secure over the tunnel and the browser
-keeps it. On any non loopback host without https it stays marked and sign in
-fails loudly, which is the behaviour you want: it means real sessions were
-about to go out unencrypted.
+To point the app on a phone at it, in `apps/app/.env`:
 
-A phone cannot reach the tunnel. For that, finish the step below.
+```bash
+EXPO_PUBLIC_DEVICE_API_URL=https://<words>.trycloudflare.com
+```
+
+The browser on the development machine keeps using the local API: a
+browser will not hold a cookie across sites, and the phone keeps its own.
+
+Quick tunnels are meant for exactly this and not for customers: Cloudflare
+makes no promises about them. The day there is a domain, replace the
+`tunnel` service with a named tunnel or a certificate on the host's nginx,
+set the four variables to the real address, and switch `MEDIA_DELIVERY`
+back to `redirect` once the bucket is behind a CDN.
+
+For a browser on this machine against the real database there is still
+`pnpm live`, which opens `ssh -L 3340:127.0.0.1:3340` and starts Expo
+pointed down it.
 
 ---
 
