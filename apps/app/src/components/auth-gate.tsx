@@ -9,10 +9,11 @@
  * Email is a six digit code. There is no password anywhere in the app.
  */
 
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { createContext, type ReactNode, useCallback, useContext, useMemo, useState } from 'react';
 import { Platform, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
+import { api } from '../lib/api';
 import { sendEmailCode, signInWithApple, signInWithGoogle, verifyEmailCode } from '../lib/auth';
 import { useTheme } from '../theme/index';
 import { Button } from './button';
@@ -105,6 +106,13 @@ function AuthSheet({ reason, onClose }: { reason: string | null; onClose: () => 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Only the ways in that the server is set up for. A Google button that
+  // answers "provider not found" is worse than no Google button.
+  const bootstrap = useQuery({ queryKey: ['bootstrap'], queryFn: api.bootstrap });
+  const showApple = Platform.OS === 'ios' && (bootstrap.data?.signIn.apple ?? false);
+  const showGoogle = bootstrap.data?.signIn.google ?? false;
+  const hasProviders = showApple || showGoogle;
+
   const close = useCallback(() => {
     setStep('choose');
     setError(null);
@@ -132,9 +140,9 @@ function AuthSheet({ reason, onClose }: { reason: string | null; onClose: () => 
         <Caption>It takes a moment, and your browsing comes with you.</Caption>
       </View>
 
-      {step === 'choose' ? (
+      {step === 'choose' && hasProviders ? (
         <View style={{ gap: 10 }}>
-          {Platform.OS === 'ios' ? (
+          {showApple ? (
             <Button
               label="Continue with Apple"
               variant="provider"
@@ -144,13 +152,15 @@ function AuthSheet({ reason, onClose }: { reason: string | null; onClose: () => 
             />
           ) : null}
 
-          <Button
-            label="Continue with Google"
-            variant="provider"
-            icon={<GoogleMark />}
-            loading={busy}
-            onPress={() => void run(signInWithGoogle)}
-          />
+          {showGoogle ? (
+            <Button
+              label="Continue with Google"
+              variant="provider"
+              icon={<GoogleMark />}
+              loading={busy}
+              onPress={() => void run(signInWithGoogle)}
+            />
+          ) : null}
 
           <Button
             label="Continue with email"
@@ -168,7 +178,7 @@ function AuthSheet({ reason, onClose }: { reason: string | null; onClose: () => 
          * other one did.
          */
         <EmailSteps
-          onCancel={() => setStep('choose')}
+          onCancel={hasProviders ? () => setStep('choose') : undefined}
           onSendCode={sendEmailCode}
           onVerify={async (email, code) => {
             await verifyEmailCode(email, code);

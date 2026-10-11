@@ -9,6 +9,7 @@
  * this screen has to be obvious rather than hidden.
  */
 
+import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, View } from 'react-native';
@@ -18,6 +19,7 @@ import { Button } from '../src/components/button';
 import { EmailSteps } from '../src/components/email-steps';
 import { Mascot } from '../src/components/mascot';
 import { Body, Caption, Display, Label } from '../src/components/text';
+import { api } from '../src/lib/api';
 import { sendEmailCode, signInWithApple, signInWithGoogle, verifyEmailCode } from '../src/lib/auth';
 import { markWelcomeSeen } from '../src/lib/first-run';
 import { elevation } from '../src/theme/elevation';
@@ -31,6 +33,13 @@ export default function WelcomeScreen() {
   const [mode, setMode] = useState<'choose' | 'email'>('choose');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Only the ways in that the server is set up for. A Google button that
+  // answers "provider not found" is worse than no Google button.
+  const bootstrap = useQuery({ queryKey: ['bootstrap'], queryFn: api.bootstrap });
+  const showApple = Platform.OS === 'ios' && (bootstrap.data?.signIn.apple ?? false);
+  const showGoogle = bootstrap.data?.signIn.google ?? false;
+  const hasProviders = showApple || showGoogle;
 
   async function leave() {
     await markWelcomeSeen();
@@ -135,9 +144,9 @@ export default function WelcomeScreen() {
           }}
         />
 
-        {mode === 'choose' ? (
+        {mode === 'choose' && hasProviders ? (
           <>
-            {Platform.OS === 'ios' ? (
+            {showApple ? (
               <Button
                 label="Continue with Apple"
                 variant="provider"
@@ -147,13 +156,15 @@ export default function WelcomeScreen() {
               />
             ) : null}
 
-            <Button
-              label="Continue with Google"
-              variant="provider"
-              loading={busy}
-              icon={<GoogleMark />}
-              onPress={() => void run(signInWithGoogle)}
-            />
+            {showGoogle ? (
+              <Button
+                label="Continue with Google"
+                variant="provider"
+                loading={busy}
+                icon={<GoogleMark />}
+                onPress={() => void run(signInWithGoogle)}
+              />
+            ) : null}
 
             <Button
               label="Continue with email"
@@ -164,7 +175,7 @@ export default function WelcomeScreen() {
           </>
         ) : (
           <EmailSteps
-            onCancel={() => setMode('choose')}
+            onCancel={hasProviders ? () => setMode('choose') : undefined}
             onSendCode={sendEmailCode}
             onVerify={async (email, code) => {
               await verifyEmailCode(email, code);

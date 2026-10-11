@@ -34,7 +34,7 @@ import { Platform } from 'react-native';
 import type { z } from 'zod';
 import { getAnonId } from './anon-id';
 import { authClient } from './auth';
-import { API_URL } from './config';
+import { API_URL, reachable } from './config';
 
 export { API_URL };
 
@@ -69,7 +69,32 @@ export interface Bootstrap {
     ghostMannequin: boolean;
     promotions: boolean;
   };
+  /** Only buttons for ways in that the server is set up for get shown. */
+  signIn: { google: boolean; apple: boolean; email: boolean };
   fitNotice: { title: string; body: string };
+}
+
+export interface OwnProfile {
+  handle: string | null;
+  displayName: string | null;
+  bio: string | null;
+  link: string | null;
+  avatar: { url: string } | null;
+  isPrivate: boolean;
+  wardrobePublic: boolean;
+  email: string | null;
+  /** Offered before a profile exists. */
+  suggestedHandle: string | null;
+}
+
+export interface ProfileUpdate {
+  handle?: string;
+  displayName?: string;
+  bio?: string | null;
+  link?: string | null;
+  isPrivate?: boolean;
+  wardrobePublic?: boolean;
+  avatarKey?: string;
 }
 
 export interface Page<T> {
@@ -159,7 +184,7 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
   if (response.status === 204) return undefined as T;
 
   const text = await response.text();
-  const payload = text ? (JSON.parse(text) as unknown) : null;
+  const payload = text ? reachable(JSON.parse(text) as unknown) : null;
 
   if (!response.ok) {
     const error = (
@@ -232,6 +257,17 @@ export const api = {
     }),
 
   photos: () => request<{ items: UserPhoto[] }>('/v1/profile/photos'),
+
+  myProfile: () => request<OwnProfile>('/v1/profile'),
+
+  updateProfile: (body: ProfileUpdate) =>
+    request<unknown>('/v1/profile', { method: 'PATCH', body }),
+
+  handleAvailable: (handle: string) =>
+    request<{ handle: string; available: boolean; suggestion?: string }>(
+      '/v1/profile/handle-available',
+      { query: { handle } },
+    ),
 
   createUpload: (body: { purpose: string; contentType: string; size: number }) =>
     request<{ uploadUrl: string; storageKey: string; headers: Record<string, string> }>(

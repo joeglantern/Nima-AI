@@ -9,7 +9,7 @@
  * a sixth digit submits itself. The buttons stay for anyone who wants them.
  */
 
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Keyboard, TextInput, View } from 'react-native';
 import { useTheme } from '../theme/index';
 import { Button } from './button';
@@ -19,10 +19,14 @@ import { Body, Caption } from './text';
 export interface EmailStepsProps {
   onSendCode: (email: string) => Promise<void>;
   onVerify: (email: string, code: string) => Promise<void>;
-  onCancel: () => void;
+  /** Absent when email is the only way in, so there is nothing to go back to. */
+  onCancel?: () => void;
   /** Which background it sits on, so the small print stays readable. */
   onSurface?: 'ground' | 'deep';
 }
+
+/** How long before another code can be asked for. Long enough for the first to arrive. */
+const RESEND_AFTER = 30;
 
 /** Enough to catch a typo, not so much that a valid address is refused. */
 function looksLikeEmail(value: string): boolean {
@@ -42,6 +46,14 @@ export function EmailSteps({
   const [sent, setSent] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [resendIn, setResendIn] = useState(0);
+
+  // Counts down once a code is out, so "send another" cannot be hammered.
+  useEffect(() => {
+    if (resendIn <= 0) return;
+    const timer = setTimeout(() => setResendIn((left) => left - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [resendIn]);
 
   const quietText = onSurface === 'deep' ? colors.onEspresso : colors.muted;
   // A quiet button is burgundy on burgundy once it sits on the deep sheet.
@@ -77,7 +89,19 @@ export function EmailSteps({
     Keyboard.dismiss();
     void run(
       () => onSendCode(email.trim()),
-      () => setSent(true),
+      () => {
+        setSent(true);
+        setResendIn(RESEND_AFTER);
+      },
+    );
+  }
+
+  function resend() {
+    if (resendIn > 0 || busy) return;
+    setCode('');
+    void run(
+      () => onSendCode(email.trim()),
+      () => setResendIn(RESEND_AFTER),
     );
   }
 
@@ -121,7 +145,9 @@ export function EmailSteps({
           onPress={send}
         />
 
-        <Button label="Back" variant="quiet" labelColor={quietLabel} onPress={onCancel} />
+        {onCancel ? (
+          <Button label="Back" variant="quiet" labelColor={quietLabel} onPress={onCancel} />
+        ) : null}
 
         {error ? (
           <Caption style={{ color: quietText }} align="center">
@@ -155,16 +181,28 @@ export function EmailSteps({
         </Caption>
       ) : null}
 
-      <Button
-        label="Use a different email"
-        variant="quiet"
-        labelColor={quietLabel}
-        onPress={() => {
-          setSent(false);
-          setCode('');
-          setError(null);
-        }}
-      />
+      <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 4 }}>
+        <Button
+          label={resendIn > 0 ? `Send a new code in ${resendIn}s` : 'Send a new code'}
+          variant="quiet"
+          full={false}
+          labelColor={quietLabel}
+          disabled={resendIn > 0 || busy}
+          onPress={resend}
+        />
+        <Button
+          label="Use a different email"
+          variant="quiet"
+          full={false}
+          labelColor={quietLabel}
+          onPress={() => {
+            setSent(false);
+            setCode('');
+            setError(null);
+            setResendIn(0);
+          }}
+        />
+      </View>
     </View>
   );
 }

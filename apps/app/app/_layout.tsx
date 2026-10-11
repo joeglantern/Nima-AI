@@ -23,7 +23,7 @@ import {
   JetBrainsMono_500Medium,
   useFonts as useJetBrains,
 } from '@expo-google-fonts/jetbrains-mono';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query';
 import { Stack, usePathname, useRouter } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
@@ -35,9 +35,10 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import '../global.css';
 import { AuthGateProvider } from '../src/components/auth-gate';
-import { ApiError } from '../src/lib/api';
-import { ensureGuestSession } from '../src/lib/auth';
-import { hasSeenWelcome } from '../src/lib/first-run';
+import { ApiError, api } from '../src/lib/api';
+import { ensureGuestSession, useSession } from '../src/lib/auth';
+import { hasBeenOfferedProfile, hasSeenWelcome, markProfileOffered } from '../src/lib/first-run';
+import { reconnectRealtime } from '../src/lib/realtime';
 import { ThemeProvider, useTheme } from '../src/theme/index';
 
 void SplashScreen.preventAutoHideAsync();
@@ -132,6 +133,45 @@ function Shell({ showWelcome }: { showWelcome: boolean }) {
     sentToWelcome.current = true;
     router.replace('/welcome');
   }, [showWelcome, pathname, router]);
+
+  // The live connection carries whoever was signed in when it opened, so a
+  // new session (guest to account, or signing out) gets a new socket.
+  const { data: session } = useSession();
+  const userId = session?.user?.id ?? null;
+
+  useEffect(() => {
+    reconnectRealtime(userId);
+  }, [userId]);
+
+  /*
+   * The first thing after creating an account is a name and a handle.
+   *
+   * Once, per account, and not while the welcome screen is still up, since
+   * that screen is about to move to the feed itself and would replace this.
+   * Everything on the profile screen is optional and it can be left at
+   * once; the point is that a new person is shown where it is.
+   */
+  const bootstrap = useQuery({ queryKey: ['bootstrap'], queryFn: api.bootstrap });
+  const viewer = bootstrap.data?.user;
+  const offeredSetupTo = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!viewer || viewer.isAnonymous || viewer.handle !== null) return;
+    if (pathname === '/welcome' || pathname === '/profile') return;
+    if (offeredSetupTo.current === viewer.id) return;
+    offeredSetupTo.current = viewer.id;
+
+    let stale = false;
+    void hasBeenOfferedProfile(viewer.id).then((offered) => {
+      if (stale || offered) return;
+      void markProfileOffered(viewer.id);
+      router.push('/profile?setup=1');
+    });
+
+    return () => {
+      stale = true;
+    };
+  }, [viewer, pathname, router]);
 
   useEffect(() => {
     void SystemUI.setBackgroundColorAsync(colors.ground);

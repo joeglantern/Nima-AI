@@ -25,3 +25,25 @@ export async function markWelcomeSeen(): Promise<void> {
     // Nothing to do. It shows once more next time at worst.
   }
 }
+
+/**
+ * Has this account been shown the profile screen after signing up.
+ *
+ * Per account and per device, so a reload or a reinstall offers it again
+ * once but moving around the app does not keep dragging people back to it.
+ */
+export async function hasBeenOfferedProfile(userId: string): Promise<boolean> {
+  try {
+    return (await sessionStorage.getItemAsync(`nima.profile-offered.${userId}`)) === '1';
+  } catch {
+    return true;
+  }
+}
+
+export async function markProfileOffered(userId: string): Promise<void> {
+  try {
+    await sessionStorage.setItemAsync(`nima.profile-offered.${userId}`, '1');
+  } catch {
+    // Nothing to do.
+  }
+}

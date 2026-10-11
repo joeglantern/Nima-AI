@@ -211,11 +211,21 @@ await go('/store', 6000);
 check('a visitor is offered an account', (await text()).includes('Create an account'));
 check('the offer opens the sheet', await tap('Create an account'));
 await sleep(2500);
-check('the sheet says what it is for', (await text()).includes('Continue with email'));
+// With no Google or Apple set up on this server, there is nothing to choose
+// between, so the sheet opens on the address field itself.
+const sheet = await text();
+check(
+  'the sheet says what it is for',
+  sheet.includes('Create an account') && sheet.includes('Send me a code'),
+  sheet.slice(0, 90),
+);
 
 // -------------------------------------------------------------- signing up ---
 console.info('\nSigning up');
-check('email is one of the ways in', await tap('Continue with email'));
+check(
+  'email is offered without a detour',
+  (await text()).includes('Send me a code') || (await tap('Continue with email')),
+);
 await sleep(2000);
 
 const before = await newestMail();

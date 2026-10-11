@@ -152,6 +152,11 @@ export default function SettingsScreen() {
                 <Field label="Credits" value={String(bootstrap.data?.credits.balance ?? 0)} />
 
                 <Row
+                  label="Your profile"
+                  hint="Name, handle and photo"
+                  onPress={() => router.push('/profile')}
+                />
+                <Row
                   label="Your style profile"
                   hint={`${user?.styleProfileCompletion ?? 0} percent answered`}
                   onPress={() => router.push('/style')}
