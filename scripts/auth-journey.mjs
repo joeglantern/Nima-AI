@@ -211,21 +211,19 @@ await go('/store', 6000);
 check('a visitor is offered an account', (await text()).includes('Create an account'));
 check('the offer opens the sheet', await tap('Create an account'));
 await sleep(2500);
-// With no Google or Apple set up on this server, there is nothing to choose
-// between, so the sheet opens on the address field itself.
+// The sheet opens on the three ways in, whatever the server is set up for,
+// and on a way out. Nobody lands on an empty field.
 const sheet = await text();
 check(
   'the sheet says what it is for',
-  sheet.includes('Create an account') && sheet.includes('Send me a code'),
+  sheet.includes('Create an account') && sheet.includes('Continue with email'),
   sheet.slice(0, 90),
 );
+check('the sheet has a way out', sheet.includes('Not now'));
 
 // -------------------------------------------------------------- signing up ---
 console.info('\nSigning up');
-check(
-  'email is offered without a detour',
-  (await text()).includes('Send me a code') || (await tap('Continue with email')),
-);
+check('email is offered', await tap('Continue with email'));
 await sleep(2000);
 
 const before = await newestMail();

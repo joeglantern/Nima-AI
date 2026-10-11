@@ -37,9 +37,23 @@ export default function WelcomeScreen() {
 
   // Only the ways in that the server is set up for. A Google button that
   // answers "provider not found" is worse than no Google button.
+  // The buttons are always there, as the design shows them. Whether the
+  // server is set up for each decides what a tap does: the sign in, or a
+  // plain sentence saying it is not switched on yet.
   const bootstrap = useQuery({ queryKey: ['bootstrap'], queryFn: api.bootstrap });
-  const showApple = Platform.OS === 'ios' && (bootstrap.data?.signIn.apple ?? false);
-  const showGoogle = bootstrap.data?.signIn.google ?? false;
+  const showApple = Platform.OS !== 'android';
+  const showGoogle = true;
+  const ready = bootstrap.data?.signIn;
+
+  const social = (provider: 'apple' | 'google', action: () => Promise<void>) => {
+    if (!ready?.[provider]) {
+      setError(
+        `${provider === 'apple' ? 'Apple' : 'Google'} sign in is not switched on yet. Use email for now.`,
+      );
+      return;
+    }
+    void run(action);
+  };
 
   // The hero makes way for the keyboard on a phone. On a wide window there
   // is room for both.
@@ -209,7 +223,7 @@ export default function WelcomeScreen() {
                 variant="provider"
                 loading={busy}
                 icon={<AppleMark color={colors.ink} />}
-                onPress={() => void run(signInWithApple)}
+                onPress={() => social('apple', signInWithApple)}
               />
             ) : null}
 
@@ -219,7 +233,7 @@ export default function WelcomeScreen() {
                 variant="provider"
                 loading={busy}
                 icon={<GoogleMark />}
-                onPress={() => void run(signInWithGoogle)}
+                onPress={() => social('google', signInWithGoogle)}
               />
             ) : null}
 

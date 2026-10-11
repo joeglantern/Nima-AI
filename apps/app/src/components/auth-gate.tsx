@@ -108,9 +108,22 @@ function AuthSheet({ reason, onClose }: { reason: string | null; onClose: () => 
 
   // Only the ways in that the server is set up for. A Google button that
   // answers "provider not found" is worse than no Google button.
+  // Always shown, as in the design. A provider the server is not set up
+  // for says so when tapped rather than failing with "provider not found".
   const bootstrap = useQuery({ queryKey: ['bootstrap'], queryFn: api.bootstrap });
-  const showApple = Platform.OS === 'ios' && (bootstrap.data?.signIn.apple ?? false);
-  const showGoogle = bootstrap.data?.signIn.google ?? false;
+  const showApple = Platform.OS !== 'android';
+  const showGoogle = true;
+  const ready = bootstrap.data?.signIn;
+
+  const social = (provider: 'apple' | 'google', action: () => Promise<void>) => {
+    if (!ready?.[provider]) {
+      setError(
+        `${provider === 'apple' ? 'Apple' : 'Google'} sign in is not switched on yet. Use email for now.`,
+      );
+      return;
+    }
+    void run(action);
+  };
 
   const close = useCallback(() => {
     setStep('choose');
@@ -147,7 +160,7 @@ function AuthSheet({ reason, onClose }: { reason: string | null; onClose: () => 
               variant="provider"
               icon={<AppleMark color={colors.ink} />}
               loading={busy}
-              onPress={() => void run(signInWithApple)}
+              onPress={() => social('apple', signInWithApple)}
             />
           ) : null}
 
@@ -157,7 +170,7 @@ function AuthSheet({ reason, onClose }: { reason: string | null; onClose: () => 
               variant="provider"
               icon={<GoogleMark />}
               loading={busy}
-              onPress={() => void run(signInWithGoogle)}
+              onPress={() => social('google', signInWithGoogle)}
             />
           ) : null}
 
