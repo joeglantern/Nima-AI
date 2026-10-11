@@ -72,38 +72,52 @@ export async function linkAnonymousAccount(
       await tx.cart.delete({ where: { id: guestCart.id } });
     }
 
-    // Saves, likes and dismissals. A unique constraint means the same look
-    // could already be saved on the new account, so skip duplicates.
-    const [saves, likes, dismissals] = await Promise.all([
-      tx.save.findMany({ where: { userId: anonymousUserId } }),
-      tx.like.findMany({ where: { userId: anonymousUserId } }),
-      tx.dismissal.findMany({ where: { userId: anonymousUserId } }),
+    // Saves, likes and dismissals. The new account may already have some of
+    // the same looks, and a unique constraint would stop the whole move, so
+    // the guest's duplicates go first and the rest move in one statement.
+    const [savedAlready, likedAlready, dismissedAlready] = await Promise.all([
+      tx.save.findMany({ where: { userId: newUserId }, select: { lookId: true, productId: true } }),
+      tx.like.findMany({ where: { userId: newUserId }, select: { lookId: true } }),
+      tx.dismissal.findMany({
+        where: { userId: newUserId },
+        select: { lookId: true, productId: true },
+      }),
     ]);
 
-    let movedSaves = 0;
-    for (const save of saves) {
-      const moved = await tx.save
-        .updateMany({
-          where: { id: save.id },
-          data: { userId: newUserId },
-        })
-        .catch(() => ({ count: 0 }));
-      movedSaves += moved.count;
-    }
+    const lookIds = (rows: Array<{ lookId: string | null }>) =>
+      rows.map((row) => row.lookId).filter((id): id is string => id !== null);
+    const productIds = (rows: Array<{ productId: string | null }>) =>
+      rows.map((row) => row.productId).filter((id): id is string => id !== null);
 
-    let movedLikes = 0;
-    for (const like of likes) {
-      const moved = await tx.like
-        .updateMany({ where: { id: like.id }, data: { userId: newUserId } })
-        .catch(() => ({ count: 0 }));
-      movedLikes += moved.count;
-    }
+    await tx.save.deleteMany({
+      where: {
+        userId: anonymousUserId,
+        OR: [
+          { lookId: { in: lookIds(savedAlready) } },
+          { productId: { in: productIds(savedAlready) } },
+        ],
+      },
+    });
+    await tx.like.deleteMany({
+      where: { userId: anonymousUserId, lookId: { in: lookIds(likedAlready) } },
+    });
+    await tx.dismissal.deleteMany({
+      where: {
+        userId: anonymousUserId,
+        OR: [
+          { lookId: { in: lookIds(dismissedAlready) } },
+          { productId: { in: productIds(dismissedAlready) } },
+        ],
+      },
+    });
 
-    for (const dismissal of dismissals) {
-      await tx.dismissal
-        .updateMany({ where: { id: dismissal.id }, data: { userId: newUserId } })
-        .catch(() => ({ count: 0 }));
-    }
+    const [savesMoved, likesMoved] = await Promise.all([
+      tx.save.updateMany({ where: { userId: anonymousUserId }, data: { userId: newUserId } }),
+      tx.like.updateMany({ where: { userId: anonymousUserId }, data: { userId: newUserId } }),
+      tx.dismissal.updateMany({ where: { userId: anonymousUserId }, data: { userId: newUserId } }),
+    ]);
+    const movedSaves = savesMoved.count;
+    const movedLikes = likesMoved.count;
 
     // Content the guest created.
     const [looks, events] = await Promise.all([

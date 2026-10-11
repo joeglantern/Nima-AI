@@ -19,8 +19,10 @@ import { AUTH_COOKIE_PREFIX } from '@nima/contracts';
 import type { PrismaClient } from '@nima/db';
 import { betterAuth } from 'better-auth';
 import { prismaAdapter } from 'better-auth/adapters/prisma';
+import { APIError, createAuthMiddleware } from 'better-auth/api';
 import { anonymous, emailOTP, magicLink } from 'better-auth/plugins';
 import type { Mailer } from '../lib/mailer.js';
+import { resolveEmail } from './email.js';
 import { linkAnonymousAccount } from './link-anonymous.js';
 import { recordMailAttempt, recordMailFailure } from './mail-outcome.js';
 
@@ -28,11 +30,21 @@ export interface CreateAuthOptions {
   env: Env;
   prisma: PrismaClient;
   mailer: Mailer;
+  /**
+   * Whether one more code may be sent to this address right now. The
+   * built in limiter counts per network address, which a tunnel or a
+   * shared Wi-Fi turns into one bucket for everybody; this one counts
+   * per inbox, which is what is actually being flooded.
+   */
+  otpAllowed?: (email: string) => Promise<boolean>;
 }
+
+/** Codes per address in ten minutes. Enough for a typo and a retry. */
+export const OTP_PER_EMAIL = 5;
 
 export type Auth = ReturnType<typeof createAuth>;
 
-export function createAuth({ env, prisma, mailer }: CreateAuthOptions) {
+export function createAuth({ env, prisma, mailer, otpAllowed }: CreateAuthOptions) {
   const isDevelopment = env.NODE_ENV === 'development';
 
   /**
@@ -60,8 +72,68 @@ export function createAuth({ env, prisma, mailer }: CreateAuthOptions) {
 
     database: prismaAdapter(prisma, { provider: 'postgresql' }),
 
-    // Passwords are not offered. Email codes and social sign in only.
-    emailAndPassword: { enabled: false },
+    /*
+     * Accounts are opened with a code, which proves the address. A password
+     * is something a person may add afterwards, from Settings, for signing
+     * in without waiting on an email. So password sign in is on and
+     * password sign up is not.
+     */
+    emailAndPassword: {
+      enabled: true,
+      disableSignUp: true,
+      minPasswordLength: 8,
+      maxPasswordLength: 128,
+    },
+
+    rateLimit: {
+      customRules: {
+        '/email-otp/send-verification-otp': { window: 60, max: 3 },
+        '/sign-in/email': { window: 60, max: 5 },
+        '/sign-in/email-otp': { window: 60, max: 6 },
+      },
+    },
+
+    hooks: {
+      before: createAuthMiddleware(async (ctx) => {
+        const body = ctx.body as { email?: unknown } | undefined;
+        if (!body || typeof body.email !== 'string') return;
+
+        const takesEmail =
+          ctx.path.startsWith('/email-otp/') ||
+          ctx.path === '/forget-password/email-otp' ||
+          ctx.path === '/sign-in/email-otp' ||
+          ctx.path === '/sign-in/email' ||
+          ctx.path === '/sign-in/magic-link';
+        if (!takesEmail) return;
+
+        // One inbox, one account, whatever Gmail decoration was typed.
+        const email = await resolveEmail(prisma, body.email);
+
+        if (ctx.path === '/email-otp/send-verification-otp' && otpAllowed) {
+          if (!(await otpAllowed(email))) {
+            throw new APIError('TOO_MANY_REQUESTS', {
+              message: 'That address has had enough codes for now. Try again in a few minutes.',
+            });
+          }
+        }
+
+        return { context: { body: { ...body, email } } };
+      }),
+    },
+
+    databaseHooks: {
+      session: {
+        create: {
+          // Signing in is how a deletion is called off, as the app promises.
+          after: async (session) => {
+            await prisma.user.updateMany({
+              where: { id: session.userId, deletionRequestedAt: { not: null } },
+              data: { deletionRequestedAt: null },
+            });
+          },
+        },
+      },
+    },
 
     trustedOrigins: [
       ...env.WEB_ORIGINS,
@@ -77,7 +149,8 @@ export function createAuth({ env, prisma, mailer }: CreateAuthOptions) {
     session: {
       expiresIn: 60 * 60 * 24 * 30, // a month, so the app rarely signs people out
       updateAge: 60 * 60 * 24,
-      cookieCache: { enabled: true, maxAge: 300 },
+      // A minute. Longer and a sign out elsewhere takes that long to land here.
+      cookieCache: { enabled: true, maxAge: 60 },
     },
 
     user: {

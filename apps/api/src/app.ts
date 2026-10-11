@@ -25,6 +25,7 @@ import realtimePlugin from './plugins/realtime.js';
 import securityPlugin from './plugins/security.js';
 import servicesPlugin from './plugins/services.js';
 import { registerRoutes } from './routes.js';
+import { startDeletionSweep } from './services/deletion.js';
 
 export interface BuildAppOptions extends Partial<CorePluginOptions> {
   env?: Env;
@@ -108,6 +109,9 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
   app.addHook('onSend', async (request, reply) => {
     reply.header('x-request-id', request.id);
   });
+
+  // Accounts past their deletion grace period are erased on a timer.
+  startDeletionSweep(app);
 
   await app.ready();
   return app;

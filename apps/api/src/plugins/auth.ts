@@ -15,7 +15,7 @@
 import { fromNodeHeaders } from 'better-auth/node';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import fp from 'fastify-plugin';
-import { type Auth, createAuth } from '../auth/auth.js';
+import { type Auth, createAuth, OTP_PER_EMAIL } from '../auth/auth.js';
 import { withMailOutcome } from '../auth/mail-outcome.js';
 import { errors } from '../lib/errors.js';
 
@@ -45,7 +45,17 @@ declare module 'fastify' {
 
 export default fp(
   async (app) => {
-    const auth = createAuth({ env: app.env, prisma: app.prisma, mailer: app.mailer });
+    const auth = createAuth({
+      env: app.env,
+      prisma: app.prisma,
+      mailer: app.mailer,
+      otpAllowed: async (email) => {
+        const key = `nima:otp:${email}`;
+        const sent = await app.redis.incr(key);
+        if (sent === 1) await app.redis.expire(key, 600);
+        return sent <= OTP_PER_EMAIL;
+      },
+    });
     app.decorate('auth', auth);
 
     app.decorateRequest('user', null);
