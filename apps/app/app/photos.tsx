@@ -18,6 +18,7 @@ import { ActivityIndicator, Alert, Pressable, ScrollView, View } from 'react-nat
 import Svg, { Path } from 'react-native-svg';
 import { Body, BodyStrong, Caption, Micro, Title } from '../src/components/text';
 import { api } from '../src/lib/api';
+import { uploadImage } from '../src/lib/upload';
 import { useTheme } from '../src/theme/index';
 
 type PhotoKind = 'FULL_BODY' | 'UPPER_BODY';
@@ -55,25 +56,10 @@ export default function PhotosScreen() {
     setBusy(kind);
 
     try {
-      const file = await fetch(asset.uri);
-      const blob = await file.blob();
-
-      const ticket = await api.createUpload({
-        purpose: 'USER_PHOTO',
-        contentType: blob.type || 'image/jpeg',
-        size: blob.size,
-      });
-
-      const upload = await fetch(ticket.uploadUrl, {
-        method: 'PUT',
-        headers: ticket.headers,
-        body: blob,
-      });
-
-      if (!upload.ok) throw new Error('The upload did not finish');
+      const { storageKey } = await uploadImage(asset, 'USER_PHOTO');
 
       await api.savePhoto({
-        storageKey: ticket.storageKey,
+        storageKey,
         kind,
         width: asset.width,
         height: asset.height,

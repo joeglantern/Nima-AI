@@ -18,6 +18,7 @@ import { useState } from 'react';
 import { ActivityIndicator, Pressable, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { api } from '../lib/api';
+import { uploadImage } from '../lib/upload';
 import { useTheme } from '../theme/index';
 import { Body, BodyStrong, Caption, Micro } from './text';
 
@@ -63,23 +64,8 @@ export function WardrobeTab() {
     setBusy(true);
 
     try {
-      const blob = await (await fetch(asset.uri)).blob();
-
-      const ticket = await api.createUpload({
-        purpose: 'WARDROBE_ITEM',
-        contentType: blob.type || 'image/jpeg',
-        size: blob.size,
-      });
-
-      const put = await fetch(ticket.uploadUrl, {
-        method: 'PUT',
-        headers: ticket.headers,
-        body: blob,
-      });
-
-      if (!put.ok) throw new Error('That photo did not upload');
-
-      await api.addWardrobeItem({ storageKey: ticket.storageKey });
+      const { storageKey } = await uploadImage(asset, 'WARDROBE_ITEM');
+      await api.addWardrobeItem({ storageKey });
       await queryClient.invalidateQueries({ queryKey: ['wardrobe'] });
     } catch (error) {
       setProblem(error instanceof Error ? error.message : 'That did not work');

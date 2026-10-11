@@ -22,6 +22,7 @@ import {
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 import { z } from 'zod';
 import { errors } from '../../lib/errors.js';
+import { sniffImageType } from '../../lib/image-type.js';
 import { verifyMediaToken } from '../../lib/media-token.js';
 import { privateImage, publicImage, storeCard } from '../../lib/presenters.js';
 import { FileTooLargeError, UnsupportedMediaError } from '../../lib/storage.js';
@@ -379,51 +380,15 @@ export const profileRoutes: FastifyPluginAsyncZod = async (app) => {
    * points here, and the token in it says which key, what type and how many
    * bytes, signed. No session is needed: the token is the permission, just
    * as the signature on a presigned bucket URL would be.
+   *
+   * It sits in its own scope because it accepts any body at all. A phone
+   * does not reliably send the Content-Type it was told to: React Native
+   * puts its blob's type on the request, which is often nothing, and the
+   * parser here refused "application/octet-stream" before the handler
+   * ever saw the bytes. So the header is ignored and the bytes say what
+   * they are.
    */
-  app.addContentTypeParser(
-    ['image/jpeg', 'image/png', 'image/webp', 'image/heic'],
-    { parseAs: 'buffer', bodyLimit: 25 * 1024 * 1024 },
-    (_request, body, done) => done(null, body),
-  );
-
-  app.put(
-    '/uploads',
-    {
-      config: { rateLimit: { max: 60, timeWindow: '1 minute' } },
-      schema: {
-        tags: ['profile'],
-        summary: 'Upload the bytes for a ticket',
-        description:
-          'Only used when the server keeps storage private. The PUT body is the image, ' +
-          'with the Content-Type the ticket was issued for. The token is in the query ' +
-          'string because it is longer than a path segment is allowed to be.',
-        querystring: z.object({ t: z.string().min(16).max(2000) }),
-        response: { 200: z.object({ storageKey: z.string() }) },
-      },
-    },
-    async (request) => {
-      const claim = verifyMediaToken(app.env.BETTER_AUTH_SECRET, request.query.t);
-      if (!claim || claim.u !== 'up' || !claim.c || !claim.m) throw errors.unauthorized();
-
-      const body = request.body;
-      if (!Buffer.isBuffer(body) || body.length === 0) {
-        throw errors.unsupportedMedia('Send the image as the request body');
-      }
-
-      const sent = (request.headers['content-type'] ?? '').split(';')[0]?.trim();
-      if (sent !== claim.c) {
-        throw errors.unsupportedMedia(`This link was issued for ${claim.c}, not ${sent || 'that'}`);
-      }
-
-      if (body.length > claim.m) {
-        const mb = (bytes: number) => Math.round(bytes / 1024 / 1024);
-        throw errors.tooLarge(`That image is ${mb(body.length)}MB. The limit is ${mb(claim.m)}MB.`);
-      }
-
-      await app.storage.put(claim.k, body, claim.c);
-      return { storageKey: claim.k };
-    },
-  );
+  await app.register(uploadBytes);
 
   app.get(
     '/profile/photos',
@@ -595,6 +560,59 @@ export const profileRoutes: FastifyPluginAsyncZod = async (app) => {
         graceDays: DELETION_GRACE_DAYS,
         message: `Your account will be deleted in ${DELETION_GRACE_DAYS} days. Sign in again before then to stop it.`,
       };
+    },
+  );
+};
+
+const uploadBytes: FastifyPluginAsyncZod = async (scope) => {
+  scope.addContentTypeParser(
+    '*',
+    { parseAs: 'buffer', bodyLimit: 25 * 1024 * 1024 },
+    (_request, body, done) => done(null, body),
+  );
+
+  scope.put(
+    '/uploads',
+    {
+      config: { rateLimit: { max: 60, timeWindow: '1 minute' } },
+      schema: {
+        tags: ['profile'],
+        summary: 'Upload the bytes for a ticket',
+        description:
+          'Only used when the server keeps storage private. The PUT body is the image. ' +
+          'Its format is read from the bytes and must be the one the ticket was issued ' +
+          'for. The token is in the query string because it is longer than a path ' +
+          'segment is allowed to be.',
+        querystring: z.object({ t: z.string().min(16).max(2000) }),
+        response: { 200: z.object({ storageKey: z.string() }) },
+      },
+    },
+    async (request) => {
+      const claim = verifyMediaToken(scope.env.BETTER_AUTH_SECRET, request.query.t);
+      if (!claim || claim.u !== 'up' || !claim.c || !claim.m) throw errors.unauthorized();
+
+      const body = request.body;
+      if (!Buffer.isBuffer(body) || body.length === 0) {
+        throw errors.unsupportedMedia('Send the image as the request body');
+      }
+
+      const actual = sniffImageType(body);
+      if (!actual) {
+        throw errors.unsupportedMedia('That is not a JPEG, PNG, WebP or HEIC image');
+      }
+      if (actual !== claim.c) {
+        throw errors.unsupportedMedia(
+          `This link was issued for ${claim.c}, but the file is ${actual}`,
+        );
+      }
+
+      if (body.length > claim.m) {
+        const mb = (bytes: number) => Math.round(bytes / 1024 / 1024);
+        throw errors.tooLarge(`That image is ${mb(body.length)}MB. The limit is ${mb(claim.m)}MB.`);
+      }
+
+      await scope.storage.put(claim.k, body, claim.c);
+      return { storageKey: claim.k };
     },
   );
 };
