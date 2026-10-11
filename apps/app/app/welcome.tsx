@@ -22,6 +22,7 @@ import { Body, Caption, Display, Label } from '../src/components/text';
 import { api } from '../src/lib/api';
 import { sendEmailCode, signInWithApple, signInWithGoogle, verifyEmailCode } from '../src/lib/auth';
 import { markWelcomeSeen } from '../src/lib/first-run';
+import { useKeyboardShown } from '../src/lib/keyboard';
 import { elevation } from '../src/theme/elevation';
 import { useTheme } from '../src/theme/index';
 
@@ -40,6 +41,10 @@ export default function WelcomeScreen() {
   const showApple = Platform.OS === 'ios' && (bootstrap.data?.signIn.apple ?? false);
   const showGoogle = bootstrap.data?.signIn.google ?? false;
   const hasProviders = showApple || showGoogle;
+
+  // The hero makes way for the keyboard on a phone. On a wide window there
+  // is room for both.
+  const typing = useKeyboardShown() && !isWide;
 
   async function leave() {
     await markWelcomeSeen();
@@ -67,7 +72,7 @@ export default function WelcomeScreen() {
     */
     <KeyboardAvoidingView
       style={{ flex: 1, width: '100%', backgroundColor: colors.ground }}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       {/*
         The top half: who this is.
@@ -81,9 +86,9 @@ export default function WelcomeScreen() {
         style={{
           flex: 1,
           alignItems: 'center',
-          justifyContent: 'space-between',
-          paddingTop: insets.top + 34,
-          paddingBottom: 30,
+          justifyContent: typing ? 'center' : 'space-between',
+          paddingTop: insets.top + (typing ? 12 : 34),
+          paddingBottom: typing ? 12 : 30,
           paddingHorizontal: 24,
         }}
       >
@@ -123,27 +128,44 @@ export default function WelcomeScreen() {
           </Pressable>
         ) : null}
 
-        <View style={{ alignItems: 'center', gap: 10 }}>
-          <Display style={{ fontSize: 56, lineHeight: 62 }}>Nima</Display>
+        <View style={{ alignItems: 'center', gap: typing ? 2 : 10 }}>
+          <Display
+            style={typing ? { fontSize: 36, lineHeight: 40 } : { fontSize: 56, lineHeight: 62 }}
+          >
+            Nima
+          </Display>
           <Label>AI stylist</Label>
         </View>
 
-        {/* Takes the slack, so the gap above and below it is even. */}
-        <View style={{ flex: 1, justifyContent: 'center', paddingVertical: 8 }}>
-          <Mascot size={200} mood="delighted" />
-        </View>
+        {/*
+          With the keyboard up there is room for the wordmark and nothing
+          else. The character and the promise go, rather than being crushed
+          into whatever strip is left above the sheet.
+        */}
+        {typing ? null : (
+          <>
+            {/* Takes the slack, so the gap above and below it is even. */}
+            <View style={{ flex: 1, justifyContent: 'center', paddingVertical: 8 }}>
+              <Mascot size={200} mood="delighted" />
+            </View>
 
-        <View style={{ alignItems: 'center', gap: 6 }}>
-          <Body
-            align="center"
-            style={{ fontFamily: 'CormorantGaramond_600SemiBold', fontSize: 26, lineHeight: 32 }}
-          >
-            Your personal AI stylist
-          </Body>
-          <Body tone="muted" align="center">
-            See yourself in every outfit
-          </Body>
-        </View>
+            <View style={{ alignItems: 'center', gap: 6 }}>
+              <Body
+                align="center"
+                style={{
+                  fontFamily: 'CormorantGaramond_600SemiBold',
+                  fontSize: 26,
+                  lineHeight: 32,
+                }}
+              >
+                Your personal AI stylist
+              </Body>
+              <Body tone="muted" align="center">
+                See yourself in every outfit
+              </Body>
+            </View>
+          </>
+        )}
       </View>
 
       {/* The bottom sheet: the ways in */}

@@ -35,6 +35,7 @@ export default function ProductScreen() {
   const [added, setAdded] = useState(false);
   const [jobId, setJobId] = useState<string | null>(null);
   const [resultUrl, setResultUrl] = useState<string | null>(null);
+  const [savedLookId, setSavedLookId] = useState<string | null>(null);
   const [progress, setProgress] = useState<string | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
 
@@ -78,6 +79,7 @@ export default function ProductScreen() {
   useServerFrame('tryon.done', (frame) => {
     if (frame.jobId !== jobId) return;
     setResultUrl(frame.imageUrl);
+    setSavedLookId(null);
     setProgress(null);
     void queryClient.invalidateQueries({ queryKey: ['bootstrap'] });
   });
@@ -122,6 +124,21 @@ export default function ProductScreen() {
       } else {
         setProblem(error.message);
       }
+    },
+  });
+
+  // Keeping the picture makes it a private look, with this piece in it.
+  const keep = useMutation({
+    mutationFn: () => {
+      if (!jobId) throw new Error('There is nothing to save yet');
+      return api.publishTryOn(jobId, { visibility: 'PRIVATE' });
+    },
+    onSuccess: (result) => {
+      setSavedLookId(result.lookId);
+      void queryClient.invalidateQueries({ queryKey: ['tryons'] });
+    },
+    onError: (error) => {
+      setProblem(error instanceof Error ? error.message : 'That did not save');
     },
   });
 
@@ -345,8 +362,28 @@ export default function ProductScreen() {
           </Caption>
         </View>
 
-        <Button label="Save to my looks" onPress={() => setResultUrl(null)} />
-        <Button label="Try something else" variant="quiet" onPress={() => setResultUrl(null)} />
+        {savedLookId ? (
+          <Button
+            label="Open it in my looks"
+            onPress={() => {
+              const lookId = savedLookId;
+              setResultUrl(null);
+              setJobId(null);
+              router.push({ pathname: '/look/[id]', params: { id: lookId } });
+            }}
+          />
+        ) : (
+          <Button label="Save to my looks" loading={keep.isPending} onPress={() => keep.mutate()} />
+        )}
+        <Button
+          label={savedLookId ? 'Done' : 'Try something else'}
+          variant="quiet"
+          onPress={() => {
+            // Both, or the try-on button stays stuck on "Nima is dressing you".
+            setResultUrl(null);
+            setJobId(null);
+          }}
+        />
       </Sheet>
     </>
   );

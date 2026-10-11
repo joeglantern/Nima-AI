@@ -10,11 +10,11 @@
  */
 
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Keyboard, TextInput, View } from 'react-native';
+import { ActivityIndicator, Keyboard, Pressable, TextInput, View } from 'react-native';
 import { useTheme } from '../theme/index';
 import { Button } from './button';
 import { CodeInput } from './code-input';
-import { Body, Caption } from './text';
+import { Body, BodyStrong, Caption } from './text';
 
 export interface EmailStepsProps {
   onSendCode: (email: string) => Promise<void>;
@@ -187,20 +187,20 @@ export function EmailSteps({
         </Caption>
       ) : null}
 
-      <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 4 }}>
-        <Button
+      {/*
+        Two small actions, stacked. Side by side they were wider than a
+        phone, and the second fell off the edge.
+      */}
+      <View style={{ alignItems: 'center', marginTop: 2 }}>
+        <TextLink
           label={resendIn > 0 ? `Send a new code in ${resendIn}s` : 'Send a new code'}
-          variant="quiet"
-          full={false}
-          labelColor={quietLabel}
+          color={quietText}
           disabled={resendIn > 0 || busy}
           onPress={resend}
         />
-        <Button
+        <TextLink
           label="Use a different email"
-          variant="quiet"
-          full={false}
-          labelColor={quietLabel}
+          color={quietText}
           onPress={() => {
             setSent(false);
             setCode('');
@@ -210,5 +210,35 @@ export function EmailSteps({
         />
       </View>
     </View>
+  );
+}
+
+/** An action that matters less than a button. */
+function TextLink({
+  label,
+  color,
+  disabled = false,
+  onPress,
+}: {
+  label: string;
+  color: string;
+  disabled?: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      disabled={disabled}
+      accessibilityRole="button"
+      accessibilityState={{ disabled }}
+      hitSlop={6}
+      style={({ pressed }) => ({
+        paddingVertical: 9,
+        paddingHorizontal: 12,
+        opacity: disabled ? 0.5 : pressed ? 0.6 : 1,
+      })}
+    >
+      <BodyStrong style={{ color, fontSize: 14, lineHeight: 20 }}>{label}</BodyStrong>
+    </Pressable>
   );
 }

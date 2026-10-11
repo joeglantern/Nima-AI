@@ -22,10 +22,11 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import Svg, { Path } from 'react-native-svg';
+import Svg, { Circle, Path } from 'react-native-svg';
 import { Button } from '../src/components/button';
 import { Body, BodyStrong, Caption, Micro, Title } from '../src/components/text';
 import { ApiError, api, type ProfileUpdate } from '../src/lib/api';
+import { uploadImage } from '../src/lib/upload';
 import { useTheme } from '../src/theme/index';
 
 /** Mirrors the server's rule, so the hint appears before the round trip. */
@@ -104,21 +105,8 @@ export default function ProfileScreen() {
     setProblem(null);
 
     try {
-      const blob = await (await fetch(asset.uri)).blob();
-      const ticket = await api.createUpload({
-        purpose: 'AVATAR',
-        contentType: blob.type || 'image/jpeg',
-        size: blob.size,
-      });
-
-      const put = await fetch(ticket.uploadUrl, {
-        method: 'PUT',
-        headers: ticket.headers,
-        body: blob,
-      });
-      if (!put.ok) throw new Error('That picture did not upload');
-
-      setAvatarKey(ticket.storageKey);
+      const { storageKey } = await uploadImage(asset, 'AVATAR');
+      setAvatarKey(storageKey);
       setAvatarPreview(asset.uri);
     } catch (error) {
       setProblem(error instanceof Error ? error.message : 'That picture did not upload');
@@ -252,51 +240,76 @@ export default function ProfileScreen() {
                 <Pressable
                   onPress={() => void pickAvatar()}
                   accessibilityRole="button"
-                  accessibilityLabel="Change your picture"
+                  accessibilityLabel={avatarPreview ? 'Change your picture' : 'Add a picture'}
                   disabled={uploading}
                   style={({ pressed }) => ({
-                    width: 108,
-                    height: 108,
-                    borderRadius: 54,
-                    overflow: 'hidden',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    backgroundColor: colors.primarySoft,
-                    opacity: pressed ? 0.8 : 1,
+                    width: 120,
+                    height: 120,
+                    opacity: pressed ? 0.85 : 1,
                   })}
                 >
-                  {avatarPreview ? (
-                    <Image
-                      source={{ uri: avatarPreview }}
-                      style={{ width: 108, height: 108 }}
-                      contentFit="cover"
-                    />
-                  ) : (
-                    <Title style={{ fontSize: 40, lineHeight: 48, color: colors.primary }}>
-                      {initials}
-                    </Title>
-                  )}
-                  {uploading ? (
-                    <View
-                      style={{
-                        position: 'absolute',
-                        inset: 0,
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        backgroundColor: 'rgba(0,0,0,0.35)',
-                      }}
-                    >
-                      <ActivityIndicator color="#fff" />
-                    </View>
-                  ) : null}
+                  <View
+                    style={{
+                      width: 120,
+                      height: 120,
+                      borderRadius: 60,
+                      overflow: 'hidden',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      backgroundColor: colors.primarySoft,
+                      borderWidth: 4,
+                      borderColor: colors.surface,
+                    }}
+                  >
+                    {avatarPreview ? (
+                      <Image
+                        source={{ uri: avatarPreview }}
+                        style={{ width: 112, height: 112 }}
+                        contentFit="cover"
+                      />
+                    ) : (
+                      <Title style={{ fontSize: 44, lineHeight: 52, color: colors.primary }}>
+                        {initials}
+                      </Title>
+                    )}
+                    {uploading ? (
+                      <View
+                        style={{
+                          position: 'absolute',
+                          inset: 0,
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          backgroundColor: 'rgba(0,0,0,0.35)',
+                        }}
+                      >
+                        <ActivityIndicator color="#fff" />
+                      </View>
+                    ) : null}
+                  </View>
+
+                  {/* The badge is the one thing on the screen that says "tap me". */}
+                  <View
+                    style={{
+                      position: 'absolute',
+                      right: 0,
+                      bottom: 0,
+                      width: 36,
+                      height: 36,
+                      borderRadius: 999,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      backgroundColor: colors.accent,
+                      borderWidth: 3,
+                      borderColor: colors.ground,
+                    }}
+                  >
+                    <CameraMark color={colors.onAccent} />
+                  </View>
                 </Pressable>
-                <Button
-                  label={avatarPreview ? 'Change picture' : 'Add a picture'}
-                  variant="quiet"
-                  full={false}
-                  disabled={uploading}
-                  onPress={() => void pickAvatar()}
-                />
+
+                <Caption>
+                  {avatarPreview ? 'Tap the picture to change it' : 'Tap to add a picture'}
+                </Caption>
               </View>
 
               <Field label="Name">
@@ -510,5 +523,20 @@ function Toggle({
         accessibilityLabel={label}
       />
     </View>
+  );
+}
+
+function CameraMark({ color }: { color: string }) {
+  return (
+    <Svg width={17} height={17} viewBox="0 0 24 24">
+      <Path
+        d="M4 8h3l1.6-2.4A1 1 0 0 1 9.4 5h5.2a1 1 0 0 1 .8.4L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1Z"
+        stroke={color}
+        strokeWidth={1.8}
+        strokeLinejoin="round"
+        fill="none"
+      />
+      <Circle cx={12} cy={13} r={3.2} stroke={color} strokeWidth={1.8} fill="none" />
+    </Svg>
   );
 }

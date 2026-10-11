@@ -304,6 +304,12 @@ export const api = {
   tryOns: (params: { cursor?: string; limit?: number } = {}) =>
     request<Page<TryOnJob>>('/v1/tryon', { query: params }),
 
+  /** Keeps a finished try-on as a look. PRIVATE is yours alone; the rest share it. */
+  publishTryOn: (
+    id: string,
+    body: { visibility: 'PRIVATE' | 'FOLLOWERS' | 'PUBLIC'; caption?: string },
+  ) => request<{ lookId: string }>(`/v1/tryon/${id}/publish`, { method: 'POST', body }),
+
   askNima: (body: {
     message: string;
     threadId?: string;

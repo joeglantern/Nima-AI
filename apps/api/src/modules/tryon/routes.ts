@@ -16,6 +16,7 @@ import {
   startTryOnSchema,
   tryOnJobSchema,
 } from '@nima/contracts';
+import type { GarmentSlot } from '@nima/db';
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 import { z } from 'zod';
 import { errors } from '../../lib/errors.js';
@@ -217,12 +218,13 @@ export function tryOnRoutes(tryOn: TryOnService): FastifyPluginAsyncZod {
         preHandler: app.requireAccount,
         schema: {
           tags: ['tryon'],
-          summary: 'Share a try-on as a look',
+          summary: 'Keep or share a try-on as a look',
           description:
-            'Try-ons are private. This is the only way one becomes visible to anyone else.',
+            'Try-ons are private. PRIVATE keeps one among your looks. FOLLOWERS or PUBLIC ' +
+            'is the only way one becomes visible to anyone else.',
           params: z.object({ id: idSchema }),
           body: z.object({
-            visibility: z.enum(['FOLLOWERS', 'PUBLIC']),
+            visibility: z.enum(['PRIVATE', 'FOLLOWERS', 'PUBLIC']),
             caption: z.string().max(500).optional(),
           }),
           response: { 200: z.object({ lookId: idSchema }) },
@@ -237,35 +239,64 @@ export function tryOnRoutes(tryOn: TryOnService): FastifyPluginAsyncZod {
           throw errors.badRequest('That image is not ready yet');
         }
 
-        const look = job.lookId
-          ? await app.prisma.look.update({
-              where: { id: job.lookId },
-              data: {
-                visibility: request.body.visibility,
-                caption: request.body.caption ?? null,
-                publishedAt: new Date(),
-              },
-            })
-          : await app.prisma.look.create({
-              data: {
-                ownerId: user.id,
-                source: 'TRY_ON',
-                visibility: request.body.visibility,
-                caption: request.body.caption ?? null,
-                coverKey: job.resultKey,
-                publishedAt: new Date(),
-              },
-            });
+        const { visibility, caption } = request.body;
+        const shared = visibility !== 'PRIVATE';
 
-        if (!job.lookId) {
-          await app.prisma.tryOnJob.update({
-            where: { id: job.id },
-            data: { lookId: look.id },
+        if (job.lookId) {
+          await app.prisma.look.update({
+            where: { id: job.lookId },
+            data: {
+              visibility,
+              ...(caption !== undefined ? { caption } : {}),
+              ...(shared ? { publishedAt: new Date() } : {}),
+            },
           });
+          return { lookId: job.lookId };
         }
+
+        // The look wears what the try-on wore, so each piece can be opened
+        // and bought from it later.
+        const worn = wornGarments.safeParse(job.inputs);
+        const garments = worn.success ? worn.data.garments : [];
+
+        const look = await app.prisma.look.create({
+          data: {
+            ownerId: user.id,
+            source: 'TRY_ON',
+            visibility,
+            caption: caption ?? null,
+            coverKey: job.resultKey,
+            publishedAt: shared ? new Date() : null,
+            items: {
+              create: garments
+                .filter((garment) => garment.productId || garment.wardrobeItemId)
+                .map((garment, index) => ({
+                  slot: garment.slot as GarmentSlot,
+                  productId: garment.productId ?? null,
+                  wardrobeItemId: garment.wardrobeItemId ?? null,
+                  position: index,
+                })),
+            },
+          },
+        });
+
+        await app.prisma.tryOnJob.update({ where: { id: job.id }, data: { lookId: look.id } });
 
         return { lookId: look.id };
       },
     );
   };
 }
+
+/** The part of a job's input snapshot that becomes the items of a look. */
+const wornGarments = z.object({
+  garments: z
+    .array(
+      z.object({
+        slot: z.string(),
+        productId: z.string().nullish(),
+        wardrobeItemId: z.string().nullish(),
+      }),
+    )
+    .default([]),
+});
