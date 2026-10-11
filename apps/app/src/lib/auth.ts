@@ -2,7 +2,7 @@
  * Sign in.
  *
  * Three ways in, in the order the design shows them: Apple, Google, email.
- * No passwords. A visitor who has not chosen any of them still gets a guest
+ * Passwords exist, but only as something added later. A visitor who has not chosen any of them still gets a guest
  * session, created on first launch, so the app works straight away.
  */
 
@@ -79,4 +79,24 @@ export async function signInWithGoogle(): Promise<void> {
 
 export async function signInWithApple(): Promise<void> {
   await authClient.signIn.social({ provider: 'apple', callbackURL: 'nima://' });
+}
+
+/**
+ * The password way in, for people who have set one.
+ *
+ * Accounts are still opened with a code, which proves the address. A
+ * password is something a person adds afterwards, in Settings, so the
+ * errors here say that rather than "invalid credentials".
+ */
+export async function signInWithPassword(email: string, password: string): Promise<void> {
+  const result = await authClient.signIn.email({ email, password });
+  if (result.error) {
+    const code = result.error.code ?? '';
+    if (code === 'INVALID_EMAIL_OR_PASSWORD' || code === 'CREDENTIAL_ACCOUNT_NOT_FOUND') {
+      throw new Error(
+        'That email and password do not match. If you have not set a password yet, use a code.',
+      );
+    }
+    throw new Error(result.error.message ?? 'That did not work');
+  }
 }

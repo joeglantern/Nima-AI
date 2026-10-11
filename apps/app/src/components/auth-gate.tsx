@@ -14,7 +14,13 @@ import { createContext, type ReactNode, useCallback, useContext, useMemo, useSta
 import { Platform, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { api } from '../lib/api';
-import { sendEmailCode, signInWithApple, signInWithGoogle, verifyEmailCode } from '../lib/auth';
+import {
+  sendEmailCode,
+  signInWithApple,
+  signInWithGoogle,
+  signInWithPassword,
+  verifyEmailCode,
+} from '../lib/auth';
 import { useTheme } from '../theme/index';
 import { Button } from './button';
 import { EmailSteps } from './email-steps';
@@ -193,6 +199,7 @@ function AuthSheet({ reason, onClose }: { reason: string | null; onClose: () => 
          */
         <EmailSteps
           onCancel={() => setStep('choose')}
+          onPassword={signInWithPassword}
           onSendCode={sendEmailCode}
           onVerify={async (email, code) => {
             await verifyEmailCode(email, code);

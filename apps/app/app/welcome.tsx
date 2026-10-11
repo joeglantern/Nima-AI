@@ -20,7 +20,13 @@ import { EmailSteps } from '../src/components/email-steps';
 import { Mascot } from '../src/components/mascot';
 import { Body, Caption, Display, Label } from '../src/components/text';
 import { api } from '../src/lib/api';
-import { sendEmailCode, signInWithApple, signInWithGoogle, verifyEmailCode } from '../src/lib/auth';
+import {
+  sendEmailCode,
+  signInWithApple,
+  signInWithGoogle,
+  signInWithPassword,
+  verifyEmailCode,
+} from '../src/lib/auth';
 import { markWelcomeSeen } from '../src/lib/first-run';
 import { useKeyboardShown } from '../src/lib/keyboard';
 import { elevation } from '../src/theme/elevation';
@@ -253,6 +259,7 @@ export default function WelcomeScreen() {
         ) : (
           <EmailSteps
             onCancel={() => setMode('choose')}
+            onPassword={signInWithPassword}
             onSendCode={sendEmailCode}
             onVerify={async (email, code) => {
               await verifyEmailCode(email, code);

@@ -19,6 +19,8 @@ import { Body, BodyStrong, Caption } from './text';
 export interface EmailStepsProps {
   onSendCode: (email: string) => Promise<void>;
   onVerify: (email: string, code: string) => Promise<void>;
+  /** The password way in, offered under the code as a smaller choice. */
+  onPassword?: (email: string, password: string) => Promise<void>;
   /** Absent when email is the only way in, so there is nothing to go back to. */
   onCancel?: () => void;
   /**
@@ -42,6 +44,7 @@ function looksLikeEmail(value: string): boolean {
 export function EmailSteps({
   onSendCode,
   onVerify,
+  onPassword,
   onCancel,
   onSurface = 'ground',
   autoFocus = true,
@@ -51,6 +54,8 @@ export function EmailSteps({
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
   const [sent, setSent] = useState(false);
+  const [withPassword, setWithPassword] = useState(false);
+  const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [resendIn, setResendIn] = useState(0);
@@ -63,8 +68,6 @@ export function EmailSteps({
   }, [resendIn]);
 
   const quietText = onSurface === 'deep' ? colors.onEspresso : colors.muted;
-  // A quiet button is burgundy on burgundy once it sits on the deep sheet.
-  const quietLabel = onSurface === 'deep' ? colors.onEspresso : undefined;
 
   const inputStyle = {
     backgroundColor: colors.surface,
@@ -101,6 +104,12 @@ export function EmailSteps({
         setResendIn(RESEND_AFTER);
       },
     );
+  }
+
+  function signInWithPassword() {
+    if (!onPassword || !looksLikeEmail(email) || password.length < 8 || busy) return;
+    Keyboard.dismiss();
+    void run(() => onPassword(email.trim(), password));
   }
 
   function resend() {
@@ -144,16 +153,52 @@ export function EmailSteps({
           accessibilityLabel="Email address"
         />
 
-        <Button
-          label="Send me a code"
-          loading={busy}
-          disabled={!looksLikeEmail(email)}
-          onPress={send}
-        />
+        {withPassword && onPassword ? (
+          <>
+            <TextInput
+              value={password}
+              onChangeText={setPassword}
+              placeholder="Your password"
+              placeholderTextColor={colors.muted}
+              secureTextEntry
+              autoCapitalize="none"
+              autoCorrect={false}
+              textContentType="password"
+              autoComplete="current-password"
+              returnKeyType="go"
+              onSubmitEditing={signInWithPassword}
+              style={inputStyle}
+              accessibilityLabel="Password"
+            />
+            <Button
+              label="Sign in"
+              loading={busy}
+              disabled={!looksLikeEmail(email) || password.length < 8}
+              onPress={signInWithPassword}
+            />
+          </>
+        ) : (
+          <Button
+            label="Send me a code"
+            loading={busy}
+            disabled={!looksLikeEmail(email)}
+            onPress={send}
+          />
+        )}
 
-        {onCancel ? (
-          <Button label="Back" variant="quiet" labelColor={quietLabel} onPress={onCancel} />
-        ) : null}
+        <View style={{ alignItems: 'center' }}>
+          {onPassword ? (
+            <TextLink
+              label={withPassword ? 'Send me a code instead' : 'I have a password'}
+              color={quietText}
+              onPress={() => {
+                setError(null);
+                setWithPassword((current) => !current);
+              }}
+            />
+          ) : null}
+          {onCancel ? <TextLink label="Back" color={quietText} onPress={onCancel} /> : null}
+        </View>
 
         {error ? (
           <Caption style={{ color: quietText }} align="center">

@@ -42,6 +42,7 @@ type Infer<T extends z.ZodTypeAny> = z.infer<T>;
 
 export type SessionUser = Infer<typeof sessionUserSchema>;
 export type FeedItem = Infer<typeof feedItemSchema>;
+export type LookCardData = Extract<FeedItem, { kind: 'look' }>['look'];
 export type ProductCard = Infer<typeof productCardSchema>;
 export type ProductDetail = Infer<typeof productDetailSchema>;
 export type LookDetail = Infer<typeof lookDetailSchema>;
@@ -85,6 +86,15 @@ export interface OwnProfile {
   email: string | null;
   /** Offered before a profile exists. */
   suggestedHandle: string | null;
+  /** Whether a password has been set, so the app can offer it as a way in. */
+  hasPassword: boolean;
+}
+
+export interface ProfileMatch {
+  handle: string;
+  displayName: string;
+  avatar: { url: string } | null;
+  isPrivate: boolean;
 }
 
 export interface ProfileUpdate {
@@ -259,6 +269,16 @@ export const api = {
   photos: () => request<{ items: UserPhoto[] }>('/v1/profile/photos'),
 
   myProfile: () => request<OwnProfile>('/v1/profile'),
+
+  /** Sets a first password, or changes one when the current one is given. */
+  setPassword: (body: { newPassword: string; currentPassword?: string }) =>
+    request<{ hasPassword: true }>('/v1/profile/password', { method: 'POST', body }),
+
+  searchProfiles: (q: string) =>
+    request<{ items: ProfileMatch[] }>('/v1/profiles', { query: { q } }),
+
+  profileLooks: (handle: string, params: { cursor?: string; limit?: number } = {}) =>
+    request<Page<LookCardData>>(`/v1/profiles/${handle}/looks`, { query: params }),
 
   updateProfile: (body: ProfileUpdate) =>
     request<unknown>('/v1/profile', { method: 'PATCH', body }),

@@ -18,6 +18,7 @@ import { Sheet } from '../src/components/sheet';
 import { Body, BodyStrong, Micro, Title } from '../src/components/text';
 import { api } from '../src/lib/api';
 import { signOut } from '../src/lib/auth';
+import { useSetupProgress } from '../src/lib/setup';
 import { useTheme } from '../src/theme/index';
 
 export default function SettingsScreen() {
@@ -31,6 +32,8 @@ export default function SettingsScreen() {
   const bootstrap = useQuery({ queryKey: ['bootstrap'], queryFn: api.bootstrap });
   const user = bootstrap.data?.user;
   const isGuest = !user || user.isAnonymous;
+  const profile = useQuery({ queryKey: ['profile'], queryFn: api.myProfile, enabled: !isGuest });
+  const setup = useSetupProgress();
 
   const leave = useMutation({
     mutationFn: api.requestDeletion,
@@ -168,6 +171,22 @@ export default function SettingsScreen() {
                   hint="The pictures Nima dresses"
                   onPress={() => router.push('/photos')}
                 />
+                <Row
+                  label="Password"
+                  hint={
+                    profile.data?.hasPassword
+                      ? 'Change it'
+                      : 'Set one to sign in without waiting for a code'
+                  }
+                  onPress={() => router.push('/password')}
+                />
+                {setup.complete ? null : (
+                  <Row
+                    label="Finish setting up"
+                    hint={`${setup.done} of ${setup.total} done`}
+                    onPress={() => router.push('/setup')}
+                  />
+                )}
                 <Row label="Sign out" onPress={confirmSignOut} />
               </>
             )}
