@@ -16,6 +16,7 @@
 import type { Env } from '@nima/config';
 import { AUTH_COOKIE_PREFIX } from '@nima/contracts';
 import type { PrismaClient } from '@nima/db';
+import { expo } from '@better-auth/expo';
 import { betterAuth } from 'better-auth';
 import { prismaAdapter } from 'better-auth/adapters/prisma';
 import { anonymous, emailOTP, magicLink } from 'better-auth/plugins';
@@ -140,6 +141,16 @@ export function createAuth({ env, prisma, mailer }: CreateAuthOptions) {
     },
 
     plugins: [
+      /*
+       * The app on a phone has no Origin header. It sends `expo-origin`
+       * instead, carrying the app scheme (nima://) or, inside Expo Go, the
+       * exp:// address of the dev server. This plugin reads that header,
+       * checks it against the trusted origins and treats it as the origin.
+       * Without it every sign in from a device is refused as having no
+       * origin, which development mode hid by being lenient.
+       */
+      expo(),
+
       anonymous({
         emailDomainName: 'guest.nima.app',
         generateName: () => 'Guest',

@@ -21,6 +21,12 @@ export interface EmailStepsProps {
   onVerify: (email: string, code: string) => Promise<void>;
   /** Absent when email is the only way in, so there is nothing to go back to. */
   onCancel?: () => void;
+  /**
+   * Open the keyboard straight away. Right after choosing email, wrong when
+   * the field is the first thing on a screen, where the keyboard would
+   * cover whatever else is there.
+   */
+  autoFocus?: boolean;
   /** Which background it sits on, so the small print stays readable. */
   onSurface?: 'ground' | 'deep';
 }
@@ -38,6 +44,7 @@ export function EmailSteps({
   onVerify,
   onCancel,
   onSurface = 'ground',
+  autoFocus = true,
 }: EmailStepsProps) {
   const { colors, radius } = useTheme();
 
@@ -125,7 +132,7 @@ export function EmailSteps({
           placeholderTextColor={colors.muted}
           autoCapitalize="none"
           autoCorrect={false}
-          autoFocus
+          autoFocus={autoFocus}
           keyboardType="email-address"
           textContentType="emailAddress"
           autoComplete="email"

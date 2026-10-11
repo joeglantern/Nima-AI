@@ -87,6 +87,42 @@ export default function WelcomeScreen() {
           paddingHorizontal: 24,
         }}
       >
+        {/*
+          Opened again from settings there is somewhere to go back to, and
+          the screen says so. On first launch there is not, and it does not.
+        */}
+        {router.canGoBack() ? (
+          <Pressable
+            onPress={() => router.back()}
+            accessibilityRole="button"
+            accessibilityLabel="Back"
+            hitSlop={12}
+            style={({ pressed }) => ({
+              position: 'absolute',
+              top: insets.top + 10,
+              left: 16,
+              width: 36,
+              height: 36,
+              borderRadius: 999,
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: colors.sunk,
+              opacity: pressed ? 0.6 : 1,
+            })}
+          >
+            <Svg width={18} height={18} viewBox="0 0 24 24">
+              <Path
+                d="m14 6-6 6 6 6"
+                stroke={colors.ink}
+                strokeWidth={1.8}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                fill="none"
+              />
+            </Svg>
+          </Pressable>
+        ) : null}
+
         <View style={{ alignItems: 'center', gap: 10 }}>
           <Display style={{ fontSize: 56, lineHeight: 62 }}>Nima</Display>
           <Label>AI stylist</Label>
@@ -176,6 +212,9 @@ export default function WelcomeScreen() {
         ) : (
           <EmailSteps
             onCancel={hasProviders ? () => setMode('choose') : undefined}
+            // Chosen from the menu: the keyboard should be there already.
+            // First thing on the screen: let the person see the screen.
+            autoFocus={hasProviders}
             onSendCode={sendEmailCode}
             onVerify={async (email, code) => {
               await verifyEmailCode(email, code);
