@@ -40,7 +40,6 @@ export default function WelcomeScreen() {
   const bootstrap = useQuery({ queryKey: ['bootstrap'], queryFn: api.bootstrap });
   const showApple = Platform.OS === 'ios' && (bootstrap.data?.signIn.apple ?? false);
   const showGoogle = bootstrap.data?.signIn.google ?? false;
-  const hasProviders = showApple || showGoogle;
 
   // The hero makes way for the keyboard on a phone. On a wide window there
   // is room for both.
@@ -202,7 +201,7 @@ export default function WelcomeScreen() {
           }}
         />
 
-        {mode === 'choose' && hasProviders ? (
+        {mode === 'choose' ? (
           <>
             {showApple ? (
               <Button
@@ -224,6 +223,12 @@ export default function WelcomeScreen() {
               />
             ) : null}
 
+            {/*
+              Always a step of its own, even when email is the only way in.
+              Landing on an empty field with nowhere to go back to reads as
+              being made to sign up, which is the one thing this screen
+              must not do.
+            */}
             <Button
               label="Continue with email"
               variant="provider"
@@ -233,10 +238,7 @@ export default function WelcomeScreen() {
           </>
         ) : (
           <EmailSteps
-            onCancel={hasProviders ? () => setMode('choose') : undefined}
-            // Chosen from the menu: the keyboard should be there already.
-            // First thing on the screen: let the person see the screen.
-            autoFocus={hasProviders}
+            onCancel={() => setMode('choose')}
             onSendCode={sendEmailCode}
             onVerify={async (email, code) => {
               await verifyEmailCode(email, code);
@@ -252,18 +254,13 @@ export default function WelcomeScreen() {
           </Caption>
         ) : null}
 
-        <Pressable
+        {/* The way past this screen, drawn like the buttons above it. */}
+        <Button
+          label="Look around first"
+          variant="quiet"
+          labelColor={colors.onEspresso}
           onPress={() => void leave()}
-          accessibilityRole="button"
-          style={({ pressed }) => ({
-            paddingVertical: 16,
-            marginTop: 4,
-            alignItems: 'center',
-            opacity: pressed ? 0.6 : 1,
-          })}
-        >
-          <Body style={{ color: colors.onEspresso, opacity: 0.75 }}>Look around first</Body>
-        </Pressable>
+        />
       </View>
     </KeyboardAvoidingView>
   );

@@ -111,7 +111,6 @@ function AuthSheet({ reason, onClose }: { reason: string | null; onClose: () => 
   const bootstrap = useQuery({ queryKey: ['bootstrap'], queryFn: api.bootstrap });
   const showApple = Platform.OS === 'ios' && (bootstrap.data?.signIn.apple ?? false);
   const showGoogle = bootstrap.data?.signIn.google ?? false;
-  const hasProviders = showApple || showGoogle;
 
   const close = useCallback(() => {
     setStep('choose');
@@ -140,7 +139,7 @@ function AuthSheet({ reason, onClose }: { reason: string | null; onClose: () => 
         <Caption>It takes a moment, and your browsing comes with you.</Caption>
       </View>
 
-      {step === 'choose' && hasProviders ? (
+      {step === 'choose' ? (
         <View style={{ gap: 10 }}>
           {showApple ? (
             <Button
@@ -168,6 +167,8 @@ function AuthSheet({ reason, onClose }: { reason: string | null; onClose: () => 
             icon={<MailMark color={colors.ink} />}
             onPress={() => setStep('email')}
           />
+
+          <Button label="Not now" variant="quiet" onPress={close} />
         </View>
       ) : (
         /*
@@ -178,7 +179,7 @@ function AuthSheet({ reason, onClose }: { reason: string | null; onClose: () => 
          * other one did.
          */
         <EmailSteps
-          onCancel={hasProviders ? () => setStep('choose') : undefined}
+          onCancel={() => setStep('choose')}
           onSendCode={sendEmailCode}
           onVerify={async (email, code) => {
             await verifyEmailCode(email, code);
