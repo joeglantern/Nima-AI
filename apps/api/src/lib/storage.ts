@@ -12,9 +12,8 @@
  *   stores/{storeId}/products/{productId}/{id}.jpg
  */
 
-import type { Readable } from 'node:stream';
-import { signMediaToken } from './media-token.js';
 import { randomUUID } from 'node:crypto';
+import type { Readable } from 'node:stream';
 import {
   DeleteObjectCommand,
   GetObjectCommand,
@@ -24,6 +23,7 @@ import {
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import type { Env } from '@nima/config';
+import { signMediaToken } from './media-token.js';
 import { reachableUrl, substituteHost } from './request-host.js';
 
 export type UploadPurpose =

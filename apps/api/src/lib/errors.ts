@@ -137,7 +137,9 @@ export function registerErrorHandler(app: FastifyInstance): void {
       const fields: Record<string, string[]> = {};
       for (const issue of error.validation) {
         const path = issue.instancePath?.replace(/^\//, '').replace(/\//g, '.') || '_';
-        (fields[path] ??= []).push(issue.message ?? 'Invalid value');
+        const messages = fields[path] ?? [];
+        messages.push(issue.message ?? 'Invalid value');
+        fields[path] = messages;
       }
 
       return reply.status(400).send({

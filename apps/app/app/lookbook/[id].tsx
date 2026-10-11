@@ -12,13 +12,13 @@ import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { EmptyState } from '../../src/components/empty-state';
-import { Body, BodyStrong, Caption, Micro, Price, Title } from '../../src/components/text';
+import { Body, BodyStrong, Micro, Price, Title } from '../../src/components/text';
 import { api, type LookbookEntry } from '../../src/lib/api';
 import { useTheme } from '../../src/theme/index';
 
 export default function LookbookScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { colors, gutter, radius, isWide } = useTheme();
+  const { colors, gutter, isWide } = useTheme();
   const queryClient = useQueryClient();
   const router = useRouter();
 

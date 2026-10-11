@@ -79,6 +79,7 @@ export function CodeInput({
 
           return (
             <View
+              // biome-ignore lint/suspicious/noArrayIndexKey: a box is its position, and nothing else tells them apart
               key={`box-${index}`}
               style={{
                 flex: 1,

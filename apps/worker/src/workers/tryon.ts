@@ -69,7 +69,7 @@ export function startTryOnWorker(
 
       // First attempt with the full prompt, then one simpler retry. The old
       // codebase did the same and it rescued a useful share of failures.
-      let generated;
+      let generated: Awaited<ReturnType<typeof provider.generate>>;
       try {
         generated = await provider.generate({
           prompt: buildTryOnPrompt(data),

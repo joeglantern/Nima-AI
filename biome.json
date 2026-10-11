@@ -6,14 +6,7 @@
     "useIgnoreFile": true
   },
   "files": {
-    "includes": [
-      "**",
-      "!**/dist/**",
-      "!**/node_modules/**",
-      "!**/generated/**",
-      "!reference/**",
-      "!docs/**"
-    ]
+    "includes": ["**", "!**/dist", "!**/node_modules", "!**/generated", "!reference", "!docs"]
   },
   "formatter": {
     "enabled": true,
@@ -47,7 +40,10 @@
         "noUnusedVariables": "error"
       },
       "complexity": {
-        "noExcessiveCognitiveComplexity": { "level": "warn", "options": { "maxAllowedComplexity": 20 } }
+        "noExcessiveCognitiveComplexity": {
+          "level": "warn",
+          "options": { "maxAllowedComplexity": 20 }
+        }
       }
     }
   },

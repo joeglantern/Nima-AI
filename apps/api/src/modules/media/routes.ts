@@ -90,7 +90,9 @@ export const mediaRoutes: FastifyPluginAsyncZod = async (app) => {
         // expires with its token, so it is cached for as long as it lasts.
         reply.header(
           'cache-control',
-          isPublic ? 'public, max-age=86400, stale-while-revalidate=604800' : 'private, max-age=3600',
+          isPublic
+            ? 'public, max-age=86400, stale-while-revalidate=604800'
+            : 'private, max-age=3600',
         );
         if (object.contentType) reply.type(object.contentType);
         if (object.contentLength !== null) reply.header('content-length', object.contentLength);

@@ -15,7 +15,7 @@ import Svg, { Path } from 'react-native-svg';
 import { useAuthGate } from '../src/components/auth-gate';
 import { Button } from '../src/components/button';
 import { Sheet } from '../src/components/sheet';
-import { Body, BodyStrong, Caption, Micro, Title } from '../src/components/text';
+import { Body, BodyStrong, Micro, Title } from '../src/components/text';
 import { api } from '../src/lib/api';
 import { signOut } from '../src/lib/auth';
 import { useTheme } from '../src/theme/index';
