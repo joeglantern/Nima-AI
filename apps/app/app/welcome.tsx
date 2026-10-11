@@ -26,7 +26,7 @@ import { elevation } from '../src/theme/elevation';
 import { useTheme } from '../src/theme/index';
 
 export default function WelcomeScreen() {
-  const { colors, radius, isWide } = useTheme();
+  const { colors, isWide } = useTheme();
   const insets = useSafeAreaInsets();
   const router = useRouter();
 

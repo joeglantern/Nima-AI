@@ -78,7 +78,7 @@ export function EmailSteps({
     color: colors.ink,
   } as const;
 
-  const run = async (action: () => Promise<void>, after?: () => void) => {
+  const run = useCallback(async (action: () => Promise<void>, after?: () => void) => {
     setBusy(true);
     setError(null);
     try {
@@ -89,7 +89,7 @@ export function EmailSteps({
     } finally {
       setBusy(false);
     }
-  };
+  }, []);
 
   function send() {
     if (!looksLikeEmail(email) || busy) return;
@@ -116,10 +116,9 @@ export function EmailSteps({
   // effect behind it does not refire on every keystroke.
   const verify = useCallback(
     (entered: string) => {
-      void run(() => onVerify(email.trim(), entered), undefined);
+      void run(() => onVerify(email.trim(), entered));
     },
-    // biome-ignore lint/correctness/useExhaustiveDependencies: run is recreated each render by design
-    [email, onVerify],
+    [email, onVerify, run],
   );
 
   if (!sent) {

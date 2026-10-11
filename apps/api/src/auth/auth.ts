@@ -13,10 +13,10 @@
  * everything. See docs/DECISIONS.md.
  */
 
+import { expo } from '@better-auth/expo';
 import type { Env } from '@nima/config';
 import { AUTH_COOKIE_PREFIX } from '@nima/contracts';
 import type { PrismaClient } from '@nima/db';
-import { expo } from '@better-auth/expo';
 import { betterAuth } from 'better-auth';
 import { prismaAdapter } from 'better-auth/adapters/prisma';
 import { anonymous, emailOTP, magicLink } from 'better-auth/plugins';
