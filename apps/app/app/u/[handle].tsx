@@ -7,15 +7,19 @@
  * so plainly rather than showing an empty grid.
  */
 
-import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, Linking, Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
+import { useAuthGate } from '../../src/components/auth-gate';
+import { Button } from '../../src/components/button';
 import { LookCard } from '../../src/components/cards';
 import { EmptyState } from '../../src/components/empty-state';
-import { Body, Caption, Micro, Title } from '../../src/components/text';
+import { Sheet } from '../../src/components/sheet';
+import { Body, BodyStrong, Caption, Micro, Title } from '../../src/components/text';
 import { ApiError, api } from '../../src/lib/api';
 import { useTheme } from '../../src/theme/index';
 
@@ -46,6 +50,46 @@ export default function PersonScreen() {
 
   const bootstrap = useQuery({ queryKey: ['bootstrap'], queryFn: api.bootstrap });
   const isMe = Boolean(person.data && bootstrap.data?.user?.id === person.data.id);
+  const signedIn = Boolean(bootstrap.data?.user && !bootstrap.data.user.isAnonymous);
+  const { requireAccount } = useAuthGate();
+  const queryClient = useQueryClient();
+  const [following, setFollowing] = useState(false);
+  const [menu, setMenu] = useState(false);
+
+  useEffect(() => {
+    setFollowing(Boolean(person.data?.isFollowing));
+  }, [person.data?.isFollowing]);
+
+  const follow = useMutation({
+    mutationFn: (next: boolean) => api.follow(String(handle), next),
+    onMutate: (next) => setFollowing(next),
+    onError: (_error, next) => setFollowing(!next),
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: ['person', handle] });
+      void queryClient.invalidateQueries({ queryKey: ['person-looks', handle] });
+      void queryClient.invalidateQueries({ queryKey: ['feed'] });
+    },
+  });
+
+  const message = useMutation({
+    mutationFn: () => api.openConversation(String(person.data?.id)),
+    onSuccess: ({ id }) => router.push({ pathname: '/messages/[id]', params: { id } }),
+  });
+
+  const block = useMutation({
+    mutationFn: () => api.block(String(handle), true),
+    onSuccess: () => {
+      setMenu(false);
+      void queryClient.invalidateQueries({ queryKey: ['feed'] });
+      void queryClient.invalidateQueries({ queryKey: ['conversations'] });
+      router.canGoBack() ? router.back() : router.replace('/');
+    },
+  });
+
+  const gated = (action: () => void, reason: string) => () => {
+    if (!signedIn) requireAccount(reason);
+    else action();
+  };
 
   if (person.isError) {
     const gone = person.error instanceof ApiError && person.error.status === 404;
@@ -69,7 +113,10 @@ export default function PersonScreen() {
       <View
         style={{ flex: 1, width: '100%', backgroundColor: colors.ground, paddingTop: insets.top }}
       >
-        <Header onBack={() => (router.canGoBack() ? router.back() : router.replace('/'))} />
+        <Header
+          onBack={() => (router.canGoBack() ? router.back() : router.replace('/'))}
+          onMore={profile && !isMe && signedIn ? () => setMenu(true) : undefined}
+        />
 
         <FlatList
           data={profile?.isPrivate && !isMe ? [] : items}
@@ -146,6 +193,42 @@ export default function PersonScreen() {
                   </Pressable>
                 ) : null}
 
+                {!isMe ? (
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      gap: 8,
+                      marginTop: 14,
+                      alignSelf: 'stretch',
+                      maxWidth: 420,
+                      width: '100%',
+                      marginHorizontal: 'auto',
+                    }}
+                  >
+                    <View style={{ flex: 1 }}>
+                      <Button
+                        label={following ? 'Following' : 'Follow'}
+                        variant={following ? 'quiet' : 'primary'}
+                        onPress={gated(
+                          () => follow.mutate(!following),
+                          `Create an account to follow ${profile.displayName}`,
+                        )}
+                      />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Button
+                        label="Message"
+                        variant="quiet"
+                        loading={message.isPending}
+                        onPress={gated(
+                          () => message.mutate(),
+                          `Create an account to message ${profile.displayName}`,
+                        )}
+                      />
+                    </View>
+                  </View>
+                ) : null}
+
                 <View
                   style={{
                     flexDirection: 'row',
@@ -206,15 +289,38 @@ export default function PersonScreen() {
           }
         />
       </View>
+
+      <Sheet
+        open={menu}
+        onClose={() => setMenu(false)}
+        title={profile ? `@${profile.handle}` : undefined}
+      >
+        <BodyStrong>{`Block ${profile?.displayName ?? 'them'}?`}</BodyStrong>
+        <Caption>
+          They will not be able to find your profile, see your looks or message you. Nima does not
+          tell them.
+        </Caption>
+        <Button label="Block" loading={block.isPending} onPress={() => block.mutate()} />
+        <Button label="Cancel" variant="quiet" onPress={() => setMenu(false)} />
+      </Sheet>
     </>
   );
 }
 
-function Header({ onBack }: { onBack: () => void }) {
+function Header({ onBack, onMore }: { onBack: () => void; onMore?: () => void }) {
   const { colors, gutter } = useTheme();
 
   return (
-    <View style={{ paddingHorizontal: gutter, paddingTop: 12, paddingBottom: 8 }}>
+    <View
+      style={{
+        paddingHorizontal: gutter,
+        paddingTop: 12,
+        paddingBottom: 8,
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+      }}
+    >
       <Pressable
         onPress={onBack}
         accessibilityLabel="Back"
@@ -238,6 +344,24 @@ function Header({ onBack }: { onBack: () => void }) {
           />
         </Svg>
       </Pressable>
+      {onMore ? (
+        <Pressable
+          onPress={onMore}
+          accessibilityRole="button"
+          accessibilityLabel="More"
+          hitSlop={8}
+          style={{ width: 36, height: 36, alignItems: 'center', justifyContent: 'center' }}
+        >
+          <Svg width={20} height={20} viewBox="0 0 24 24">
+            <Path
+              d="M5 12h.01M12 12h.01M19 12h.01"
+              stroke={colors.ink}
+              strokeWidth={3}
+              strokeLinecap="round"
+            />
+          </Svg>
+        </Pressable>
+      ) : null}
     </View>
   );
 }

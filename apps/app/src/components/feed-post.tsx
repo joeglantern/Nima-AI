@@ -19,7 +19,6 @@ import { memo, useEffect, useRef, useState } from 'react';
 import { Animated, Pressable, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { ApiError, api, type LookCardData } from '../lib/api';
-import { shareLook } from '../lib/share';
 import { compactCount, timeAgo } from '../lib/time';
 import { useTheme } from '../theme/index';
 import { useAuthGate } from './auth-gate';
@@ -178,6 +177,7 @@ export interface FeedPostProps {
   onPieces: (lookId: string) => void;
   onComments: (lookId: string) => void;
   onTryOn: (lookId: string) => void;
+  onSend: (lookId: string) => void;
   /** The look id currently being dressed, so its button can say so. */
   dressing?: boolean;
 }
@@ -187,6 +187,7 @@ export const FeedPost = memo(function FeedPost({
   onPieces,
   onComments,
   onTryOn,
+  onSend,
   dressing = false,
 }: FeedPostProps) {
   const { colors, radius, isWide, scheme } = useTheme();
@@ -424,10 +425,7 @@ export const FeedPost = memo(function FeedPost({
         <IconButton label="Comments" onPress={() => onComments(look.id)}>
           <Icon name="comment" color={colors.ink} />
         </IconButton>
-        <IconButton
-          label="Send to a friend"
-          onPress={() => void shareLook(look.id).catch(() => undefined)}
-        >
+        <IconButton label="Send to a friend" onPress={() => onSend(look.id)}>
           <Icon name="send" color={colors.ink} size={24} />
         </IconButton>
         <View style={{ flex: 1 }} />

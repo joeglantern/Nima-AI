@@ -105,6 +105,12 @@ export const notificationSchema = z.object({
   body: z.string(),
   /** Deep link target inside the app, for example look/abc123. */
   target: z.string().nullable(),
+  /** Who did it, when a person did. */
+  actor: conversationPeerSchema.nullable().default(null),
+  /** A thumbnail of the thing it is about, usually the look. */
+  image: imageSchema.nullable().default(null),
+  /** For a new follower: whether you follow them back. */
+  followingBack: z.boolean().nullable().default(null),
   read: z.boolean(),
   createdAt: z.string(),
 });
@@ -113,4 +119,22 @@ export const registerPushTokenSchema = z.object({
   token: z.string().min(10).max(200),
   platform: z.enum(['IOS', 'ANDROID', 'WEB']),
   deviceName: z.string().max(80).optional(),
+});
+
+// ------------------------------------------------------------------ follows ---
+
+export const followStateSchema = z.object({ following: z.boolean() });
+
+/** Only ever shown to the person themselves. Counts are never public. */
+export const followSummarySchema = z.object({
+  followers: z.number().int(),
+  following: z.number().int(),
+});
+
+/** Sharing one thing with a few people at once, from the send sheet. */
+export const shareToPeopleSchema = z.object({
+  kind: z.enum(['LOOK', 'PRODUCT']),
+  refId: idSchema,
+  userIds: z.array(idSchema).min(1).max(15),
+  note: z.string().max(500).optional(),
 });

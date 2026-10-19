@@ -11,7 +11,9 @@ import { Link, usePathname, useRouter } from 'expo-router';
 import { Pressable, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { api } from '../lib/api';
+import { useSignedIn, useUnread } from '../lib/social';
 import { useTheme } from '../theme/index';
+import { CountBadge, HeartIcon, PlaneIcon } from './inbox-buttons';
 import { Body, BodyStrong, Display, Label, Micro } from './text';
 
 export interface Destination {
@@ -218,6 +220,57 @@ export function Sidebar() {
           );
         })}
       </View>
+
+      <SidebarInbox />
+    </View>
+  );
+}
+
+function SidebarInbox() {
+  const { colors, radius } = useTheme();
+  const router = useRouter();
+  const pathname = usePathname();
+  const signedIn = useSignedIn();
+  const unread = useUnread();
+
+  if (!signedIn) return null;
+
+  const rows = [
+    { href: '/activity' as const, label: 'Activity', count: unread.activity, icon: HeartIcon },
+    { href: '/messages' as const, label: 'Messages', count: unread.messages, icon: PlaneIcon },
+  ];
+
+  return (
+    <View style={{ gap: 4, borderTopWidth: 1, borderTopColor: colors.line, paddingTop: 20 }}>
+      {rows.map((row) => {
+        const active = pathname.startsWith(row.href);
+        const Glyph = row.icon;
+        return (
+          <Pressable
+            key={row.href}
+            onPress={() => router.push(row.href)}
+            accessibilityRole="link"
+            style={({ pressed }) => ({
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 12,
+              paddingHorizontal: 14,
+              paddingVertical: 10,
+              borderRadius: radius.pill,
+              backgroundColor: active || pressed ? colors.sunk : 'transparent',
+            })}
+          >
+            <View>
+              <Glyph color={colors.ink} size={22} />
+              <CountBadge count={row.count} dot={row.href === '/activity'} />
+            </View>
+            <Body style={{ flex: 1 }}>{row.label}</Body>
+            {row.count > 0 && row.href === '/messages' ? (
+              <Micro tone="primary">{String(row.count)}</Micro>
+            ) : null}
+          </Pressable>
+        );
+      })}
     </View>
   );
 }

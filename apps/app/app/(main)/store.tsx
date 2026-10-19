@@ -354,8 +354,16 @@ function ProfileCard({
 }) {
   const { colors, radius, width } = useTheme();
   const size = width < 400 ? 84 : 96;
-  const name = user ? (user.name ?? 'You') : 'Your Nima';
+  const name = user ? user.name?.trim() || 'You' : 'Your Nima';
   const initial = name.trim().charAt(0).toUpperCase() || 'N';
+
+  // Yours to see and nobody else's: there is no public follower count.
+  const follows = useQuery({
+    queryKey: ['my-follows'],
+    queryFn: api.myFollows,
+    enabled: Boolean(user && !user.isAnonymous),
+    staleTime: 60_000,
+  });
 
   return (
     <View
@@ -473,6 +481,32 @@ function ProfileCard({
         ) : (
           <Caption align="center">Sign in to keep your looks, wardrobe and orders</Caption>
         )}
+
+        {follows.data ? (
+          <View
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8 }}
+            accessibilityLabel={`${follows.data.followers} followers, ${follows.data.following} following. Only you can see this.`}
+          >
+            <BodyStrong style={{ fontSize: 14 }}>
+              {follows.data.followers.toLocaleString('en-KE')}
+            </BodyStrong>
+            <Caption>{follows.data.followers === 1 ? 'follower' : 'followers'}</Caption>
+            <Caption>·</Caption>
+            <BodyStrong style={{ fontSize: 14 }}>
+              {follows.data.following.toLocaleString('en-KE')}
+            </BodyStrong>
+            <Caption>following</Caption>
+            <Svg width={13} height={13} viewBox="0 0 24 24" style={{ marginLeft: 2 }}>
+              <Path
+                d="M7 11V8a5 5 0 0 1 10 0v3M6 11h12v9H6z"
+                stroke={colors.muted}
+                strokeWidth={1.8}
+                strokeLinejoin="round"
+                fill="none"
+              />
+            </Svg>
+          </View>
+        ) : null}
 
         <View
           style={{

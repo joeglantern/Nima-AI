@@ -25,6 +25,7 @@ import { z } from 'zod';
 import { errors } from '../../lib/errors.js';
 import { lookAuthor, lookCard, productCard, publicImage } from '../../lib/presenters.js';
 import { recordEvent } from '../../services/events.js';
+import { notify } from '../social/routes.js';
 import { canView } from './visibility.js';
 
 export const lookRoutes: FastifyPluginAsyncZod = async (app) => {
@@ -302,6 +303,34 @@ export const lookRoutes: FastifyPluginAsyncZod = async (app) => {
         entityId: lookId,
       });
 
+      // One love tells the owner once. Unloving and loving again stays quiet.
+      if (liked && look.ownerId && look.ownerId !== user.id) {
+        const told = await app.prisma.notification.findFirst({
+          where: {
+            userId: look.ownerId,
+            type: 'LOOK_LIKED',
+            AND: [
+              { data: { path: ['actorId'], equals: user.id } },
+              { data: { path: ['lookId'], equals: lookId } },
+            ],
+          },
+          select: { id: true },
+        });
+        if (!told) {
+          const me = await app.prisma.profile.findUnique({
+            where: { userId: user.id },
+            select: { displayName: true },
+          });
+          await notify(app, {
+            userId: look.ownerId,
+            type: 'LOOK_LIKED',
+            title: 'Your look was loved',
+            body: `${me?.displayName ?? 'Someone'} loved your look`,
+            data: { actorId: user.id, lookId },
+          });
+        }
+      }
+
       const updated = await app.prisma.look.findUnique({
         where: { id: lookId },
         select: { likeCount: true },
@@ -513,22 +542,12 @@ export const lookRoutes: FastifyPluginAsyncZod = async (app) => {
       });
 
       if (look.ownerId && look.ownerId !== user.id) {
-        await app.prisma.notification.create({
-          data: {
-            userId: look.ownerId,
-            type: 'LOOK_COMMENT',
-            title: 'New comment',
-            body: `${comment.author.profile?.displayName ?? 'Someone'} commented on your look`,
-            data: { lookId: look.id, commentId: comment.id },
-          },
-        });
-
-        await app.realtime.toUser(look.ownerId, {
-          type: 'notification.new',
-          id: comment.id,
-          kind: 'LOOK_COMMENT',
+        await notify(app, {
+          userId: look.ownerId,
+          type: 'LOOK_COMMENT',
           title: 'New comment',
-          body: `${comment.author.profile?.displayName ?? 'Someone'} commented on your look`,
+          body: `${comment.author.profile?.displayName ?? 'Someone'} commented: ${comment.body.slice(0, 80)}`,
+          data: { actorId: user.id, lookId: look.id, commentId: comment.id },
         });
       }
 

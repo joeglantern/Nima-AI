@@ -85,7 +85,9 @@ export const sessionRoutes: FastifyPluginAsyncZod = async (app) => {
       return {
         user: {
           id: userId,
-          name: request.user.name,
+          // The name they chose for their profile wins over whatever the
+          // sign in provider had, which for an email code is nothing.
+          name: profile?.displayName?.trim() || request.user.name?.trim() || '',
           email: request.user.email,
           isAnonymous: request.user.isAnonymous,
           role: request.user.role,

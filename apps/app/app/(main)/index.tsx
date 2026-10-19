@@ -11,7 +11,7 @@
  * so nobody loses their place.
  */
 
-import { useInfiniteQuery } from '@tanstack/react-query';
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, RefreshControl, View } from 'react-native';
@@ -20,11 +20,20 @@ import { ProductCard } from '../../src/components/cards';
 import { EmptyState } from '../../src/components/empty-state';
 import { FeedPost } from '../../src/components/feed-post';
 import { CommentsSheet, PiecesSheet } from '../../src/components/feed-sheets';
+import { InboxButtons } from '../../src/components/inbox-buttons';
 import { OccasionRings } from '../../src/components/occasion-rings';
+import { SendSheet, type SendTarget } from '../../src/components/send-sheet';
 import { Body, BodyStrong, Caption, Eyebrow, Heading } from '../../src/components/text';
 import { TryOnResultSheet, useTryOn } from '../../src/components/try-on';
 import { ApiError, api, type FeedItem } from '../../src/lib/api';
 import { useTheme } from '../../src/theme/index';
+
+function greeting(): string {
+  const hour = new Date().getHours();
+  if (hour < 12) return 'Good morning';
+  if (hour < 17) return 'Good afternoon';
+  return 'Good evening';
+}
 
 export default function ForYouScreen() {
   const { colors, gutter, isWide, floatingClearance, radius } = useTheme();
@@ -34,6 +43,11 @@ export default function ForYouScreen() {
   const [piecesFor, setPiecesFor] = useState<string | null>(null);
   const [commentsFor, setCommentsFor] = useState<string | null>(null);
   const [dressing, setDressing] = useState<string | null>(null);
+  const [sending, setSending] = useState<SendTarget | null>(null);
+
+  const bootstrap = useQuery({ queryKey: ['bootstrap'], queryFn: api.bootstrap });
+  const user = bootstrap.data?.user;
+  const firstName = user && !user.isAnonymous ? user.name?.trim().split(/s+/)[0] : null;
 
   const tryOn = useTryOn('Create an account to wear this yourself');
 
@@ -60,6 +74,8 @@ export default function ForYouScreen() {
     [tryOn],
   );
 
+  const sendLook = useCallback((lookId: string) => setSending({ kind: 'LOOK', id: lookId }), []);
+
   const renderItem = useCallback(
     ({ item }: { item: FeedItem }) => {
       switch (item.kind) {
@@ -70,6 +86,7 @@ export default function ForYouScreen() {
               onPieces={setPiecesFor}
               onComments={setCommentsFor}
               onTryOn={startTryOn}
+              onSend={sendLook}
               dressing={tryOn.busy && dressing === item.look.id}
             />
           );
@@ -165,6 +182,7 @@ export default function ForYouScreen() {
       radius.card,
       router,
       startTryOn,
+      sendLook,
       tryOn.busy,
       dressing,
     ],
@@ -172,6 +190,30 @@ export default function ForYouScreen() {
 
   const header = (
     <View>
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          paddingLeft: gutter,
+          paddingRight: gutter - 6,
+          paddingTop: 2,
+          paddingBottom: 8,
+          gap: 12,
+        }}
+      >
+        <Heading
+          numberOfLines={1}
+          style={{
+            flex: 1,
+            fontFamily: 'CormorantGaramond_500Medium_Italic',
+            fontSize: 22,
+            lineHeight: 28,
+          }}
+        >
+          {firstName ? `${greeting()}, ${firstName}` : 'Dressed for today'}
+        </Heading>
+        <InboxButtons />
+      </View>
       <OccasionRings selected={occasion} onSelect={setOccasion} />
       <View style={{ height: 1, backgroundColor: colors.line, marginBottom: 4 }} />
 
@@ -303,6 +345,7 @@ export default function ForYouScreen() {
       <PiecesSheet lookId={piecesFor} onClose={() => setPiecesFor(null)} onTryOn={startTryOn} />
       <CommentsSheet lookId={commentsFor} onClose={() => setCommentsFor(null)} />
       <TryOnResultSheet tryOn={tryOn} label="this look" />
+      <SendSheet target={sending} onClose={() => setSending(null)} />
     </>
   );
 }

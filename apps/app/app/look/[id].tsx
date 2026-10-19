@@ -6,16 +6,17 @@
  * change a piece.
  */
 
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, useWindowDimensions, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { Button } from '../../src/components/button';
+import { SendSheet } from '../../src/components/send-sheet';
 import { Body, BodyStrong, Caption, Eyebrow, Micro, Price, Title } from '../../src/components/text';
 import { TryOnResultSheet, useTryOn } from '../../src/components/try-on';
 import { api } from '../../src/lib/api';
-import { shareLook } from '../../src/lib/share';
 import { useTheme } from '../../src/theme/index';
 
 export default function LookScreen() {
@@ -32,7 +33,7 @@ export default function LookScreen() {
 
   const tryOn = useTryOn('Create an account to wear this yourself');
 
-  const share = useMutation({ mutationFn: () => shareLook(String(id)) });
+  const [sending, setSending] = useState(false);
 
   if (look.isLoading) {
     return (
@@ -144,12 +145,7 @@ export default function LookScreen() {
               </Body>
             ) : null}
 
-            <Button
-              label="Share this look"
-              variant="quiet"
-              loading={share.isPending}
-              onPress={() => share.mutate()}
-            />
+            <Button label="Send to a friend" variant="quiet" onPress={() => setSending(true)} />
 
             <View style={{ gap: 12 }}>
               <BodyStrong>{`In this look (${item.items.length})`}</BodyStrong>
@@ -232,6 +228,10 @@ export default function LookScreen() {
       </ScrollView>
 
       <TryOnResultSheet tryOn={tryOn} label={item.title ?? 'this look'} />
+      <SendSheet
+        target={sending ? { kind: 'LOOK', id: item.id } : null}
+        onClose={() => setSending(false)}
+      />
     </>
   );
 }

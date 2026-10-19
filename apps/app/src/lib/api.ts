@@ -14,11 +14,15 @@ import type {
   cartSchema,
   checkoutSchema,
   commentSchema,
+  conversationPeerSchema,
+  conversationSchema,
   creditBalanceSchema,
   feedItemSchema,
   lookbookEntrySchema,
   lookbookSchema,
   lookDetailSchema,
+  messageSchema,
+  notificationSchema,
   orderSchema,
   pickupPointSchema,
   productCardSchema,
@@ -48,6 +52,10 @@ export type ProductCard = Infer<typeof productCardSchema>;
 export type ProductDetail = Infer<typeof productDetailSchema>;
 export type LookDetail = Infer<typeof lookDetailSchema>;
 export type Comment = Infer<typeof commentSchema>;
+export type Peer = Infer<typeof conversationPeerSchema>;
+export type Conversation = Infer<typeof conversationSchema>;
+export type Message = Infer<typeof messageSchema>;
+export type Notification = Infer<typeof notificationSchema>;
 export interface Occasion {
   key: string;
   label: string;
@@ -472,4 +480,58 @@ export const api = {
     request<Page<Order>>('/v1/orders', { query: params }),
 
   order: (id: string) => request<Order>(`/v1/orders/${id}`),
+
+  // ----------------------------------------------------------- social ---
+
+  follow: (handle: string, following: boolean) =>
+    request<{ following: boolean }>(`/v1/profiles/${handle}/follow`, {
+      method: following ? 'POST' : 'DELETE',
+    }),
+
+  followStore: (slug: string, following: boolean) =>
+    request<{ following: boolean }>(`/v1/stores/${slug}/follow`, {
+      method: following ? 'POST' : 'DELETE',
+    }),
+
+  block: (handle: string, blocked: boolean) =>
+    request<{ blocked: boolean }>(`/v1/profiles/${handle}/block`, {
+      method: blocked ? 'POST' : 'DELETE',
+    }),
+
+  myFollows: () => request<{ followers: number; following: number }>('/v1/me/follows'),
+
+  people: (q?: string) => request<{ items: Peer[] }>('/v1/me/people', { query: { q } }),
+
+  notifications: (cursor?: string) =>
+    request<Page<Notification> & { unread: number }>('/v1/notifications', {
+      query: { cursor, limit: 30 },
+    }),
+
+  unread: () => request<{ activity: number; messages: number }>('/v1/notifications/unread'),
+
+  markActivityRead: () => request<void>('/v1/notifications/read', { method: 'POST' }),
+
+  conversations: (cursor?: string) =>
+    request<Page<Conversation>>('/v1/conversations', { query: { cursor, limit: 30 } }),
+
+  openConversation: (userId: string) =>
+    request<{ id: string }>('/v1/conversations', { method: 'POST', body: { userIds: [userId] } }),
+
+  conversation: (id: string) =>
+    request<{ id: string; peers: Peer[]; blocked: boolean }>(`/v1/conversations/${id}`),
+
+  messages: (id: string, cursor?: string) =>
+    request<Page<Message>>(`/v1/conversations/${id}/messages`, { query: { cursor, limit: 40 } }),
+
+  sendMessage: (id: string, body: string) =>
+    request<Message>(`/v1/conversations/${id}/messages`, {
+      method: 'POST',
+      body: { kind: 'TEXT', body },
+    }),
+
+  markConversationRead: (id: string) =>
+    request<void>(`/v1/conversations/${id}/read`, { method: 'POST' }),
+
+  shareTo: (body: { kind: 'LOOK' | 'PRODUCT'; refId: string; userIds: string[]; note?: string }) =>
+    request<{ sent: number }>('/v1/share', { method: 'POST', body }),
 };

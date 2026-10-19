@@ -23,6 +23,7 @@ import { mediaRoutes } from './modules/media/routes.js';
 import { profileRoutes } from './modules/profile/routes.js';
 import { sessionRoutes } from './modules/session/routes.js';
 import { shopRoutes } from './modules/shop/routes.js';
+import { socialRoutes } from './modules/social/routes.js';
 import { stylistRoutes } from './modules/stylist/routes.js';
 import { tryOnRoutes } from './modules/tryon/routes.js';
 import { wardrobeRoutes } from './modules/wardrobe/routes.js';
@@ -43,6 +44,7 @@ export const registerRoutes: FastifyPluginAsync = async (app) => {
     wardrobeRoutes,
     lookbookRoutes,
     profileRoutes,
+    socialRoutes,
     creditRoutes,
     tryOnRoutes(tryOn),
     stylistRoutes(stylist),
