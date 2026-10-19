@@ -156,7 +156,17 @@ export default function ProductScreen() {
           {/* Everything else */}
           <View style={{ flex: isWide ? 1 : undefined, padding: isWide ? 0 : gutter, gap: 20 }}>
             <View style={{ gap: 6 }}>
-              <Micro>{item.store.name}</Micro>
+              <Pressable
+                onPress={() =>
+                  router.push({ pathname: '/s/[slug]', params: { slug: item.store.slug } })
+                }
+                accessibilityRole="link"
+                accessibilityLabel={`Visit ${item.store.name}`}
+                hitSlop={6}
+                style={{ alignSelf: 'flex-start' }}
+              >
+                <Micro tone="primary">{`${item.store.name}  ›`}</Micro>
+              </Pressable>
               <Title>{item.title}</Title>
               <Price cents={price} style={{ fontSize: 20 }} />
             </View>

@@ -23,6 +23,7 @@ import { Sheet } from '../../src/components/sheet';
 import { Body, BodyStrong, Caption, Eyebrow, Micro, Price, Title } from '../../src/components/text';
 import { WardrobeTab } from '../../src/components/wardrobe-tab';
 import { api, type SessionUser, type TryOnJob } from '../../src/lib/api';
+import { SELL_HOME } from '../../src/lib/routes';
 import { elevation } from '../../src/theme/elevation';
 import { useTheme } from '../../src/theme/index';
 
@@ -105,6 +106,8 @@ export default function StoreScreen() {
             onEdit={() => router.push('/profile')}
             onSignIn={() => requireAccount('Create an account to keep everything you make')}
           />
+
+          {!isGuest ? <ShopCard /> : null}
 
           {!isGuest && (user?.styleProfileCompletion ?? 0) < 100 ? (
             <Pressable
@@ -640,5 +643,84 @@ function GearMark({ color, hole }: { color: string; hole: string }) {
       />
       <Circle cx={12} cy={12} r={3.2} fill={hole} />
     </Svg>
+  );
+}
+
+/**
+ * Selling, from your own profile.
+ *
+ * One account buys and sells. Without a shop this is a quiet invitation;
+ * with one it is the way to the counter, and says when orders are waiting.
+ */
+function ShopCard() {
+  const { colors, radius } = useTheme();
+  const router = useRouter();
+  const shop = useQuery({
+    queryKey: ['seller-store'],
+    queryFn: api.sellerStore,
+    staleTime: 30_000,
+  });
+
+  if (shop.isLoading) return null;
+  const store = shop.data?.store;
+  const waiting = store?.stats.openOrders ?? 0;
+
+  return (
+    <Pressable
+      onPress={() => router.push(store ? SELL_HOME : '/sell/setup')}
+      accessibilityRole="button"
+      style={({ pressed }) => ({
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 14,
+        padding: 16,
+        borderRadius: radius.card,
+        backgroundColor: pressed ? colors.sunk : colors.surface,
+        borderWidth: waiting ? 1 : 0,
+        borderColor: colors.accent,
+      })}
+    >
+      <View
+        style={{
+          width: 44,
+          height: 44,
+          borderRadius: 22,
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: colors.accentSoft,
+        }}
+      >
+        <Svg width={22} height={22} viewBox="0 0 24 24">
+          <Path
+            d="M4 9.5 5.5 4h13L20 9.5M4 9.5h16M4 9.5a2.7 2.7 0 0 0 5.3 0 2.7 2.7 0 0 0 5.4 0 2.7 2.7 0 0 0 5.3 0M5.5 12v8h13v-8M10 20v-4.5h4V20"
+            stroke={colors.primary}
+            strokeWidth={1.5}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            fill="none"
+          />
+        </Svg>
+      </View>
+      <View style={{ flex: 1, gap: 2 }}>
+        <BodyStrong>{store ? store.name : 'Sell on Nima'}</BodyStrong>
+        <Caption numberOfLines={2}>
+          {store
+            ? waiting
+              ? `${waiting} ${waiting === 1 ? 'order' : 'orders'} waiting to be packed`
+              : `${store.stats.activeProducts} in the shop · ${store.stats.followers} ${store.stats.followers === 1 ? 'follower' : 'followers'}`
+            : 'Open a shop and let people try your pieces on before they buy'}
+        </Caption>
+      </View>
+      <Svg width={18} height={18} viewBox="0 0 24 24">
+        <Path
+          d="m9 6 6 6-6 6"
+          stroke={colors.muted}
+          strokeWidth={1.8}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          fill="none"
+        />
+      </Svg>
+    </Pressable>
   );
 }

@@ -36,6 +36,7 @@ import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 import { z } from 'zod';
 import { errors } from '../../lib/errors.js';
 import { publicImage } from '../../lib/presenters.js';
+import { notify } from '../../services/notify.js';
 import { canView } from '../looks/visibility.js';
 
 const peerSelect = {
@@ -69,28 +70,6 @@ async function blockedBetween(prisma: PrismaClient, a: string, b: string): Promi
     select: { id: true },
   });
   return row !== null;
-}
-
-/**
- * Hands the notification to the worker, which writes the row, tells any
- * open app over the socket, and pushes to the phone when the app is shut.
- */
-export async function notify(
-  app: FastifyInstance,
-  data: {
-    userId: string;
-    type: 'NEW_FOLLOWER' | 'LOOK_LIKED' | 'LOOK_COMMENT';
-    title: string;
-    body: string;
-    data: Record<string, unknown>;
-  },
-): Promise<void> {
-  try {
-    await app.queues.notification.add('notify', { ...data, skipPushIfOnline: true });
-  } catch (error) {
-    // Losing a "someone loved your look" is better than failing the love.
-    app.log.warn({ err: error }, 'Could not queue a notification');
-  }
 }
 
 /** A short line for the inbox, whatever the message is. */
@@ -398,7 +377,13 @@ export const socialRoutes: FastifyPluginAsyncZod = async (app) => {
       const page = hasMore ? rows.slice(0, limit) : rows;
 
       const dataOf = (row: (typeof page)[number]) =>
-        (row.data ?? {}) as { actorId?: string; lookId?: string; jobId?: string; orderId?: string };
+        (row.data ?? {}) as {
+          actorId?: string;
+          lookId?: string;
+          jobId?: string;
+          orderId?: string;
+          seller?: boolean;
+        };
 
       const actorIds = [...new Set(page.map((r) => dataOf(r).actorId).filter(Boolean))] as string[];
       const lookIds = [...new Set(page.map((r) => dataOf(r).lookId).filter(Boolean))] as string[];
@@ -435,6 +420,7 @@ export const socialRoutes: FastifyPluginAsyncZod = async (app) => {
           if (data.lookId) target = `look/${data.lookId}`;
           else if (row.type === 'NEW_FOLLOWER' && actor?.profile)
             target = `u/${actor.profile.handle}`;
+          else if (data.orderId && data.seller) target = 'sell/orders';
           else if (data.orderId) target = `order/${data.orderId}`;
 
           return {

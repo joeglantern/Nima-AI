@@ -204,3 +204,63 @@ export const sellerDashboardSchema = z.object({
     paidOutCents: z.number().int(),
   }),
 });
+
+// ------------------------------------------------------------ seller views ---
+
+/** The shop as its owner sees it, with the private bits the public never does. */
+export const sellerStoreSchema = storeCardSchema.extend({
+  about: z.string().nullable(),
+  whatsapp: z.string().nullable(),
+  returnPolicy: z.string().nullable(),
+  plan: z.string(),
+  stats: z.object({
+    activeProducts: z.number().int(),
+    draftProducts: z.number().int(),
+    openOrders: z.number().int(),
+    followers: z.number().int(),
+    sales30dCents: z.number().int(),
+    pendingCents: z.number().int(),
+    availableCents: z.number().int(),
+  }),
+});
+
+export const sellerProductRowSchema = z.object({
+  id: idSchema,
+  title: z.string(),
+  status: z.enum(['DRAFT', 'ACTIVE', 'OUT_OF_STOCK', 'ARCHIVED']),
+  priceFromCents: z.number().int(),
+  stock: z.number().int(),
+  image: imageSchema.nullable(),
+  views30d: z.number().int(),
+  updatedAt: z.string(),
+});
+
+/** Everything the edit form needs to fill itself in. */
+export const sellerProductDetailSchema = z.object({
+  id: idSchema,
+  title: z.string(),
+  description: z.string().nullable(),
+  category: z.string(),
+  colours: z.array(z.string()),
+  occasions: z.array(z.string()),
+  status: z.enum(['DRAFT', 'ACTIVE', 'OUT_OF_STOCK', 'ARCHIVED']),
+  variants: z.array(
+    z.object({
+      id: idSchema,
+      size: z.string().nullable(),
+      colour: z.string().nullable(),
+      priceCents: z.number().int(),
+      stock: z.number().int(),
+      isActive: z.boolean(),
+    }),
+  ),
+  images: z.array(
+    z.object({ storageKey: z.string(), image: imageSchema, processing: z.boolean() }),
+  ),
+});
+
+export const sellerOrderSchema = orderSchema.extend({
+  buyer: z.object({ displayName: z.string(), handle: z.string().nullable() }),
+  /** What the seller can do next, so the app never offers a step that will be refused. */
+  actions: z.array(z.enum(['accept', 'mark_ready', 'cancel'])),
+});

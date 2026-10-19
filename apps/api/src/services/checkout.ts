@@ -26,6 +26,7 @@ import type { Prisma } from '@nima/db';
 import type { FastifyInstance } from 'fastify';
 import { errors } from '../lib/errors.js';
 import { primaryImageKey } from './cart.js';
+import { notify } from './notify.js';
 import { type PaymentGateway, PaymentGatewayError, type WebhookResult } from './payments/index.js';
 
 export interface StartCheckoutInput {
@@ -412,6 +413,27 @@ export class CheckoutService {
         type: 'order.updated',
         orderId: order.id,
         status: 'PAID',
+      });
+    }
+
+    // Each shop hears about its own order, so packing can start.
+    const paidOrders = await app.prisma.order.findMany({
+      where: { checkoutGroupId: group.id },
+      select: {
+        id: true,
+        reference: true,
+        subtotalCents: true,
+        store: { select: { ownerId: true } },
+        _count: { select: { items: true } },
+      },
+    });
+    for (const paid of paidOrders) {
+      await notify(app, {
+        userId: paid.store.ownerId,
+        type: 'ORDER_PLACED',
+        title: 'New order',
+        body: `New order ${paid.reference}: ${paid._count.items} ${paid._count.items === 1 ? 'piece' : 'pieces'}, KSh ${Math.round(paid.subtotalCents / 100).toLocaleString('en-KE')}`,
+        data: { orderId: paid.id, seller: true },
       });
     }
 

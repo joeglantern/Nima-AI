@@ -28,6 +28,11 @@ import type {
   productCardSchema,
   productDetailSchema,
   publicProfileSchema,
+  sellerDashboardSchema,
+  sellerOrderSchema,
+  sellerProductDetailSchema,
+  sellerProductRowSchema,
+  sellerStoreSchema,
   sessionUserSchema,
   startTryOnResponseSchema,
   styleProfileSchema,
@@ -56,6 +61,42 @@ export type Peer = Infer<typeof conversationPeerSchema>;
 export type Conversation = Infer<typeof conversationSchema>;
 export type Message = Infer<typeof messageSchema>;
 export type Notification = Infer<typeof notificationSchema>;
+export type SellerStore = Infer<typeof sellerStoreSchema>;
+export type SellerProductRow = Infer<typeof sellerProductRowSchema>;
+export type SellerProductDetail = Infer<typeof sellerProductDetailSchema>;
+export type SellerOrder = Infer<typeof sellerOrderSchema>;
+export type SellerDashboard = Infer<typeof sellerDashboardSchema>;
+export interface StoreFront {
+  id: string;
+  name: string;
+  slug: string;
+  logo: { url: string } | null;
+  verified: boolean;
+  county: string | null;
+  about: string | null;
+  banner: { url: string } | null;
+  returnPolicy: string | null;
+  productCount: number;
+  isFollowing: boolean | null;
+}
+export interface StoreInput {
+  name: string;
+  about?: string | null;
+  county?: string | null;
+  whatsapp?: string | null;
+  returnPolicy?: string | null;
+  logoKey?: string | null;
+}
+export interface ProductInput {
+  title: string;
+  description?: string | null;
+  category: string;
+  colours: string[];
+  occasions: string[];
+  status: 'DRAFT' | 'ACTIVE';
+  variants: Array<{ id?: string; size: string | null; priceCents: number; stock: number }>;
+  images: Array<{ storageKey: string }>;
+}
 export interface Occasion {
   key: string;
   label: string;
@@ -260,6 +301,8 @@ export const api = {
     cursor?: string;
     limit?: number;
     sort?: string;
+    storeId?: string;
+    inStockOnly?: boolean;
   }) => request<Page<ProductCard>>('/v1/products', { query: params }),
 
   product: (id: string) => request<ProductDetail>(`/v1/products/${id}`),
@@ -534,4 +577,45 @@ export const api = {
 
   shareTo: (body: { kind: 'LOOK' | 'PRODUCT'; refId: string; userIds: string[]; note?: string }) =>
     request<{ sent: number }>('/v1/share', { method: 'POST', body }),
+
+  // ----------------------------------------------------------- selling ---
+
+  storeFront: (slug: string) => request<{ store: StoreFront }>(`/v1/stores/${slug}`),
+
+  sellerStore: () => request<{ store: SellerStore | null }>('/v1/seller/store'),
+
+  openStore: (body: StoreInput) =>
+    request<{ store: SellerStore }>('/v1/seller/store', { method: 'POST', body }),
+
+  updateStore: (body: Partial<StoreInput>) =>
+    request<{ store: SellerStore }>('/v1/seller/store', { method: 'PATCH', body }),
+
+  sellerProducts: (status?: string) =>
+    request<{ items: SellerProductRow[] }>('/v1/seller/products', { query: { status } }),
+
+  sellerProduct: (id: string) => request<SellerProductDetail>(`/v1/seller/products/${id}`),
+
+  createProduct: (body: ProductInput) =>
+    request<SellerProductDetail>('/v1/seller/products', { method: 'POST', body }),
+
+  saveProduct: (id: string, body: ProductInput) =>
+    request<SellerProductDetail>(`/v1/seller/products/${id}`, { method: 'PUT', body }),
+
+  setProductStatus: (id: string, status: 'DRAFT' | 'ACTIVE' | 'ARCHIVED') =>
+    request<{ status: string }>(`/v1/seller/products/${id}/status`, {
+      method: 'POST',
+      body: { status },
+    }),
+
+  sellerOrders: (params: { cursor?: string; status?: string } = {}) =>
+    request<Page<SellerOrder>>('/v1/seller/orders', { query: { ...params, limit: 30 } }),
+
+  sellerOrderAction: (id: string, action: 'accept' | 'mark_ready' | 'cancel', reason?: string) =>
+    request<SellerOrder>(`/v1/seller/orders/${id}/action`, {
+      method: 'POST',
+      body: { action, reason },
+    }),
+
+  sellerDashboard: (range: '7d' | '30d' | '90d' = '30d') =>
+    request<SellerDashboard>('/v1/seller/dashboard', { query: { range } }),
 };

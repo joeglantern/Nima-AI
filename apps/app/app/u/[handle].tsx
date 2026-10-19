@@ -245,7 +245,10 @@ export default function PersonScreen() {
                           ? `${profile.store.name}, verified seller`
                           : profile.store.name
                       }
-                      onPress={() => router.push({ pathname: '/store' })}
+                      onPress={() =>
+                        profile.store &&
+                        router.push({ pathname: '/s/[slug]', params: { slug: profile.store.slug } })
+                      }
                     />
                   ) : null}
                   {isMe ? (

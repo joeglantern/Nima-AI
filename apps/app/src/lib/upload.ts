@@ -14,7 +14,13 @@
 import type { ImagePickerAsset } from 'expo-image-picker';
 import { api } from './api';
 
-export type UploadPurpose = 'AVATAR' | 'USER_PHOTO' | 'WARDROBE_ITEM' | 'QUICK_TRY_ON';
+export type UploadPurpose =
+  | 'AVATAR'
+  | 'USER_PHOTO'
+  | 'WARDROBE_ITEM'
+  | 'QUICK_TRY_ON'
+  | 'PRODUCT_IMAGE'
+  | 'STORE_LOGO';
 
 type ImageType = 'image/jpeg' | 'image/png' | 'image/webp' | 'image/heic';
 

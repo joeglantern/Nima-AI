@@ -16,6 +16,7 @@ import { Avatar } from '../src/components/feed-post';
 import { ScreenHeader } from '../src/components/screen-header';
 import { Body, BodyStrong, Caption } from '../src/components/text';
 import { api, type Notification } from '../src/lib/api';
+import { sellOrders } from '../src/lib/routes';
 import { useSignedIn } from '../src/lib/social';
 import { timeAgo } from '../src/lib/time';
 import { useTheme } from '../src/theme/index';
@@ -146,6 +147,7 @@ function Row({ item }: { item: Notification }) {
     if (kind === 'look' && id) router.push({ pathname: '/look/[id]', params: { id } });
     else if (kind === 'u' && id) router.push({ pathname: '/u/[handle]', params: { handle: id } });
     else if (kind === 'order' && id) router.push({ pathname: '/order/[id]', params: { id } });
+    else if (kind === 'sell') router.push(sellOrders());
   };
 
   // "Amani loved your look." The name is bold and the rest is not, which is

@@ -25,7 +25,7 @@ import { z } from 'zod';
 import { errors } from '../../lib/errors.js';
 import { lookAuthor, lookCard, productCard, publicImage } from '../../lib/presenters.js';
 import { recordEvent } from '../../services/events.js';
-import { notify } from '../social/routes.js';
+import { notify } from '../../services/notify.js';
 import { canView } from './visibility.js';
 
 export const lookRoutes: FastifyPluginAsyncZod = async (app) => {
