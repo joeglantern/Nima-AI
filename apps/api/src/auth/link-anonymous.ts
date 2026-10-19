@@ -133,10 +133,6 @@ export async function linkAnonymousAccount(
       tx.lookbook.updateMany({ where: { ownerId: anonymousUserId }, data: { ownerId: newUserId } }),
       tx.tryOnJob.updateMany({ where: { userId: anonymousUserId }, data: { userId: newUserId } }),
       tx.userPhoto.updateMany({ where: { userId: anonymousUserId }, data: { userId: newUserId } }),
-      tx.creditLedgerEntry.updateMany({
-        where: { userId: anonymousUserId },
-        data: { userId: newUserId },
-      }),
       tx.pushToken.updateMany({ where: { userId: anonymousUserId }, data: { userId: newUserId } }),
       tx.stylistThread.updateMany({
         where: { userId: anonymousUserId },
@@ -144,18 +140,32 @@ export async function linkAnonymousAccount(
       }),
     ]);
 
-    // Fold any credit balance the guest accumulated into the new account.
-    const guestBalance = await tx.creditBalance.findUnique({ where: { userId: anonymousUserId } });
-    if (guestBalance && guestBalance.balance > 0) {
+    // Credits. A guest is handed the free weekly credits and the welcome
+    // bonus on arrival, and every visit starts as a fresh guest. Carrying
+    // those across meant every sign in, on every device, added eight free
+    // credits to the account. The account gets its own grants on its own
+    // schedule, so the guest's are dropped. Anything else on the guest's
+    // ledger, such as a refund, still moves across with its balance.
+    await tx.creditLedgerEntry.deleteMany({
+      where: { userId: anonymousUserId, reason: { in: ['WEEKLY_GRANT', 'SIGNUP_BONUS'] } },
+    });
+    const carried = await tx.creditLedgerEntry.aggregate({
+      where: { userId: anonymousUserId },
+      _sum: { delta: true },
+    });
+    await tx.creditLedgerEntry.updateMany({
+      where: { userId: anonymousUserId },
+      data: { userId: newUserId },
+    });
+    const carriedCredits = carried._sum.delta ?? 0;
+    if (carriedCredits !== 0) {
       await tx.creditBalance.upsert({
         where: { userId: newUserId },
-        create: { userId: newUserId, balance: guestBalance.balance },
-        update: { balance: { increment: guestBalance.balance } },
+        create: { userId: newUserId, balance: Math.max(0, carriedCredits) },
+        update: { balance: { increment: carriedCredits } },
       });
     }
-    if (guestBalance) {
-      await tx.creditBalance.delete({ where: { userId: anonymousUserId } });
-    }
+    await tx.creditBalance.deleteMany({ where: { userId: anonymousUserId } });
 
     return {
       movedCartItems,
