@@ -67,7 +67,7 @@ export default function InboxScreen() {
         />
 
         {!signedIn ? (
-          <EmptyState art="sparkle" message="Sign in to talk outfits with your friends." />
+          <EmptyState art="chat" message="Sign in to talk outfits with your friends." />
         ) : inbox.isLoading ? (
           <ActivityIndicator color={colors.primary} style={{ marginTop: 60 }} />
         ) : (
@@ -90,7 +90,7 @@ export default function InboxScreen() {
             }}
             ListEmptyComponent={
               <EmptyState
-                art="sparkle"
+                art="chat"
                 message="No messages yet. Send a look to a friend and the conversation starts here."
               />
             }

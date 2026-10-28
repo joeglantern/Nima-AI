@@ -13,11 +13,17 @@ Current home: `liban@156.67.25.84`, in `/home/liban/nima-ai`.
 
 | Service | What it is | Published on |
 |---|---|---|
-| `api` | Fastify, the whole HTTP and WebSocket surface | `127.0.0.1:3340` |
+| `api` | Fastify, the whole HTTP and WebSocket surface, and the web app | `127.0.0.1:3340` |
 | `worker` | Try-ons, media, notifications | nothing |
 | `postgres` | Postgres 17 with pgvector | `127.0.0.1:5462` |
 | `valkey` | Queues, rate limits, socket fan out | nothing |
 | `garage` | S3 compatible storage for photographs | `127.0.0.1:3962` |
+
+The web app is built into the API image (the `web` stage of
+`infra/Dockerfile` runs `expo export`). The API answers every GET that is not
+an API path from that build, so the public address that serves the API also
+serves the web app, and the app finds the API at whatever address it was
+loaded from. A deploy that rebuilds `api` ships the web app too.
 
 The published ports are loopback only so a human can reach them over an SSH
 tunnel and nobody else can reach them at all.

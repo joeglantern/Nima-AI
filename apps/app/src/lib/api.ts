@@ -125,6 +125,8 @@ export interface Bootstrap {
     directMessages: boolean;
     ghostMannequin: boolean;
     promotions: boolean;
+    /** False while no image provider is set up. */
+    tryOn?: boolean;
   };
   /** Only buttons for ways in that the server is set up for get shown. */
   signIn: { google: boolean; apple: boolean; email: boolean };

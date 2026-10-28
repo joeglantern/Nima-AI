@@ -15,7 +15,7 @@ import Svg, { Path } from 'react-native-svg';
 import { Button } from '../../src/components/button';
 import { SendSheet } from '../../src/components/send-sheet';
 import { Body, BodyStrong, Caption, Eyebrow, Micro, Price, Title } from '../../src/components/text';
-import { TryOnResultSheet, useTryOn } from '../../src/components/try-on';
+import { TryOnResultSheet, useTryOn, useTryOnAvailable } from '../../src/components/try-on';
 import { api } from '../../src/lib/api';
 import { useTheme } from '../../src/theme/index';
 
@@ -32,6 +32,7 @@ export default function LookScreen() {
   });
 
   const tryOn = useTryOn('Create an account to wear this yourself');
+  const canTryOn = useTryOnAvailable();
 
   const [sending, setSending] = useState(false);
 
@@ -131,7 +132,12 @@ export default function LookScreen() {
               </View>
             ) : null}
 
-            {item.canRecreate ? (
+            {item.canRecreate && !canTryOn ? (
+              <Caption align="center">
+                Seeing looks on yourself is switched off in this preview. It is back soon.
+              </Caption>
+            ) : null}
+            {item.canRecreate && canTryOn ? (
               <Button
                 label={tryOn.busy ? 'Nima is dressing you' : 'See this on me'}
                 loading={tryOn.busy}

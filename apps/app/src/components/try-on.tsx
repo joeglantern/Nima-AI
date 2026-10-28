@@ -10,7 +10,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { ApiError, api } from '../lib/api';
 import { useServerFrame } from '../lib/realtime';
@@ -21,6 +21,19 @@ import { Sheet } from './sheet';
 import { Caption, Eyebrow } from './text';
 
 type StartBody = Parameters<typeof api.startTryOn>[0];
+
+/** A job that has said nothing for this long is not coming back on this screen. */
+const GIVE_UP_AFTER = 4 * 60_000;
+
+/**
+ * Whether try-ons can run right now. Off while no image provider is set up,
+ * so nobody pays for a job that cannot finish. An older server that does
+ * not send the flag is treated as on.
+ */
+export function useTryOnAvailable(): boolean {
+  const bootstrap = useQuery({ queryKey: ['bootstrap'], queryFn: api.bootstrap });
+  return bootstrap.data?.features.tryOn !== false;
+}
 
 export interface TryOn {
   start: (body: StartBody) => void;
@@ -66,6 +79,20 @@ export function useTryOn(accountReason = 'Create an account to try this on yours
     setProblem(frame.reason);
     void queryClient.invalidateQueries({ queryKey: ['bootstrap'] });
   });
+
+  // Stop the spinner rather than leave someone watching it for ever. The
+  // job carries on, and a finished one still lands in My Store.
+  useEffect(() => {
+    if (!jobId || resultUrl) return;
+    const timer = setTimeout(() => {
+      setJobId(null);
+      setProgress(null);
+      setProblem(
+        'This is taking longer than it should. It will appear in My Store when it is ready.',
+      );
+    }, GIVE_UP_AFTER);
+    return () => clearTimeout(timer);
+  }, [jobId, resultUrl]);
 
   const start = useMutation({
     mutationFn: (body: StartBody) => api.startTryOn(body),

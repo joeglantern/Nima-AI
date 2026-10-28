@@ -1,0 +1,12 @@
+# Only what the images build from. Local installs, builds and secrets stay out.
+**/node_modules
+**/dist
+**/dist-web
+**/.expo
+**/.turbo
+.git
+.env
+.env.*
+apps/app/.env
+.shots
+**/*.log

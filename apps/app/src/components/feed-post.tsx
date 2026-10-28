@@ -22,7 +22,8 @@ import { ApiError, api, type LookCardData } from '../lib/api';
 import { compactCount, timeAgo } from '../lib/time';
 import { useTheme } from '../theme/index';
 import { useAuthGate } from './auth-gate';
-import { Body, BodyStrong, Caption } from './text';
+import { Body, BodyStrong, Caption, Micro } from './text';
+import { useTryOnAvailable } from './try-on';
 
 const BLUR = 'L6Pj0^jE.AyE_3t7t7R**0o#DgR4';
 const DOUBLE_TAP_MS = 260;
@@ -90,7 +91,7 @@ function Icon({
   filled = false,
   size = 25,
 }: {
-  name: 'heart' | 'comment' | 'send' | 'bookmark' | 'bag' | 'badge' | 'sparkle';
+  name: 'heart' | 'comment' | 'send' | 'bookmark' | 'bag' | 'badge' | 'sparkle' | 'hanger';
   color: string;
   filled?: boolean;
   size?: number;
@@ -122,6 +123,13 @@ function Icon({
           {...stroke}
           fill="none"
         />
+      ) : name === 'hanger' ? (
+        <Path
+          d="M12 7.5a2 2 0 1 1 2 2c-1.1 0-2 .6-2 1.7v.8m0 0-8.2 5.6c-.8.5-.5 1.4.4 1.4h15.6c.9 0 1.2-.9.4-1.4L12 12Z"
+          {...stroke}
+          fill="none"
+          strokeWidth={2}
+        />
       ) : name === 'sparkle' ? (
         <Path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z" fill={color} />
       ) : (
@@ -146,13 +154,20 @@ function Icon({
 
 function IconButton({
   label,
+  caption,
+  active = false,
   onPress,
   children,
 }: {
   label: string;
+  /** The word under the icon. Without one it is a bare icon. */
+  caption?: string;
+  active?: boolean;
   onPress?: () => void;
   children: React.ReactNode;
 }) {
+  const { colors } = useTheme();
+
   return (
     <Pressable
       onPress={onPress}
@@ -160,14 +175,26 @@ function IconButton({
       accessibilityLabel={label}
       hitSlop={4}
       style={({ pressed }) => ({
-        width: 42,
-        height: 42,
+        ...(caption ? { flex: 1, paddingVertical: 6, gap: 3 } : { width: 42, height: 42 }),
         alignItems: 'center',
         justifyContent: 'center',
-        transform: [{ scale: pressed ? 0.88 : 1 }],
+        transform: [{ scale: pressed ? 0.92 : 1 }],
       })}
     >
       {children}
+      {caption ? (
+        <Micro
+          numberOfLines={1}
+          style={{
+            fontSize: 12,
+            lineHeight: 15,
+            color: active ? colors.accent : colors.ink,
+            fontFamily: active ? 'DMSans_600SemiBold' : 'DMSans_500Medium',
+          }}
+        >
+          {caption}
+        </Micro>
+      ) : null}
     </Pressable>
   );
 }
@@ -193,6 +220,7 @@ export const FeedPost = memo(function FeedPost({
   const { colors, radius, isWide, scheme } = useTheme();
   const router = useRouter();
   const { requireAccount } = useAuthGate();
+  const canTryOn = useTryOnAvailable();
 
   const [liked, setLiked] = useState(look.likedByMe);
   const [likes, setLikes] = useState(look.likeCount);
@@ -315,7 +343,7 @@ export const FeedPost = memo(function FeedPost({
           </View>
         </Pressable>
 
-        {look.canRecreate ? (
+        {look.canRecreate && canTryOn ? (
           <Pressable
             onPress={() => onTryOn(look.id)}
             disabled={dressing}
@@ -332,7 +360,7 @@ export const FeedPost = memo(function FeedPost({
               opacity: pressed || dressing ? 0.7 : 1,
             })}
           >
-            <Icon name="sparkle" color={colors.primary} size={13} />
+            <Icon name="hanger" color={colors.primary} size={15} />
             <BodyStrong style={{ fontSize: 13, lineHeight: 17, color: colors.primary }}>
               {dressing ? 'Dressing you' : 'Try it on'}
             </BodyStrong>
@@ -417,20 +445,33 @@ export const FeedPost = memo(function FeedPost({
 
       {/* What you can do */}
       <View
-        style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 6, paddingTop: 4 }}
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-around',
+          paddingHorizontal: 8,
+          paddingTop: 6,
+          paddingBottom: 4,
+        }}
       >
-        <IconButton label={liked ? 'Loved' : 'Love it'} onPress={toggleLike}>
-          <Icon name="heart" color={liked ? colors.accent : colors.ink} filled={liked} size={26} />
+        <IconButton
+          label={liked ? 'Loved' : 'Love it'}
+          caption={liked ? 'Loved' : 'Love it'}
+          active={liked}
+          onPress={toggleLike}
+        >
+          <Icon name="heart" color={liked ? colors.accent : colors.ink} filled={liked} size={25} />
         </IconButton>
-        <IconButton label="Comments" onPress={() => onComments(look.id)}>
-          <Icon name="comment" color={colors.ink} />
+        <IconButton label="Comments" caption="Comment" onPress={() => onComments(look.id)}>
+          <Icon name="comment" color={colors.ink} size={24} />
         </IconButton>
-        <IconButton label="Send to a friend" onPress={() => onSend(look.id)}>
-          <Icon name="send" color={colors.ink} size={24} />
+        <IconButton label="Send to a friend" caption="Send" onPress={() => onSend(look.id)}>
+          <Icon name="send" color={colors.ink} size={23} />
         </IconButton>
-        <View style={{ flex: 1 }} />
         <IconButton
           label={saved ? 'Saved' : 'Save'}
+          caption={saved ? 'Saved' : 'Save'}
+          active={saved}
           onPress={() => {
             setSaved(!saved);
             save.mutate();
@@ -438,9 +479,9 @@ export const FeedPost = memo(function FeedPost({
         >
           <Icon
             name="bookmark"
-            color={saved ? colors.primary : colors.ink}
+            color={saved ? colors.accent : colors.ink}
             filled={saved}
-            size={24}
+            size={23}
           />
         </IconButton>
       </View>

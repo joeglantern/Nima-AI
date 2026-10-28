@@ -95,7 +95,11 @@ export function createLlmProvider(env: Env): LlmProvider {
         authorization: `Bearer ${env.LLM_API_KEY}`,
       },
       body: JSON.stringify(body),
-      ...(signal ? { signal } : {}),
+      // A model host that swallows the request must not leave someone
+      // watching "Thinking" for ever. The catalogue fallback answers instead.
+      signal: signal
+        ? AbortSignal.any([signal, AbortSignal.timeout(30_000)])
+        : AbortSignal.timeout(30_000),
     });
 
     if (!response.ok) {

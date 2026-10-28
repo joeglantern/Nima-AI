@@ -13,6 +13,7 @@ import {
   hasZodFastifySchemaValidationErrors,
   isResponseSerializationError,
 } from 'fastify-type-provider-zod';
+import { serveWebApp } from './web-app.js';
 
 export type ErrorCode =
   | 'bad_request'
@@ -102,8 +103,11 @@ interface ErrorBody {
 }
 
 export function registerErrorHandler(app: FastifyInstance): void {
-  app.setNotFoundHandler((request: FastifyRequest, reply: FastifyReply) => {
-    reply.status(404).send({
+  app.setNotFoundHandler(async (request: FastifyRequest, reply: FastifyReply) => {
+    // Anything that is not an API path may be a screen of the web app.
+    if (await serveWebApp(request, reply)) return reply;
+
+    return reply.status(404).send({
       error: {
         code: 'not_found',
         message: `No route for ${request.method} ${request.url}`,

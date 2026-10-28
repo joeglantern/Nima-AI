@@ -31,6 +31,15 @@ export const API_URL: string = (() => {
     if (host) return `http://${host}:3333`;
   }
 
+  /*
+   * A production web build is served by the API itself, so the API is
+   * wherever this page came from. That keeps sign in cookies first party,
+   * and the build keeps working when the public address changes.
+   */
+  if (!__DEV__ && Platform.OS === 'web' && typeof window !== 'undefined') {
+    return window.location.origin;
+  }
+
   return 'http://localhost:3333';
 })();
 

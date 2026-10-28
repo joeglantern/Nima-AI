@@ -73,7 +73,7 @@ export default function ActivityScreen() {
         <ScreenHeader title="Activity" />
 
         {!signedIn ? (
-          <EmptyState art="sparkle" message="Sign in to see who loves your looks." />
+          <EmptyState art="heart" message="Sign in to see who loves your looks." />
         ) : activity.isLoading ? (
           <ActivityIndicator color={colors.primary} style={{ marginTop: 60 }} />
         ) : (
@@ -111,7 +111,7 @@ export default function ActivityScreen() {
             renderItem={({ item }) => <Row item={item} />}
             ListEmptyComponent={
               <EmptyState
-                art="sparkle"
+                art="heart"
                 message="Nothing yet. When someone loves, comments on or follows your looks, it shows up here."
               />
             }

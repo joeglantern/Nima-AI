@@ -41,8 +41,6 @@ export default function WelcomeScreen() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Only the ways in that the server is set up for. A Google button that
-  // answers "provider not found" is worse than no Google button.
   // The buttons are always there, as the design shows them. Whether the
   // server is set up for each decides what a tap does: the sign in, or a
   // plain sentence saying it is not switched on yet.
@@ -177,7 +175,7 @@ export default function WelcomeScreen() {
                   lineHeight: 32,
                 }}
               >
-                Your personal AI stylist
+                Your personal stylist
               </Body>
               <Body tone="muted" align="center">
                 See yourself in every outfit

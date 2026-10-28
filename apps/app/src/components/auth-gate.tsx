@@ -112,8 +112,6 @@ function AuthSheet({ reason, onClose }: { reason: string | null; onClose: () => 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Only the ways in that the server is set up for. A Google button that
-  // answers "provider not found" is worse than no Google button.
   // Always shown, as in the design. A provider the server is not set up
   // for says so when tapped rather than failing with "provider not found".
   const bootstrap = useQuery({ queryKey: ['bootstrap'], queryFn: api.bootstrap });
@@ -214,10 +212,6 @@ function AuthSheet({ reason, onClose }: { reason: string | null; onClose: () => 
           {error}
         </Body>
       ) : null}
-
-      <Caption align="center" style={{ marginTop: 16 }}>
-        By continuing you agree to Nima's terms and privacy notice.
-      </Caption>
     </Sheet>
   );
 }

@@ -18,7 +18,7 @@ import Svg, { Path } from 'react-native-svg';
 import { useAuthGate } from '../../src/components/auth-gate';
 import { Button } from '../../src/components/button';
 import { Body, BodyStrong, Caption, Micro, Price, Title } from '../../src/components/text';
-import { TryOnResultSheet, useTryOn } from '../../src/components/try-on';
+import { TryOnResultSheet, useTryOn, useTryOnAvailable } from '../../src/components/try-on';
 import { ApiError, api } from '../../src/lib/api';
 import { useTheme } from '../../src/theme/index';
 
@@ -67,6 +67,7 @@ export default function ProductScreen() {
   });
 
   const tryOn = useTryOn();
+  const canTryOn = useTryOnAvailable();
 
   if (product.isLoading) {
     return (
@@ -205,22 +206,29 @@ export default function ProductScreen() {
               </View>
             ) : null}
 
-            <Button
-              label={tryOn.busy ? 'Nima is dressing you' : 'See it on me'}
-              loading={tryOn.busy}
-              onPress={() =>
-                tryOn.start({
-                  kind: 'SINGLE_ITEM',
-                  items: [
-                    {
-                      slot: slotFor(item.category),
-                      productId: item.id,
-                      ...(variantId ? { variantId } : {}),
-                    },
-                  ],
-                })
-              }
-            />
+            {canTryOn ? null : (
+              <Caption align="center">
+                Seeing pieces on yourself is switched off in this preview. It is back soon.
+              </Caption>
+            )}
+            {canTryOn ? (
+              <Button
+                label={tryOn.busy ? 'Nima is dressing you' : 'See it on me'}
+                loading={tryOn.busy}
+                onPress={() =>
+                  tryOn.start({
+                    kind: 'SINGLE_ITEM',
+                    items: [
+                      {
+                        slot: slotFor(item.category),
+                        productId: item.id,
+                        ...(variantId ? { variantId } : {}),
+                      },
+                    ],
+                  })
+                }
+              />
+            ) : null}
 
             {/*
               Buying comes second, under the try-on, because seeing it on
@@ -245,9 +253,13 @@ export default function ProductScreen() {
               </Body>
             ) : null}
 
-            {bootstrap.data?.user && !bootstrap.data.user.isAnonymous ? (
+            {canTryOn && bootstrap.data?.user && !bootstrap.data.user.isAnonymous ? (
               <Caption align="center">
-                {`${bootstrap.data.credits.balance} credits left, one per try-on`}
+                {(() => {
+                  const balance = bootstrap.data.credits.balance;
+                  const cost = bootstrap.data.costs.tryOnSingleItem ?? 1;
+                  return `${balance} ${balance === 1 ? 'credit' : 'credits'} left, ${cost === 1 ? 'one' : cost} per try-on`;
+                })()}
               </Caption>
             ) : null}
 

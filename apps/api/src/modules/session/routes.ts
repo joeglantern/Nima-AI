@@ -41,6 +41,8 @@ export const sessionRoutes: FastifyPluginAsyncZod = async (app) => {
               directMessages: z.boolean(),
               ghostMannequin: z.boolean(),
               promotions: z.boolean(),
+              /** Off until an image provider is set up, so nobody waits on a job that cannot run. */
+              tryOn: z.boolean(),
             }),
             /** Only buttons for ways in that are set up get shown. */
             signIn: z.object({ google: z.boolean(), apple: z.boolean(), email: z.boolean() }),
@@ -51,6 +53,8 @@ export const sessionRoutes: FastifyPluginAsyncZod = async (app) => {
     },
     async (request) => {
       const settings = await app.services.settings.get();
+
+      const features = { ...settings.features, tryOn: Boolean(app.env.GEMINI_API_KEY) };
 
       const signIn = {
         google: Boolean(app.env.GOOGLE_CLIENT_ID && app.env.GOOGLE_CLIENT_SECRET),
@@ -67,7 +71,7 @@ export const sessionRoutes: FastifyPluginAsyncZod = async (app) => {
             nextGrantAt: null,
           },
           costs: settings.creditCosts as unknown as Record<string, number>,
-          features: settings.features,
+          features,
           signIn,
           fitNotice,
         };
@@ -103,7 +107,7 @@ export const sessionRoutes: FastifyPluginAsyncZod = async (app) => {
           nextGrantAt: balance.nextGrantAt?.toISOString() ?? null,
         },
         costs: settings.creditCosts as unknown as Record<string, number>,
-        features: settings.features,
+        features,
         signIn,
         fitNotice,
       };

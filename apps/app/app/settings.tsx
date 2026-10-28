@@ -8,6 +8,7 @@
  */
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import Constants from 'expo-constants';
 import { Stack, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Alert, Platform, Pressable, ScrollView, View } from 'react-native';
@@ -55,7 +56,9 @@ export default function SettingsScreen() {
     // Alert does not exist on the web, where a window confirm is the native
     // thing and is what a browser user expects.
     if (Platform.OS === 'web') {
-      void endSession();
+      if (globalThis.confirm?.('Sign out? Your looks stay on your account.') ?? true) {
+        void endSession();
+      }
       return;
     }
 
@@ -193,7 +196,7 @@ export default function SettingsScreen() {
           </Group>
 
           <Group title="About">
-            <Field label="Version" value="0.1.0, in development" />
+            <Field label="Version" value={Constants.expoConfig?.version ?? '0.1.0'} />
             <Body tone="muted">
               Nima shows you how something looks, not how it will fit. Check the seller's size guide
               before you buy.

@@ -188,7 +188,7 @@ export default function SellerHome() {
                 <ActivityIndicator color={colors.primary} style={{ marginTop: 30 }} />
               ) : (
                 <EmptyState
-                  art="sparkle"
+                  art="parcel"
                   message="No orders yet. When someone buys, it lands here and on your phone."
                 />
               )

@@ -116,8 +116,23 @@ export default function AskScreen() {
     onError: (error) => {
       if (error instanceof ApiError && error.needsAccount) {
         requireAccount('Create an account to talk to Nima');
+        setTurns((current) => current.slice(0, -1));
+        return;
       }
-      setTurns((current) => current.slice(0, -1));
+      // Say so, in Nima's place, rather than leave the question hanging.
+      setTurns((current) => [
+        ...current.slice(0, -1),
+        {
+          id: `nima-${Date.now()}`,
+          role: 'nima',
+          text:
+            error instanceof ApiError && error.status === 429
+              ? 'Give me a moment, that was a lot of questions at once. Try again shortly.'
+              : 'I could not answer that just now. Try again in a moment.',
+          products: [],
+          streaming: false,
+        },
+      ]);
     },
   });
 

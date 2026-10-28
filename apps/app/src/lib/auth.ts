@@ -10,6 +10,7 @@ import { expoClient } from '@better-auth/expo/client';
 import { AUTH_COOKIE_PREFIX } from '@nima/contracts';
 import { anonymousClient, emailOTPClient, magicLinkClient } from 'better-auth/client/plugins';
 import { createAuthClient } from 'better-auth/react';
+import { Platform } from 'react-native';
 import { API_URL } from './config';
 import { sessionStorage } from './session-storage';
 
@@ -73,12 +74,18 @@ export async function verifyEmailCode(email: string, otp: string): Promise<void>
   }
 }
 
+/** Where a provider sends someone back to: the app on a phone, this page on the web. */
+function returnTo(): string {
+  if (Platform.OS === 'web' && typeof window !== 'undefined') return `${window.location.origin}/`;
+  return 'nima://';
+}
+
 export async function signInWithGoogle(): Promise<void> {
-  await authClient.signIn.social({ provider: 'google', callbackURL: 'nima://' });
+  await authClient.signIn.social({ provider: 'google', callbackURL: returnTo() });
 }
 
 export async function signInWithApple(): Promise<void> {
-  await authClient.signIn.social({ provider: 'apple', callbackURL: 'nima://' });
+  await authClient.signIn.social({ provider: 'apple', callbackURL: returnTo() });
 }
 
 /**

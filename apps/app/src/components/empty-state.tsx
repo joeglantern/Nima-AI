@@ -11,7 +11,17 @@ import Svg, { Circle, Path, Rect } from 'react-native-svg';
 import { useTheme } from '../theme/index';
 import { Body } from './text';
 
-export type EmptyArt = 'hanger' | 'book' | 'cart' | 'sparkle' | 'wardrobe';
+export type EmptyArt =
+  | 'hanger'
+  | 'book'
+  | 'cart'
+  | 'sparkle'
+  | 'wardrobe'
+  | 'heart'
+  | 'chat'
+  | 'parcel'
+  | 'person'
+  | 'cloud';
 
 function Art({ kind, color, size }: { kind: EmptyArt; color: string; size: number }) {
   const common = {
@@ -56,6 +66,43 @@ function Art({ kind, color, size }: { kind: EmptyArt; color: string; size: numbe
           <Path d="M48 16v64M41 44v6M55 44v6" {...common} />
         </Svg>
       );
+    case 'heart':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 96 96">
+          <Path
+            d="M48 76S20 59 20 39a14 14 0 0 1 28-5 14 14 0 0 1 28 5c0 20-28 37-28 37Z"
+            {...common}
+          />
+        </Svg>
+      );
+    case 'chat':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 96 96">
+          <Path d="M20 26h56v36H44L30 74V62H20V26Z" {...common} />
+          <Path d="M34 44h.01M48 44h.01M62 44h.01" {...common} strokeWidth={5} />
+        </Svg>
+      );
+    case 'parcel':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 96 96">
+          <Path d="M48 18 76 32v32L48 78 20 64V32l28-14Z" {...common} />
+          <Path d="M20 32l28 14 28-14M48 46v32M34 25l28 14" {...common} />
+        </Svg>
+      );
+    case 'person':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 96 96">
+          <Circle cx={48} cy={36} r={13} {...common} />
+          <Path d="M24 76c2-14 12-22 24-22s22 8 24 22" {...common} />
+        </Svg>
+      );
+    case 'cloud':
+      return (
+        <Svg width={size} height={size} viewBox="0 0 96 96">
+          <Path d="M30 66h38a14 14 0 0 0 1-28 20 20 0 0 0-38-4 16 16 0 0 0-1 32Z" {...common} />
+          <Path d="M40 52l16 0" {...common} />
+        </Svg>
+      );
     default:
       return (
         <Svg width={size} height={size} viewBox="0 0 96 96">
@@ -72,7 +119,7 @@ export interface EmptyStateProps {
   action?: React.ReactNode;
 }
 
-export function EmptyState({ art = 'sparkle', message, action }: EmptyStateProps) {
+export function EmptyState({ art = 'hanger', message, action }: EmptyStateProps) {
   const { colors, isCompact } = useTheme();
 
   return (

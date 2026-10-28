@@ -12,7 +12,7 @@
  */
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Stack, useRouter } from 'expo-router';
+import { Redirect, Stack, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -32,7 +32,14 @@ import { useTheme } from '../src/theme/index';
 
 type Stage = 'form' | 'waiting' | 'paid' | 'failed';
 
-export default function CheckoutScreen() {
+/** Payments off means nothing to pay with yet, so the basket explains. */
+export default function CheckoutGate() {
+  const bootstrap = useQuery({ queryKey: ['bootstrap'], queryFn: api.bootstrap });
+  if (bootstrap.data && !bootstrap.data.features.checkout) return <Redirect href="/cart" />;
+  return <CheckoutScreen />;
+}
+
+function CheckoutScreen() {
   const { colors, gutter, radius, isWide } = useTheme();
   const queryClient = useQueryClient();
   const router = useRouter();

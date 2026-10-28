@@ -19,6 +19,7 @@ import { Button } from './button';
 import { Avatar } from './feed-post';
 import { Sheet } from './sheet';
 import { Body, BodyStrong, Caption, Price } from './text';
+import { useTryOnAvailable } from './try-on';
 
 const SLOT_NAMES: Record<string, string> = {
   TOP: 'Top',
@@ -43,6 +44,8 @@ export function PiecesSheet({
 }) {
   const { colors } = useTheme();
   const router = useRouter();
+
+  const canTryOn = useTryOnAvailable();
 
   const look = useQuery({
     queryKey: ['look', lookId],
@@ -170,7 +173,7 @@ export function PiecesSheet({
           ) : null}
 
           <View style={{ gap: 10, marginTop: 4 }}>
-            {item.canRecreate ? (
+            {item.canRecreate && canTryOn ? (
               <Button
                 label="Try it on me"
                 onPress={() => {

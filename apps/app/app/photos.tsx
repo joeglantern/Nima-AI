@@ -14,7 +14,7 @@ import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { Stack, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { Body, BodyStrong, Caption, Micro, Title } from '../src/components/text';
 import { api } from '../src/lib/api';
@@ -28,6 +28,8 @@ export default function PhotosScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [busy, setBusy] = useState<PhotoKind | null>(null);
+  // Shown on the screen, because Alert does nothing in a browser.
+  const [problem, setProblem] = useState<string | null>(null);
 
   const photos = useQuery({ queryKey: ['photos'], queryFn: api.photos });
 
@@ -39,7 +41,7 @@ export default function PhotosScreen() {
   async function pickAndUpload(kind: PhotoKind) {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
-      Alert.alert('Nima needs access to your photos', 'You can change this in settings.');
+      setProblem('Nima needs access to your photos. You can allow it in your phone settings.');
       return;
     }
 
@@ -54,6 +56,7 @@ export default function PhotosScreen() {
     if (picked.canceled || !asset) return;
 
     setBusy(kind);
+    setProblem(null);
 
     try {
       const { storageKey } = await uploadImage(asset, 'USER_PHOTO');
@@ -68,9 +71,8 @@ export default function PhotosScreen() {
 
       await queryClient.invalidateQueries({ queryKey: ['photos'] });
     } catch (error) {
-      Alert.alert(
-        'That photo did not upload',
-        error instanceof Error ? error.message : 'Try again in a moment.',
+      setProblem(
+        `That photo did not upload. ${error instanceof Error ? error.message : 'Try again in a moment.'}`,
       );
     } finally {
       setBusy(null);
@@ -146,6 +148,12 @@ export default function PhotosScreen() {
           onAdd={() => void pickAndUpload('UPPER_BODY')}
           onRemove={(id) => remove.mutate(id)}
         />
+
+        {problem ? (
+          <Caption tone="critical" align="center">
+            {problem}
+          </Caption>
+        ) : null}
 
         {items.length === 0 && !photos.isLoading ? (
           <Caption align="center" style={{ paddingTop: 4 }}>

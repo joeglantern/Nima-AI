@@ -51,6 +51,12 @@ export class TryOnService {
   async start(input: StartTryOnInput, request: FastifyRequest): Promise<StartTryOnResult> {
     const { app } = this;
 
+    // Without an image provider the job would wait forever, after being
+    // paid for. Refuse before anything is charged.
+    if (!app.env.GEMINI_API_KEY) {
+      throw errors.providerUnavailable('Try-ons are switched off for now. They will be back soon.');
+    }
+
     // One person cannot fill the queue.
     const running = await app.prisma.tryOnJob.count({
       where: { userId: input.userId, status: { in: ['QUEUED', 'RUNNING'] } },
@@ -58,7 +64,9 @@ export class TryOnService {
 
     if (running >= app.env.MAX_CONCURRENT_AI_JOBS) {
       throw errors.conflict(
-        `You already have ${running} images being made. Wait for those to finish.`,
+        running === 1
+          ? 'One of your try-ons is still being made. Wait for it to finish.'
+          : `${running} of your try-ons are still being made. Wait for those to finish.`,
       );
     }
 

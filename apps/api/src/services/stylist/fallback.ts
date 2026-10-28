@@ -60,6 +60,16 @@ export interface FallbackAnswer {
   productIds: string[];
 }
 
+/** How an occasion reads in a sentence: "for a wedding", "for the office". */
+const OCCASION_PHRASE: Record<string, string> = {
+  wedding: 'a wedding',
+  office: 'the office',
+  weekend: 'the weekend',
+  'date night': 'a date night',
+  celebration: 'a celebration',
+  holiday: 'a holiday',
+};
+
 export async function answerWithoutModel(
   app: FastifyInstance,
   input: { userId: string; message: string; context?: { occasion?: string } },
@@ -131,12 +141,20 @@ export async function answerWithoutModel(
 
   const parts: string[] = [];
   const first = products[0];
+  const budget = maxCents
+    ? `under KSh ${Math.round(maxCents / 100).toLocaleString('en-KE')}`
+    : null;
 
-  if (occasion) parts.push(`For ${occasion}`);
-  else if (category) parts.push('Here is what fits');
-  else parts.push('Here is what I would start with');
+  if (occasion) parts.push(`For ${OCCASION_PHRASE[occasion] ?? occasion}`);
+  else if (category) parts.push('These would work');
+  else if (!budget) {
+    // Nothing to go on yet. Ask, and still put a few pieces in front of them.
+    parts.push(
+      'Tell me where you are going and roughly what you want to spend, and I will narrow it down. A few to start with',
+    );
+  } else parts.push('Here is what I found');
 
-  if (maxCents) parts.push(`under KSh ${Math.round(maxCents / 100).toLocaleString('en-KE')}`);
+  if (budget) parts.push(budget);
 
   const opener = `${parts.join(' ')}.`;
   const detail = first

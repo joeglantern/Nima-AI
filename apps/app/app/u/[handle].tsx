@@ -97,7 +97,7 @@ export default function PersonScreen() {
       <View style={{ flex: 1, backgroundColor: colors.ground, paddingTop: insets.top }}>
         <Header onBack={() => (router.canGoBack() ? router.back() : router.replace('/'))} />
         <EmptyState
-          art="sparkle"
+          art="person"
           message={gone ? 'There is nobody by that handle.' : 'That page could not be loaded.'}
         />
       </View>

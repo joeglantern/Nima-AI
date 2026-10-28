@@ -47,9 +47,32 @@ RUN pnpm --filter @nima/db generate \
   && pnpm --filter @nima/api build \
   && pnpm --filter @nima/worker build
 
+# ------------------------------------------------------------- web ---
+# The Expo web app, exported to static files. The API serves them, so the
+# web app and the API share one address and the sign in cookie stays first
+# party. Its own install, because the app pulls in React Native and the
+# server images should not carry that.
+FROM base AS web
+ENV CI=1 EXPO_NO_TELEMETRY=1
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
+COPY apps/api/package.json apps/api/
+COPY apps/worker/package.json apps/worker/
+COPY apps/app/package.json apps/app/
+COPY packages/config/package.json packages/config/
+COPY packages/contracts/package.json packages/contracts/
+COPY packages/db/package.json packages/db/
+COPY packages/jobs/package.json packages/jobs/
+RUN pnpm install --frozen-lockfile --filter "@nima/app..."
+COPY tsconfig.base.json ./
+COPY packages/contracts/ packages/contracts/
+COPY apps/app/ apps/app/
+RUN pnpm --filter @nima/contracts build   && cd apps/app   && pnpm exec expo export --platform web --output-dir dist
+
 # ------------------------------------------------------------- api ---
 FROM build AS api
 ENV NODE_ENV=production
+COPY --from=web /app/apps/app/dist /app/web
+ENV WEB_DIR=/app/web
 WORKDIR /app/apps/api
 EXPOSE 3333
 HEALTHCHECK --interval=20s --timeout=5s --start-period=40s --retries=5 \

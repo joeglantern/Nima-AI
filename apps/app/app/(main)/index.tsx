@@ -263,7 +263,7 @@ export default function ForYouScreen() {
     if (feed.isError) {
       return (
         <EmptyState
-          art="sparkle"
+          art="cloud"
           message={
             feed.error instanceof ApiError
               ? feed.error.message
@@ -312,7 +312,7 @@ export default function ForYouScreen() {
         ListEmptyComponent={
           body ?? (
             <EmptyState
-              art="sparkle"
+              art="hanger"
               message={
                 occasion
                   ? 'Nothing for this occasion yet. Try another circle, or see everything.'
