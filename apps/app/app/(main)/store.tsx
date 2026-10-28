@@ -18,6 +18,7 @@ import Svg, { Circle, Path } from 'react-native-svg';
 import { useAuthGate } from '../../src/components/auth-gate';
 import { Button } from '../../src/components/button';
 import { type EmptyArt, EmptyState } from '../../src/components/empty-state';
+import { Avatar } from '../../src/components/feed-post';
 import { LookbooksTab } from '../../src/components/lookbooks-tab';
 import { Sheet } from '../../src/components/sheet';
 import { Body, BodyStrong, Caption, Eyebrow, Micro, Price, Title } from '../../src/components/text';
@@ -359,14 +360,17 @@ function ProfileCard({
   const size = width < 400 ? 84 : 96;
   const name = user ? user.name?.trim() || 'You' : 'Your Nima';
   const initial = name.trim().charAt(0).toUpperCase() || 'N';
+  const router = useRouter();
 
-  // Yours to see and nobody else's: there is no public follower count.
-  const follows = useQuery({
-    queryKey: ['my-follows'],
-    queryFn: api.myFollows,
+  // Faces of the people you follow, never a count. Nima shows no follower
+  // or following totals to anyone, you included.
+  const circle = useQuery({
+    queryKey: ['circle'],
+    queryFn: () => api.circle(),
     enabled: Boolean(user && !user.isAnonymous),
     staleTime: 60_000,
   });
+  const faces = circle.data?.items.slice(0, 5) ?? [];
 
   return (
     <View
@@ -485,30 +489,36 @@ function ProfileCard({
           <Caption align="center">Sign in to keep your looks, wardrobe and orders</Caption>
         )}
 
-        {follows.data ? (
-          <View
-            style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8 }}
-            accessibilityLabel={`${follows.data.followers} followers, ${follows.data.following} following. Only you can see this.`}
+        {faces.length ? (
+          <Pressable
+            onPress={() => router.push('/circle')}
+            accessibilityRole="button"
+            accessibilityLabel="Your circle, the people you follow"
+            style={({ pressed }) => ({
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 10,
+              marginTop: 10,
+              opacity: pressed ? 0.7 : 1,
+            })}
           >
-            <BodyStrong style={{ fontSize: 14 }}>
-              {follows.data.followers.toLocaleString('en-KE')}
-            </BodyStrong>
-            <Caption>{follows.data.followers === 1 ? 'follower' : 'followers'}</Caption>
-            <Caption>·</Caption>
-            <BodyStrong style={{ fontSize: 14 }}>
-              {follows.data.following.toLocaleString('en-KE')}
-            </BodyStrong>
-            <Caption>following</Caption>
-            <Svg width={13} height={13} viewBox="0 0 24 24" style={{ marginLeft: 2 }}>
-              <Path
-                d="M7 11V8a5 5 0 0 1 10 0v3M6 11h12v9H6z"
-                stroke={colors.muted}
-                strokeWidth={1.8}
-                strokeLinejoin="round"
-                fill="none"
-              />
-            </Svg>
-          </View>
+            <View style={{ flexDirection: 'row' }}>
+              {faces.map((person, index) => (
+                <View
+                  key={person.id}
+                  style={{
+                    marginLeft: index === 0 ? 0 : -8,
+                    borderRadius: 999,
+                    borderWidth: 2,
+                    borderColor: colors.surface,
+                  }}
+                >
+                  <Avatar url={person.avatar?.url} name={person.displayName} size={26} />
+                </View>
+              ))}
+            </View>
+            <Caption tone="ink">Your circle</Caption>
+          </Pressable>
         ) : null}
 
         <View
@@ -707,7 +717,7 @@ function ShopCard() {
           {store
             ? waiting
               ? `${waiting} ${waiting === 1 ? 'order' : 'orders'} waiting to be packed`
-              : `${store.stats.activeProducts} in the shop · ${store.stats.followers} ${store.stats.followers === 1 ? 'follower' : 'followers'}`
+              : `${store.stats.activeProducts} ${store.stats.activeProducts === 1 ? 'piece' : 'pieces'} in the shop`
             : 'Open a shop and let people try your pieces on before they buy'}
         </Caption>
       </View>

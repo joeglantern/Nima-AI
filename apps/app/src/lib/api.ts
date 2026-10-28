@@ -543,7 +543,8 @@ export const api = {
       method: blocked ? 'POST' : 'DELETE',
     }),
 
-  myFollows: () => request<{ followers: number; following: number }>('/v1/me/follows'),
+  circle: (cursor?: string) =>
+    request<Page<Peer>>('/v1/me/circle', { query: { cursor, limit: 50 } }),
 
   people: (q?: string) => request<{ items: Peer[] }>('/v1/me/people', { query: { q } }),
 

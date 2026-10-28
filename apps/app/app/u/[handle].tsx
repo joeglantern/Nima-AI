@@ -18,6 +18,7 @@ import { useAuthGate } from '../../src/components/auth-gate';
 import { Button } from '../../src/components/button';
 import { LookCard } from '../../src/components/cards';
 import { EmptyState } from '../../src/components/empty-state';
+import { Avatar } from '../../src/components/feed-post';
 import { Sheet } from '../../src/components/sheet';
 import { Body, BodyStrong, Caption, Micro, Title } from '../../src/components/text';
 import { ApiError, api } from '../../src/lib/api';
@@ -175,6 +176,31 @@ export default function PersonScreen() {
                 </Title>
                 <Caption align="center">{`@${profile.handle}`}</Caption>
 
+                {profile.knownFollowers && !isMe ? (
+                  <View
+                    style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 }}
+                  >
+                    <View style={{ flexDirection: 'row' }}>
+                      {profile.knownFollowers.people.map((person, index) => (
+                        <View
+                          key={person.handle}
+                          style={{
+                            marginLeft: index === 0 ? 0 : -6,
+                            borderRadius: 999,
+                            borderWidth: 2,
+                            borderColor: colors.ground,
+                          }}
+                        >
+                          <Avatar url={person.avatar?.url} name={person.displayName} size={22} />
+                        </View>
+                      ))}
+                    </View>
+                    <Caption tone="ink" style={{ flexShrink: 1 }}>
+                      {knownLine(profile.knownFollowers)}
+                    </Caption>
+                  </View>
+                ) : null}
+
                 {profile.bio ? (
                   <Body align="center" style={{ marginTop: 6, maxWidth: 420 }}>
                     {profile.bio}
@@ -308,6 +334,15 @@ export default function PersonScreen() {
       </Sheet>
     </>
   );
+}
+
+/** "Followed by Amani", "Followed by Amani and Wanjiru", "Followed by Amani and 3 others you follow". */
+function knownLine(known: { people: Array<{ displayName: string }>; others: number }): string {
+  const names = known.people.map((p) => p.displayName.split(' ')[0]);
+  if (known.others > 0) {
+    return `Followed by ${names.join(', ')} and ${known.others} ${known.others === 1 ? 'other' : 'others'} you follow`;
+  }
+  return `Followed by ${names.join(' and ')}`;
 }
 
 function Header({ onBack, onMore }: { onBack: () => void; onMore?: () => void }) {

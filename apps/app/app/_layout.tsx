@@ -203,6 +203,7 @@ function Shell({ showWelcome }: { showWelcome: boolean }) {
         <Stack.Screen name="password" options={{ presentation: 'card' }} />
         <Stack.Screen name="u/[handle]" options={{ presentation: 'card' }} />
         <Stack.Screen name="activity" options={{ presentation: 'card' }} />
+        <Stack.Screen name="circle" options={{ presentation: 'card' }} />
         <Stack.Screen name="messages/index" options={{ presentation: 'card' }} />
         <Stack.Screen name="messages/[id]" options={{ presentation: 'card' }} />
         <Stack.Screen name="sell/index" options={{ presentation: 'card' }} />

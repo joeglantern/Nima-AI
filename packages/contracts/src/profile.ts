@@ -44,6 +44,19 @@ export const publicProfileSchema = z.object({
    * field simply does not exist on the public shape.
    */
   joinedAt: z.string(),
+  /**
+   * People the viewer follows who also follow this person. Faces and names,
+   * never a total: "Followed by Amani and 2 others you follow".
+   */
+  knownFollowers: z
+    .object({
+      people: z.array(
+        z.object({ handle: z.string(), displayName: z.string(), avatar: imageSchema.nullable() }),
+      ),
+      others: z.number().int(),
+    })
+    .nullable()
+    .default(null),
 });
 
 export const updateProfileSchema = z.object({

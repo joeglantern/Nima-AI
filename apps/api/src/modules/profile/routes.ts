@@ -44,7 +44,8 @@ export const profileRoutes: FastifyPluginAsyncZod = async (app) => {
       schema: {
         tags: ['profile'],
         summary: 'A public profile',
-        description: 'Follower counts are deliberately absent: they are never public.',
+        description:
+          'Follower counts are deliberately absent, here and everywhere. knownFollowers names people the viewer follows who follow this person.',
         params: z.object({ handle: handleSchema }),
         response: { 200: publicProfileSchema },
       },
@@ -72,10 +73,55 @@ export const profileRoutes: FastifyPluginAsyncZod = async (app) => {
         throw errors.notFound('That profile');
       }
 
+      // Who you know that follows them. Two faces and how many more, never
+      // their total: it says "you have friends in common", not "they rank".
+      let knownFollowers: {
+        people: Array<{
+          handle: string;
+          displayName: string;
+          avatar: ReturnType<typeof publicImage>;
+        }>;
+        others: number;
+      } | null = null;
+      if (viewer && viewer.id !== profile.user.id) {
+        const mutual = {
+          followedId: profile.user.id,
+          follower: { followers: { some: { followerId: viewer.id } } },
+        };
+        const [rows, count] = await Promise.all([
+          app.prisma.follow.findMany({
+            where: mutual,
+            orderBy: { createdAt: 'desc' },
+            take: 2,
+            select: {
+              follower: {
+                select: {
+                  profile: { select: { handle: true, displayName: true, avatarKey: true } },
+                },
+              },
+            },
+          }),
+          app.prisma.follow.count({ where: mutual }),
+        ]);
+        const people = rows.flatMap((row) =>
+          row.follower.profile
+            ? [
+                {
+                  handle: row.follower.profile.handle,
+                  displayName: row.follower.profile.displayName,
+                  avatar: publicImage(app.storage, row.follower.profile.avatarKey),
+                },
+              ]
+            : [],
+        );
+        if (people.length) knownFollowers = { people, others: Math.max(0, count - people.length) };
+      }
+
       return {
         id: profile.user.id,
         handle: profile.handle,
         displayName: profile.displayName,
+        knownFollowers,
         bio: profile.bio,
         link: profile.link,
         avatar: publicImage(app.storage, profile.avatarKey),
@@ -456,6 +502,7 @@ export const profileRoutes: FastifyPluginAsyncZod = async (app) => {
         avatar: publicImage(app.storage, profile.avatarKey),
         isPrivate: profile.isPrivate,
         isFollowing: null,
+        knownFollowers: null,
         store: profile.user.store ? storeCard(app.storage, profile.user.store) : null,
         joinedAt: profile.createdAt.toISOString(),
       };

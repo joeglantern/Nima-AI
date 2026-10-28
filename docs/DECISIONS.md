@@ -232,3 +232,25 @@ Styling is plain React Native objects from `src/theme`, which both
 platforms read the same way. `global.css` stays as plain CSS for the one
 thing that only exists on the web: the page around the app shell.
 
+
+---
+
+## 16. No follower numbers, anywhere, for anyone
+
+People follow people, and the button says Follow because everyone already
+knows what it means. What Nima drops is the number. A count on a profile turns
+a person into a score, and on a style app that score is read as how good your
+taste is, which is exactly the feeling that stops people posting.
+
+So there are no follower or following totals in any response, public or
+private, including on your own profile. In their place:
+
+- **Your circle**: the faces of the people you follow, on My Store and as a
+  list. Who follows you arrives in Activity, one person at a time.
+- **Followed by people you know**: someone's page names up to two people you
+  follow who also follow them, plus how many more of *your* people do. It
+  says you have friends in common, not where they rank.
+
+Shops are the exception, and only behind the counter: a seller sees how many
+people follow their shop on their own dashboard, because that is a business
+number they need. It is never shown to customers.

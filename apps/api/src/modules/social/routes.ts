@@ -15,11 +15,11 @@
  */
 
 import {
+  circleSchema,
   conversationListQuerySchema,
   conversationPeerSchema,
   conversationSchema,
   followStateSchema,
-  followSummarySchema,
   handleSchema,
   idSchema,
   messageListQuerySchema,
@@ -230,23 +230,36 @@ export const socialRoutes: FastifyPluginAsyncZod = async (app) => {
   );
 
   app.get(
-    '/me/follows',
+    '/me/circle',
     {
       preHandler: app.requireAccount,
       schema: {
         tags: ['social'],
-        summary: 'My own follower and following counts',
-        description: 'Only for the person themselves. There is no public version of this.',
-        response: { 200: followSummarySchema },
+        summary: 'The people I follow',
+        description: 'Faces, newest first. There are no follower or following totals anywhere.',
+        querystring: paginationQuerySchema,
+        response: { 200: circleSchema },
       },
     },
     async (request) => {
       const user = request.requireUser();
-      const [followers, following] = await Promise.all([
-        app.prisma.follow.count({ where: { followedId: user.id } }),
-        app.prisma.follow.count({ where: { followerId: user.id, followedId: { not: null } } }),
-      ]);
-      return { followers, following };
+      const { limit, cursor } = request.query;
+
+      const rows = await app.prisma.follow.findMany({
+        where: { followerId: user.id, followedId: { not: null } },
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+        take: limit + 1,
+        ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+        select: { id: true, followed: { select: peerSelect } },
+      });
+
+      const hasMore = rows.length > limit;
+      const page = hasMore ? rows.slice(0, limit) : rows;
+
+      return {
+        items: page.flatMap((row) => (row.followed ? [peer(app, row.followed)] : [])),
+        nextCursor: hasMore ? (page.at(-1)?.id ?? null) : null,
+      };
     },
   );
 

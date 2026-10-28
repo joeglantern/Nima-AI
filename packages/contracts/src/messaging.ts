@@ -125,10 +125,14 @@ export const registerPushTokenSchema = z.object({
 
 export const followStateSchema = z.object({ following: z.boolean() });
 
-/** Only ever shown to the person themselves. Counts are never public. */
-export const followSummarySchema = z.object({
-  followers: z.number().int(),
-  following: z.number().int(),
+/**
+ * The people you follow, as faces. Nima shows no follower or following
+ * totals anywhere, to anyone, including the person themselves: a number on a
+ * profile turns people into a score.
+ */
+export const circleSchema = z.object({
+  items: z.array(conversationPeerSchema),
+  nextCursor: z.string().nullable(),
 });
 
 /** Sharing one thing with a few people at once, from the send sheet. */
