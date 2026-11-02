@@ -93,6 +93,77 @@ export function Avatar({
 
 type MarkName = 'love' | 'ask' | 'send' | 'hang';
 
+/**
+ * The clips that play when an action is taken: an embroidered heart stitching
+ * itself, a linen speech bubble inflating, a card tag folding into a paper
+ * plane, a wooden hanger swinging. Each plays once over the drawn mark, then
+ * the ones with a lasting state hold their last frame.
+ */
+const MOTION = {
+  love: {
+    clip: require('../../assets/motion/heart.webp'),
+    still: require('../../assets/motion/heart-still.webp'),
+    size: 52,
+    top: 13,
+  },
+  ask: { clip: require('../../assets/motion/bubble.webp'), still: null, size: 56, top: 11 },
+  send: { clip: require('../../assets/motion/plane.webp'), still: null, size: 58, top: 8 },
+  hang: {
+    clip: require('../../assets/motion/hanger.webp'),
+    still: require('../../assets/motion/hanger-still.webp'),
+    size: 62,
+    top: 6,
+  },
+} as const;
+
+/** A little longer than the clips, so the last frame is on screen before the swap. */
+const CLIP_MS = 2700;
+
+function Motion({
+  name,
+  playingSince,
+  on,
+}: {
+  name: MarkName;
+  /** When the clip was last started. A new value restarts it. */
+  playingSince: number | null;
+  /** Whether the lasting state holds once the clip has played. */
+  on: boolean;
+}) {
+  const spec = MOTION[name];
+  const [playing, setPlaying] = useState(false);
+
+  useEffect(() => {
+    if (!playingSince) return;
+    setPlaying(true);
+    const timer = setTimeout(() => setPlaying(false), CLIP_MS);
+    return () => clearTimeout(timer);
+  }, [playingSince]);
+
+  const source = playing ? spec.clip : on ? spec.still : null;
+  if (!source) return null;
+
+  return (
+    <View
+      pointerEvents="none"
+      style={{
+        position: 'absolute',
+        top: spec.top,
+        left: 36 - spec.size / 2,
+        width: spec.size,
+        height: spec.size,
+      }}
+    >
+      <Image
+        key={playing ? String(playingSince) : 'still'}
+        source={source}
+        style={{ width: '100%', height: '100%' }}
+        contentFit="contain"
+      />
+    </View>
+  );
+}
+
 /** One word set along a curve. */
 function Curved({ id, d, color, word }: { id: string; d: string; color: string; word: string }) {
   return (
@@ -238,6 +309,7 @@ function useLookActions(look: LookCardData) {
   return {
     liked,
     saved,
+    signedIn,
     toggleLike: () => {
       if (!signedIn) {
         requireAccount('Create an account to keep what you love');
@@ -463,9 +535,13 @@ export const FeedPost = memo(function FeedPost({
 }: FeedPostProps) {
   const { colors, width } = useTheme();
   const router = useRouter();
-  const { liked, saved, toggleLike, toggleSave } = useLookActions(look);
+  const { liked, saved, signedIn, toggleLike, toggleSave } = useLookActions(look);
   const [piece, setPiece] = useState<number | null>(null);
   const [heartScale, popHeart] = usePop();
+
+  // Which clips are playing, by when they started.
+  const [motion, setMotion] = useState<Partial<Record<MarkName, number>>>({});
+  const play = (name: MarkName) => setMotion((current) => ({ ...current, [name]: Date.now() }));
 
   // The hanger swings on its hook when you hang something on it.
   const sway = useRef(new Animated.Value(0)).current;
@@ -574,7 +650,10 @@ export const FeedPost = memo(function FeedPost({
       >
         <Pressable
           onPress={() => {
-            if (!liked) popHeart();
+            if (!liked) {
+              popHeart();
+              if (signedIn) play('love');
+            }
             toggleLike();
           }}
           accessibilityRole="button"
@@ -582,26 +661,42 @@ export const FeedPost = memo(function FeedPost({
           accessibilityState={{ selected: liked }}
         >
           <Animated.View style={{ transform: [{ scale: heartScale }] }}>
-            <Mark name="love" uid={`l${look.id}`} color={liked ? colors.accent : colors.ink} on={liked} />
+            <Mark name="love" uid={`l${look.id}`} color={liked ? colors.accent : colors.ink} />
+            <Motion name="love" playingSince={motion.love ?? null} on={liked} />
           </Animated.View>
         </Pressable>
         <Pressable
-          onPress={() => onComments(look.id)}
+          onPress={() => {
+            play('ask');
+            onComments(look.id);
+          }}
           accessibilityRole="button"
           accessibilityLabel="Ask about this look"
         >
-          <Mark name="ask" uid={`a${look.id}`} color={colors.ink} />
-        </Pressable>
-        <Pressable
-          onPress={() => onSend(look.id)}
-          accessibilityRole="button"
-          accessibilityLabel="Send to a friend"
-        >
-          <Mark name="send" uid={`s${look.id}`} color={colors.ink} />
+          <View>
+            <Mark name="ask" uid={`a${look.id}`} color={colors.ink} />
+            <Motion name="ask" playingSince={motion.ask ?? null} on={false} />
+          </View>
         </Pressable>
         <Pressable
           onPress={() => {
-            if (!saved) swing();
+            play('send');
+            onSend(look.id);
+          }}
+          accessibilityRole="button"
+          accessibilityLabel="Send to a friend"
+        >
+          <View>
+            <Mark name="send" uid={`s${look.id}`} color={colors.ink} />
+            <Motion name="send" playingSince={motion.send ?? null} on={false} />
+          </View>
+        </Pressable>
+        <Pressable
+          onPress={() => {
+            if (!saved) {
+              swing();
+              if (signedIn) play('hang');
+            }
             toggleSave();
           }}
           accessibilityRole="button"
@@ -617,7 +712,8 @@ export const FeedPost = memo(function FeedPost({
               ],
             }}
           >
-            <Mark name="hang" uid={`h${look.id}`} color={saved ? colors.primary : colors.ink} on={saved} />
+            <Mark name="hang" uid={`h${look.id}`} color={saved ? colors.primary : colors.ink} />
+            <Motion name="hang" playingSince={motion.hang ?? null} on={saved} />
           </Animated.View>
         </Pressable>
       </View>
