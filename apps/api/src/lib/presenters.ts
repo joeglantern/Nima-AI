@@ -159,6 +159,7 @@ export function lookCard(
     // A look can be recreated when it is public and has at least one item.
     canRecreate: look.visibility === 'PUBLIC' && (look._count?.items ?? 0) > 0,
     promoted: viewer.promoted ?? false,
+    pieces: [],
     createdAt: look.createdAt.toISOString(),
   };
 }

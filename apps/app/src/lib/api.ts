@@ -315,6 +315,9 @@ export const api = {
     request<{ liked: boolean; likeCount: number }>(`/v1/looks/${id}/like`, { method: 'POST' }),
 
   saveLook: (id: string) => request<{ saved: boolean }>(`/v1/looks/${id}/save`, { method: 'POST' }),
+  lovePiece: (productId: string) =>
+    request<{ saved: boolean }>(`/v1/products/${productId}/save`, { method: 'POST' }),
+  saved: () => request<{ looks: LookCardData[]; pieces: ProductCard[] }>('/v1/me/saved'),
 
   dismissLook: (id: string, reason?: string) =>
     request<{ ok: true }>(`/v1/looks/${id}/not-for-me`, {

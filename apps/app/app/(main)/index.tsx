@@ -18,15 +18,40 @@ import { ActivityIndicator, FlatList, Pressable, RefreshControl, View } from 're
 import { Button } from '../../src/components/button';
 import { ProductCard } from '../../src/components/cards';
 import { EmptyState } from '../../src/components/empty-state';
-import { FeedPost } from '../../src/components/feed-post';
+import { FeedPost, FeedTile } from '../../src/components/feed-post';
 import { CommentsSheet, PiecesSheet } from '../../src/components/feed-sheets';
 import { InboxButtons } from '../../src/components/inbox-buttons';
-import { OccasionRings } from '../../src/components/occasion-rings';
+import { OccasionTabs } from '../../src/components/occasion-tabs';
 import { SendSheet, type SendTarget } from '../../src/components/send-sheet';
-import { Body, BodyStrong, Caption, Eyebrow, Heading } from '../../src/components/text';
+import { Body, BodyStrong, Caption, Heading } from '../../src/components/text';
 import { TryOnResultSheet, useTryOn } from '../../src/components/try-on';
 import { ApiError, api, type FeedItem } from '../../src/lib/api';
 import { useTheme } from '../../src/theme/index';
+
+type LookItem = Extract<FeedItem, { kind: 'look' }>;
+type Row = FeedItem | { kind: 'pair'; first: LookItem; second: LookItem };
+
+/**
+ * One big look, then two side by side, like the pages of a magazine. Worked
+ * out per page, so loading more never rearranges what is already on screen.
+ */
+function pace(items: FeedItem[]): Row[] {
+  const rows: Row[] = [];
+  let big = true;
+  for (let at = 0; at < items.length; at++) {
+    const item = items[at] as FeedItem;
+    const next = items[at + 1];
+    if (!big && item.kind === 'look' && next?.kind === 'look') {
+      rows.push({ kind: 'pair', first: item, second: next });
+      at += 1;
+      big = true;
+      continue;
+    }
+    rows.push(item);
+    if (item.kind === 'look') big = false;
+  }
+  return rows;
+}
 
 function greeting(): string {
   const hour = new Date().getHours();
@@ -64,7 +89,7 @@ export default function ForYouScreen() {
     getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
   });
 
-  const items = feed.data?.pages.flatMap((page) => page.items) ?? [];
+  const items = feed.data?.pages.flatMap((page) => pace(page.items)) ?? [];
 
   const startTryOn = useCallback(
     (lookId: string) => {
@@ -77,8 +102,16 @@ export default function ForYouScreen() {
   const sendLook = useCallback((lookId: string) => setSending({ kind: 'LOOK', id: lookId }), []);
 
   const renderItem = useCallback(
-    ({ item }: { item: FeedItem }) => {
+    ({ item }: { item: Row }) => {
       switch (item.kind) {
+        case 'pair':
+          return (
+            <View style={{ flexDirection: 'row', gap: 10, paddingHorizontal: 12, paddingBottom: 28 }}>
+              <FeedTile look={item.first.look} />
+              <FeedTile look={item.second.look} />
+            </View>
+          );
+
         case 'look':
           return (
             <FeedPost
@@ -149,7 +182,6 @@ export default function ForYouScreen() {
                   gap: 10,
                 }}
               >
-                <Eyebrow>Nima</Eyebrow>
                 <Heading>{item.title}</Heading>
                 <Body tone="muted">{item.body}</Body>
                 <Button
@@ -205,17 +237,17 @@ export default function ForYouScreen() {
           numberOfLines={1}
           style={{
             flex: 1,
-            fontFamily: 'CormorantGaramond_500Medium_Italic',
-            fontSize: 22,
-            lineHeight: 28,
+            fontFamily: 'CormorantGaramond_500Medium',
+            fontSize: 28,
+            lineHeight: 32,
           }}
         >
           {firstName ? `${greeting()}, ${firstName}` : 'Dressed for today'}
         </Heading>
         <InboxButtons />
       </View>
-      <OccasionRings selected={occasion} onSelect={setOccasion} />
-      <View style={{ height: 1, backgroundColor: colors.line, marginBottom: 4 }} />
+      <OccasionTabs selected={occasion} onSelect={setOccasion} />
+      <View style={{ height: 10 }} />
 
       {/* While Nima works, and if it could not, said once at the top. */}
       {tryOn.progress || tryOn.problem ? (
@@ -283,7 +315,9 @@ export default function ForYouScreen() {
         data={body ? [] : items}
         style={{ width: '100%' }}
         keyExtractor={(item, index) =>
-          item.kind === 'look'
+          item.kind === 'pair'
+            ? `pair-${item.first.look.id}`
+            : item.kind === 'look'
             ? `look-${item.look.id}`
             : item.kind === 'product'
               ? `product-${item.product.id}`
@@ -294,7 +328,7 @@ export default function ForYouScreen() {
         ListHeaderComponent={header}
         contentContainerStyle={{
           paddingBottom: floatingClearance,
-          maxWidth: isWide ? 620 : undefined,
+          maxWidth: isWide ? 1080 : undefined,
           width: '100%',
           alignSelf: 'center',
         }}

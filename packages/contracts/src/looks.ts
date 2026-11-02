@@ -41,6 +41,22 @@ export const lookAuthorSchema = z.object({
   store: storeCardSchema.nullable(),
 });
 
+/**
+ * One line of a look's credit list: what the piece is, what it costs and
+ * whether you love it. A piece someone already owns has no product.
+ */
+export const lookPieceSchema = z.object({
+  id: idSchema,
+  slot: garmentSlotSchema,
+  productId: idSchema.nullable(),
+  title: z.string(),
+  priceCents: z.number().int().nullable(),
+  storeName: z.string().nullable(),
+  image: imageSchema.nullable().default(null),
+  inStock: z.boolean(),
+  lovedByMe: z.boolean(),
+});
+
 export const lookCardSchema = z.object({
   id: idSchema,
   title: z.string().nullable(),
@@ -59,6 +75,8 @@ export const lookCardSchema = z.object({
   savedByMe: z.boolean(),
   canRecreate: z.boolean(),
   promoted: z.boolean().default(false),
+  /** Filled on the feed. Empty where the list did not load them. */
+  pieces: z.array(lookPieceSchema).default([]),
   createdAt: z.string(),
 });
 

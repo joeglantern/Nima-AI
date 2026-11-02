@@ -83,7 +83,7 @@ export function PiecesSheet({
                 {item.title ?? 'This look'}
               </Body>
               <Caption>
-                {`${item.items.length} ${item.items.length === 1 ? 'piece' : 'pieces'}, in the spirit of the photo`}
+                {`${item.items.length} ${item.items.length === 1 ? 'piece' : 'pieces'}`}
               </Caption>
             </View>
           </View>
@@ -237,7 +237,7 @@ export function CommentsSheet({ lookId, onClose }: { lookId: string | null; onCl
         setProblem(null);
         onClose();
       }}
-      title="Comments"
+      title="Ask"
     >
       {comments.isLoading ? (
         <View style={{ paddingVertical: 28, alignItems: 'center' }}>
@@ -245,7 +245,7 @@ export function CommentsSheet({ lookId, onClose }: { lookId: string | null; onCl
         </View>
       ) : items.length === 0 ? (
         <View style={{ paddingVertical: 20, alignItems: 'center', gap: 4 }}>
-          <BodyStrong>No comments yet</BodyStrong>
+          <BodyStrong>Nothing asked yet</BodyStrong>
           <Caption align="center">
             Say what you would wear it to, or ask where something is from.
           </Caption>
@@ -290,7 +290,7 @@ export function CommentsSheet({ lookId, onClose }: { lookId: string | null; onCl
         <TextInput
           value={draft}
           onChangeText={setDraft}
-          placeholder="Add a comment"
+          placeholder="Ask about this look"
           placeholderTextColor={colors.muted}
           maxLength={500}
           multiline
@@ -303,7 +303,7 @@ export function CommentsSheet({ lookId, onClose }: { lookId: string | null; onCl
             maxHeight: 110,
             textAlignVertical: 'center',
           }}
-          accessibilityLabel="Add a comment"
+          accessibilityLabel="Ask about this look"
         />
         <Pressable
           onPress={() => text && post.mutate(text)}

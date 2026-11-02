@@ -53,7 +53,10 @@ export const feedRoutes: FastifyPluginAsyncZod = async (app) => {
       );
 
       const lookIds = scored.map((entry) => entry.look.id);
-      const [likes, saves] = await Promise.all([
+      const pieceProductIds = scored.flatMap((entry) =>
+        entry.look.items.flatMap((item) => (item.product ? [item.product.id] : [])),
+      );
+      const [likes, saves, lovedPieces] = await Promise.all([
         request.user
           ? app.prisma.like.findMany({
               where: { userId: request.user.id, lookId: { in: lookIds } },
@@ -66,17 +69,47 @@ export const feedRoutes: FastifyPluginAsyncZod = async (app) => {
               select: { lookId: true },
             })
           : [],
+        request.user
+          ? app.prisma.save.findMany({
+              where: { userId: request.user.id, productId: { in: pieceProductIds } },
+              select: { productId: true },
+            })
+          : [],
       ]);
 
       const likedIds = new Set(likes.map((like) => like.lookId));
       const savedIds = new Set(saves.map((save) => save.lookId));
+      const lovedIds = new Set(lovedPieces.map((save) => save.productId));
 
       const items: Array<z.infer<typeof feedItemSchema>> = scored.map((entry) => ({
         kind: 'look' as const,
-        look: lookCard(app.storage, entry.look, {
-          likedByMe: likedIds.has(entry.look.id),
-          savedByMe: savedIds.has(entry.look.id),
-        }),
+        look: {
+          ...lookCard(app.storage, entry.look, {
+            likedByMe: likedIds.has(entry.look.id),
+            savedByMe: savedIds.has(entry.look.id),
+          }),
+          // Only what can still be bought, or what the poster already owns.
+          pieces: entry.look.items
+            .filter((item) => !item.product || item.product.status === 'ACTIVE')
+            .map((item) => ({
+              id: item.id,
+              slot: item.slot,
+              productId: item.product?.id ?? null,
+              title: item.product?.title ?? item.wardrobeItem?.label ?? 'From their wardrobe',
+              priceCents: item.product?.priceFromCents ?? null,
+              storeName: item.product?.store.name ?? null,
+              image: item.product?.images[0]
+                ? publicImage(
+                    app.storage,
+                    item.product.images[0].processedKey ?? item.product.images[0].originalKey,
+                    item.product.images[0].width,
+                    item.product.images[0].height,
+                  )
+                : null,
+              inStock: item.product?.inStock ?? false,
+              lovedByMe: Boolean(item.product && lovedIds.has(item.product.id)),
+            })),
+        },
       }));
 
       // A shelf of new arrivals every eight cards keeps shopping present

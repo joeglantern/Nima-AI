@@ -8,6 +8,7 @@
 
 import {
   idSchema,
+  lookCardSchema,
   productCardSchema,
   productDetailSchema,
   productListQuerySchema,
@@ -19,7 +20,7 @@ import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 import { z } from 'zod';
 import { errors } from '../../lib/errors.js';
 import { decodeCursor, encodeCursor } from '../../lib/pagination.js';
-import { productCard, publicImage, storeCard } from '../../lib/presenters.js';
+import { lookCard, productCard, publicImage, storeCard } from '../../lib/presenters.js';
 import { recordEvent } from '../../services/events.js';
 
 const productInclude = {
@@ -109,6 +110,98 @@ export const shopRoutes: FastifyPluginAsyncZod = async (app) => {
           hasMore && last
             ? encodeCursor({ key: last.publishedAt?.toISOString() ?? '', id: last.id })
             : null,
+      };
+    },
+  );
+
+  // Love one piece rather than a whole look. It also tells the seller exactly
+  // what people wanted, which a like on a photograph cannot.
+  app.post(
+    '/products/:id/save',
+    {
+      preHandler: app.requireAccount,
+      schema: {
+        tags: ['shop'],
+        summary: 'Love a piece, or stop loving it',
+        params: z.object({ id: idSchema }),
+        response: { 200: z.object({ saved: z.boolean() }) },
+      },
+    },
+    async (request) => {
+      const user = request.requireUser();
+      const productId = request.params.id;
+
+      const product = await app.prisma.product.findFirst({
+        where: { id: productId, status: { not: 'ARCHIVED' } },
+        select: { id: true },
+      });
+      if (!product) throw errors.notFound('That piece');
+
+      const existing = await app.prisma.save.findUnique({
+        where: { userId_productId: { userId: user.id, productId } },
+      });
+
+      if (existing) {
+        await app.prisma.save.delete({ where: { id: existing.id } });
+        return { saved: false };
+      }
+
+      await app.prisma.save.create({ data: { userId: user.id, productId } });
+      void recordEvent(app, { request, type: 'SAVE', entityType: 'product', entityId: productId });
+
+      return { saved: true };
+    },
+  );
+
+  app.get(
+    '/me/saved',
+    {
+      preHandler: app.requireAccount,
+      schema: {
+        tags: ['shop'],
+        summary: 'The looks you hung up and the pieces you love',
+        response: {
+          200: z.object({ looks: z.array(lookCardSchema), pieces: z.array(productCardSchema) }),
+        },
+      },
+    },
+    async (request) => {
+      const user = request.requireUser();
+
+      const saves = await app.prisma.save.findMany({
+        where: { userId: user.id },
+        orderBy: { createdAt: 'desc' },
+        take: 100,
+        select: { lookId: true, productId: true },
+      });
+      const lookIds = saves.flatMap((save) => (save.lookId ? [save.lookId] : []));
+      const productIds = saves.flatMap((save) => (save.productId ? [save.productId] : []));
+
+      const [looks, products] = await Promise.all([
+        app.prisma.look.findMany({
+          where: { id: { in: lookIds } },
+          include: {
+            owner: { include: { profile: true, store: true } },
+            _count: { select: { items: true, comments: { where: { hiddenAt: null } } } },
+          },
+        }),
+        app.prisma.product.findMany({
+          where: { id: { in: productIds }, status: { not: 'ARCHIVED' } },
+          include: productInclude,
+        }),
+      ]);
+
+      // Newest save first, whatever order the database returned them in.
+      const inOrder = <T extends { id: string }>(rows: T[], ids: string[]) =>
+        ids.flatMap((id) => rows.filter((row) => row.id === id));
+
+      return {
+        looks: inOrder(looks, lookIds).map((look) =>
+          lookCard(app.storage, look, { savedByMe: true }),
+        ),
+        pieces: inOrder(products, productIds).map((product) =>
+          productCard(app.storage, product, { savedByMe: true }),
+        ),
       };
     },
   );

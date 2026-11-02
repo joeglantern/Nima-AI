@@ -1,12 +1,16 @@
 /**
- * Development seed.
+ * Sample data.
  *
- * Enough of a world to work against: two Nairobi stores, a spread of
- * products, a few public looks and a demo shopper. Prices are realistic KES
- * so the interface is designed against numbers of the right shape, not
- * against 9.99.
+ * Enough of a world to work against and to show people: two Nairobi shops, a
+ * demo shopper, and the outfits in looks.ts with every piece in them for
+ * sale. Prices are realistic KES so the interface is designed against numbers
+ * of the right shape.
  *
  * Safe to run repeatedly: everything is keyed by a stable slug or handle.
+ *
+ *   tsx prisma/seed.ts                     fill in whatever is missing
+ *   tsx prisma/seed.ts --replace-looks     rebuild the curated looks
+ *   tsx prisma/seed.ts --replace-catalogue clear the sample shops, then rebuild
  */
 
 import { readFile } from 'node:fs/promises';
@@ -14,15 +18,8 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { config as loadDotenv } from 'dotenv';
 import { type GarmentSlot, PrismaClient, type ProductCategory } from '../generated/client/index.js';
-import { catalogueFrom } from './catalogue.js';
-import { SEED_LOOKS, type SeedLook } from './looks.js';
-import {
-  availableGarments,
-  createSeedUploader,
-  noPhotoImage,
-  placeholderImage,
-  placeholderShape,
-} from './seed-media.js';
+import { SEED_LOOKS, type SeedSlot } from './looks.js';
+import { createSeedUploader } from './seed-media.js';
 
 // Configuration lives in one .env at the repository root.
 loadDotenv({
@@ -40,23 +37,7 @@ const upload = createSeedUploader({
   bucket: process.env.S3_BUCKET ?? 'nima-media',
 });
 
-let imageIndex = 0;
-
 const KES = (shillings: number) => shillings * 100;
-
-interface SeedProduct {
-  slug: string;
-  title: string;
-  category: ProductCategory;
-  slot: GarmentSlot;
-  brand: string;
-  description: string;
-  colours: string[];
-  tags: string[];
-  occasions: string[];
-  price: number;
-  sizes: string[];
-}
 
 const SAMPLE_STORES = [
   {
@@ -65,148 +46,36 @@ const SAMPLE_STORES = [
     about: 'Tailored African print and linen, cut and sewn in Nairobi. Made to order in five days.',
     county: 'Nairobi',
     verified: true,
-    products: [
-      {
-        slug: 'ankara-panel-shirt',
-        title: 'Ankara panel shirt',
-        category: 'TOP' as ProductCategory,
-        slot: 'TOP' as GarmentSlot,
-        brand: 'Kanzu',
-        description:
-          'A short sleeve shirt in cotton, with a hand cut ankara panel across the chest and sleeve.',
-        colours: ['brown', 'rust', 'cream'],
-        tags: ['ankara', 'print', 'smart casual', 'heritage'],
-        occasions: ['weekend', 'celebration', 'office'],
-        price: 4500,
-        sizes: ['S', 'M', 'L', 'XL'],
-      },
-      {
-        slug: 'linen-drawstring-trouser',
-        title: 'Linen drawstring trouser',
-        category: 'BOTTOM' as ProductCategory,
-        slot: 'BOTTOM' as GarmentSlot,
-        brand: 'Kanzu',
-        description:
-          'Light linen with a wide leg and a drawstring waist. Built for hot afternoons.',
-        colours: ['sand', 'olive', 'black'],
-        tags: ['linen', 'relaxed', 'warm weather'],
-        occasions: ['weekend', 'holiday'],
-        price: 3800,
-        sizes: ['S', 'M', 'L', 'XL'],
-      },
-      {
-        slug: 'kitenge-wrap-dress',
-        title: 'Kitenge wrap dress',
-        category: 'DRESS' as ProductCategory,
-        slot: 'FULL_BODY' as GarmentSlot,
-        brand: 'Kanzu',
-        description: 'A full length wrap in waxed kitenge, with a tie waist and deep pockets.',
-        colours: ['indigo', 'gold'],
-        tags: ['kitenge', 'print', 'elegant'],
-        occasions: ['celebration', 'wedding', 'date night'],
-        price: 7200,
-        sizes: ['XS', 'S', 'M', 'L'],
-      },
-    ] satisfies SeedProduct[],
   },
   {
     slug: 'sote-street',
     name: 'Sote Street',
-    about: 'Streetwear out of Eastlands. Heavy cotton, boxy cuts, small runs.',
+    about: 'Streetwear and good mitumba out of Eastlands. Picked, washed and pressed.',
     county: 'Nairobi',
     verified: false,
-    products: [
-      {
-        slug: 'boxy-logo-tee',
-        title: 'Boxy logo tee',
-        category: 'TOP' as ProductCategory,
-        slot: 'TOP' as GarmentSlot,
-        brand: 'Sote',
-        description: 'Heavyweight 240gsm cotton, dropped shoulder, screen printed logo.',
-        colours: ['black', 'white', 'maroon'],
-        tags: ['streetwear', 'oversized', 'cotton'],
-        occasions: ['weekend', 'casual'],
-        price: 2200,
-        sizes: ['S', 'M', 'L', 'XL', 'XXL'],
-      },
-      {
-        slug: 'cargo-utility-pant',
-        title: 'Cargo utility pant',
-        category: 'BOTTOM' as ProductCategory,
-        slot: 'BOTTOM' as GarmentSlot,
-        brand: 'Sote',
-        description: 'Six pocket ripstop cargo with an adjustable hem.',
-        colours: ['khaki', 'black'],
-        tags: ['streetwear', 'utility', 'cargo'],
-        occasions: ['casual', 'weekend'],
-        price: 4900,
-        sizes: ['28', '30', '32', '34', '36'],
-      },
-      {
-        slug: 'suede-court-sneaker',
-        title: 'Suede court sneaker',
-        category: 'SHOES' as ProductCategory,
-        slot: 'SHOES' as GarmentSlot,
-        brand: 'Sote',
-        description: 'Low top suede with a gum sole.',
-        colours: ['brown', 'off white'],
-        tags: ['sneakers', 'everyday'],
-        occasions: ['casual', 'weekend'],
-        price: 6500,
-        sizes: ['39', '40', '41', '42', '43', '44'],
-      },
-      {
-        slug: 'round-frame-sunglasses',
-        title: 'Round frame sunglasses',
-        category: 'EYEWEAR' as ProductCategory,
-        slot: 'EYEWEAR' as GarmentSlot,
-        brand: 'Sote',
-        description: 'Thin metal frame, rose tinted lens, UV400.',
-        colours: ['rose', 'black'],
-        tags: ['accessory', 'statement'],
-        occasions: ['weekend', 'festival'],
-        price: 1800,
-        sizes: ['One size'],
-      },
-    ] satisfies SeedProduct[],
   },
 ];
 
-/**
- * Hands out a photograph per category, in order, without repeating one
- * until the category runs out. A shop where two listings share a picture
- * looks like a mistake, and it is the first thing anybody notices.
- */
-function createPicturePool(files: Array<{ file: string; category: string }>) {
-  const byCategory = new Map<string, string[]>();
-
-  for (const entry of files) {
-    const bucket = byCategory.get(entry.category);
-    if (bucket) bucket.push(entry.file);
-    else byCategory.set(entry.category, [entry.file]);
-  }
-
-  const used = new Map<string, number>();
-
-  return function pictureFor(category: string): string | null {
-    const bucket = byCategory.get(category.toUpperCase());
-    if (!bucket || bucket.length === 0) return null;
-
-    const at = used.get(category) ?? 0;
-    used.set(category, at + 1);
-    return bucket[at % bucket.length] ?? null;
-  };
-}
+/** The shop category each slot in a look sells under. */
+const CATEGORY_FOR_SLOT: Record<SeedSlot, ProductCategory> = {
+  TOP: 'TOP',
+  BOTTOM: 'BOTTOM',
+  FULL_BODY: 'DRESS',
+  OUTERWEAR: 'OUTERWEAR',
+  SHOES: 'SHOES',
+  BAG: 'BAG',
+  JEWELLERY: 'JEWELLERY',
+  EYEWEAR: 'EYEWEAR',
+  HEADWEAR: 'HEADWEAR',
+};
 
 /**
  * Clear the sample catalogue so it can be seeded afresh.
  *
- *   tsx prisma/seed.ts --replace-catalogue
- *
  * Only what the seed itself created: the products of the sample stores and
- * the curated looks built from them. Anything a real person did with those
- * products is respected. A product that was ordered is archived rather than
- * deleted, because an order has to keep pointing at what was sold.
+ * the curated looks. Real people's posts and shops are never touched. A
+ * product that was ordered is archived rather than deleted, because an order
+ * has to keep pointing at what was sold.
  */
 async function replaceCatalogue(): Promise<void> {
   const sampleStores = await prisma.store.findMany({
@@ -214,9 +83,10 @@ async function replaceCatalogue(): Promise<void> {
     select: { id: true },
   });
   const storeIds = sampleStores.map((store) => store.id);
+
+  const looks = await prisma.look.deleteMany({ where: { source: 'CURATED' } });
   if (storeIds.length === 0) return;
 
-  await prisma.look.deleteMany({ where: { source: 'CURATED' } });
   await prisma.cartItem.deleteMany({ where: { product: { storeId: { in: storeIds } } } });
 
   const archived = await prisma.product.updateMany({
@@ -227,13 +97,134 @@ async function replaceCatalogue(): Promise<void> {
     where: { storeId: { in: storeIds }, orderItems: { none: {} } },
   });
 
-  console.info(`Catalogue cleared: ${removed.count} removed, ${archived.count} archived (ordered)`);
+  console.info(
+    `Cleared: ${looks.count} looks, ${removed.count} products removed, ${archived.count} archived (ordered)`,
+  );
+}
+
+/**
+ * The curated looks, from seed-assets/looks, and the pieces in them, from
+ * seed-assets/pieces.
+ *
+ * Each look belongs to nobody, which is what the feed shows as Nima's own,
+ * and each of its pieces is listed in one of the two sample shops. The set
+ * is rebuilt only when asked or when the photographs change, so loves and
+ * comments people left on them survive an ordinary seed.
+ */
+async function seedLooks(force: boolean): Promise<void> {
+  const assets = join(dirname(fileURLToPath(import.meta.url)), 'seed-assets');
+
+  const existing = await prisma.look.findMany({
+    where: { source: 'CURATED' },
+    select: { coverKey: true },
+  });
+  const wanted = new Set(SEED_LOOKS.map((look) => `seed/looks/${look.file}`));
+  const current =
+    existing.length === wanted.size && existing.every((look) => wanted.has(look.coverKey ?? ''));
+
+  if (current && !force) {
+    for (const look of SEED_LOOKS) {
+      await prisma.look.updateMany({
+        where: { source: 'CURATED', coverKey: `seed/looks/${look.file}` },
+        data: { occasions: look.occasions },
+      });
+    }
+    return;
+  }
+
+  await prisma.look.deleteMany({ where: { source: 'CURATED' } });
+
+  // Newest first in the feed, so the order of the list is the order shown.
+  const now = Date.now();
+
+  for (const [index, look] of SEED_LOOKS.entries()) {
+    const postedAt = new Date(now - index * 47 * 60 * 1000);
+    const coverKey = `seed/looks/${look.file}`;
+    await upload(coverKey, await readFile(join(assets, 'looks', look.file)));
+
+    const store = await prisma.store.findUniqueOrThrow({ where: { slug: look.store } });
+    const productIds: string[] = [];
+
+    for (const piece of look.pieces) {
+      const product = await prisma.product.upsert({
+        where: { slug: piece.slug },
+        create: {
+          storeId: store.id,
+          title: piece.title,
+          slug: piece.slug,
+          description: piece.description,
+          category: CATEGORY_FOR_SLOT[piece.slot],
+          colours: piece.colours,
+          tags: [],
+          occasions: look.occasions,
+          status: 'ACTIVE',
+          publishedAt: postedAt,
+          priceFromCents: KES(piece.price),
+          inStock: true,
+          variants: {
+            create: piece.sizes.map((size) => ({
+              size,
+              colour: piece.colours[0] ?? null,
+              priceCents: KES(piece.price),
+              stock: 8,
+            })),
+          },
+        },
+        update: {},
+      });
+      productIds.push(product.id);
+
+      const pictureKey = `seed/pieces/${piece.slug}.jpg`;
+      await upload(pictureKey, await readFile(join(assets, 'pieces', `${piece.slug}.jpg`)));
+      await prisma.productImage.deleteMany({ where: { productId: product.id } });
+      await prisma.productImage.create({
+        data: {
+          productId: product.id,
+          originalKey: pictureKey,
+          processedKey: pictureKey,
+          isPrimary: true,
+          position: 0,
+          width: 1080,
+          height: 1350,
+        },
+      });
+    }
+
+    await prisma.look.create({
+      data: {
+        ownerId: null,
+        coverKey,
+        width: 1080,
+        height: 1350,
+        title: look.title,
+        caption: look.caption,
+        nimaSays: look.nimaSays,
+        occasions: look.occasions,
+        source: 'CURATED',
+        visibility: 'PUBLIC',
+        publishedAt: postedAt,
+        createdAt: postedAt,
+        likeCount: look.likes,
+        saveCount: Math.round(look.likes / 4),
+        items: {
+          create: look.pieces.map((piece, position) => ({
+            slot: piece.slot as GarmentSlot,
+            productId: productIds[position],
+            position,
+          })),
+        },
+      },
+    });
+  }
+
+  console.info(`Looks: ${SEED_LOOKS.length} curated looks, each with its own pieces`);
 }
 
 async function main(): Promise<void> {
-  console.info('Seeding Nima development data');
+  console.info('Seeding Nima sample data');
 
-  if (process.argv.includes('--replace-catalogue')) await replaceCatalogue();
+  const replacing = process.argv.includes('--replace-catalogue');
+  if (replacing) await replaceCatalogue();
 
   // A demo shopper. Sign in as this person with an email code in development.
   await prisma.user.upsert({
@@ -265,36 +256,9 @@ async function main(): Promise<void> {
       creditBalance: { create: { balance: 8 } },
     },
     update: {},
-    include: { profile: true },
   });
 
-  /*
-   * The catalogue.
-   *
-   * The seven written by hand stay, because their copy says something a
-   * generator cannot. Everything else is built from the photographs that
-   * were collected, split between the two shops, so the grid, the filters
-   * and the feed have enough to work with to be judged at all.
-   */
-  const photographs = await availableGarments();
-  const pictureFor = createPicturePool(photographs);
-
-  // The written ones take the first picture in their category; the rest
-  // follow. `catalogueFrom` turns what is left into listings.
-  const written = SAMPLE_STORES.reduce((count, store) => count + store.products.length, 0);
-  const extra = catalogueFrom(photographs.slice(written));
-
-  console.info(
-    `  ${photographs.length} photographs, ${written} written listings, ${extra.length} generated`,
-  );
-
-  // Alternating, so neither shop ends up with one category.
-  const storesWithExtras = SAMPLE_STORES.map((store, index) => ({
-    ...store,
-    products: [...store.products, ...extra.filter((_, at) => at % SAMPLE_STORES.length === index)],
-  }));
-
-  for (const storeSeed of storesWithExtras) {
+  for (const storeSeed of SAMPLE_STORES) {
     const owner = await prisma.user.upsert({
       where: { email: `${storeSeed.slug}@example.com` },
       create: {
@@ -312,7 +276,7 @@ async function main(): Promise<void> {
       update: {},
     });
 
-    const store = await prisma.store.upsert({
+    await prisma.store.upsert({
       where: { slug: storeSeed.slug },
       create: {
         ownerId: owner.id,
@@ -325,91 +289,16 @@ async function main(): Promise<void> {
       },
       update: {},
     });
-
-    for (const productSeed of storeSeed.products) {
-      const product = await prisma.product.upsert({
-        where: { slug: productSeed.slug },
-        create: {
-          storeId: store.id,
-          title: productSeed.title,
-          slug: productSeed.slug,
-          description: productSeed.description,
-          category: productSeed.category,
-          brand: productSeed.brand,
-          colours: productSeed.colours,
-          tags: productSeed.tags,
-          occasions: productSeed.occasions,
-          status: 'ACTIVE',
-          publishedAt: new Date(),
-          priceFromCents: KES(productSeed.price),
-          inStock: true,
-          sizeGuide: {
-            note: 'Measurements are in centimetres, taken flat.',
-            rows: productSeed.sizes.map((size) => ({ size, chest: '-', length: '-' })),
-          },
-          variants: {
-            create: productSeed.sizes.map((size) => ({
-              size,
-              colour: productSeed.colours[0] ?? null,
-              priceCents: KES(productSeed.price),
-              stock: 12,
-            })),
-          },
-        },
-        update: {},
-      });
-
-      // Give every product a placeholder so the grid can be judged for real.
-      const existingImage = await prisma.productImage.findFirst({
-        where: { productId: product.id },
-      });
-
-      if (!existingImage) {
-        const key = `seed/products/${product.slug}.jpg`;
-        // The shape is recorded so the shop grid can lay the tile out before
-        // the picture has downloaded, which is what keeps the masonry from
-        // jumping as the page fills.
-        const shape = placeholderShape(imageIndex);
-        const picture = pictureFor(product.category);
-
-        await upload(
-          key,
-          picture
-            ? await placeholderImage({ index: imageIndex, file: picture, size: shape })
-            : await noPhotoImage(shape),
-        );
-        imageIndex += 1;
-
-        await prisma.productImage.create({
-          data: {
-            productId: product.id,
-            originalKey: key,
-            processedKey: key,
-            isPrimary: true,
-            position: 0,
-            width: shape.width,
-            height: shape.height,
-          },
-        });
-      }
-
-      console.info(`  product ${product.slug}`);
-    }
   }
 
-  // The feed's sample looks: real outfit photographs, each with a few pieces
-  // from the sample shops linked underneath. Rebuilt whenever the set of
-  // photographs changes, or with --replace-looks.
-  await seedLooks(process.argv.includes('--replace-looks'));
+  await seedLooks(replacing || process.argv.includes('--replace-looks'));
 
-  const counts = {
+  console.info('Done:', {
     users: await prisma.user.count(),
     stores: await prisma.store.count(),
     products: await prisma.product.count(),
     looks: await prisma.look.count(),
-  };
-
-  console.info('Done:', counts);
+  });
 }
 
 main()
@@ -418,119 +307,3 @@ main()
     process.exit(1);
   })
   .finally(() => prisma.$disconnect());
-
-/** Which shop category a look's slot draws its linked pieces from. */
-const CATEGORY_FOR_SLOT: Record<SeedLook['slots'][number], ProductCategory> = {
-  TOP: 'TOP',
-  BOTTOM: 'BOTTOM',
-  FULL_BODY: 'DRESS',
-  OUTERWEAR: 'OUTERWEAR',
-  SHOES: 'SHOES',
-  BAG: 'BAG',
-  JEWELLERY: 'JEWELLERY',
-};
-
-interface LookCredit {
-  file: string;
-  author: string;
-  licence: string;
-  page: string;
-}
-
-/**
- * The curated looks, from seed-assets/looks.
- *
- * They belong to nobody: a look without an owner is Nima's own, which is
- * what the feed shows as curated. Every caption ends with the photograph's
- * credit, because the licence asks for it and because it is right.
- */
-async function seedLooks(force: boolean): Promise<void> {
-  const folder = join(dirname(fileURLToPath(import.meta.url)), 'seed-assets', 'looks');
-  const credits = JSON.parse(await readFile(join(folder, 'manifest.json'), 'utf8')) as LookCredit[];
-
-  const existing = await prisma.look.findMany({
-    where: { source: 'CURATED' },
-    select: { coverKey: true },
-  });
-  const wanted = new Set(SEED_LOOKS.map((look) => `seed/looks/${look.file}`));
-  const current =
-    existing.length === wanted.size && existing.every((look) => wanted.has(look.coverKey ?? ''));
-  if (current && !force) {
-    // Same photographs: only bring the tags up to date, so likes and
-    // comments people have left on them survive.
-    for (const look of SEED_LOOKS) {
-      await prisma.look.updateMany({
-        where: { source: 'CURATED', coverKey: `seed/looks/${look.file}` },
-        data: { occasions: look.occasions },
-      });
-    }
-    return;
-  }
-
-  await prisma.look.deleteMany({ where: { source: 'CURATED' } });
-
-  const products = await prisma.product.findMany({
-    where: { status: 'ACTIVE' },
-    select: { id: true, category: true },
-    orderBy: { createdAt: 'asc' },
-  });
-  const byCategory = new Map<ProductCategory, string[]>();
-  for (const product of products) {
-    byCategory.set(product.category, [...(byCategory.get(product.category) ?? []), product.id]);
-  }
-
-  // Spread across the catalogue rather than linking the same piece everywhere.
-  const turn = new Map<ProductCategory, number>();
-  const pick = (category: ProductCategory): string | null => {
-    const pool = byCategory.get(category) ?? [];
-    if (pool.length === 0) return null;
-    const next = turn.get(category) ?? 0;
-    turn.set(category, next + 1);
-    return pool[next % pool.length] ?? null;
-  };
-
-  // Newest first in the feed, so the order of the list is the order shown.
-  const now = Date.now();
-
-  for (const [index, look] of SEED_LOOKS.entries()) {
-    const credit = credits.find((entry) => entry.file === look.file);
-    const key = `seed/looks/${look.file}`;
-    await upload(key, await readFile(join(folder, look.file)));
-
-    const items = look.slots
-      .map((slot) => ({ slot, productId: pick(CATEGORY_FOR_SLOT[slot]) }))
-      .filter((item): item is { slot: SeedLook['slots'][number]; productId: string } =>
-        Boolean(item.productId),
-      );
-
-    await prisma.look.create({
-      data: {
-        ownerId: null,
-        coverKey: key,
-        width: 1080,
-        height: 1350,
-        title: look.title,
-        caption: credit
-          ? `${look.caption}\n\nPhoto: ${credit.author}, ${credit.licence}, via Wikimedia Commons.`
-          : look.caption,
-        nimaSays: look.nimaSays,
-        occasions: look.occasions,
-        source: 'CURATED',
-        visibility: 'PUBLIC',
-        publishedAt: new Date(now - index * 47 * 60 * 1000),
-        createdAt: new Date(now - index * 47 * 60 * 1000),
-        likeCount: look.likes,
-        saveCount: Math.round(look.likes / 4),
-        items: {
-          create: items.map((item, position) => ({
-            slot: item.slot as GarmentSlot,
-            productId: item.productId,
-            position,
-          })),
-        },
-      },
-    });
-  }
-
-  console.info(`Looks: ${SEED_LOOKS.length} curated looks with photographs`);
-}

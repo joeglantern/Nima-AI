@@ -7,12 +7,12 @@
  */
 
 export const light = {
-  ground: '#FAF8F5',
+  ground: '#FFFFFF',
   surface: '#FFFFFF',
-  sunk: '#F2EEE8',
+  sunk: '#F4F3F1',
   ink: '#2D2926',
   muted: '#6E655E',
-  line: '#E7E1D9',
+  line: '#EFEDEA',
   primary: '#5C2A33',
   primarySoft: '#F3E7E9',
   onPrimary: '#FAF8F5',

@@ -1,40 +1,45 @@
 /**
  * A post in For You.
  *
- * The shape people already know how to read from Instagram: who posted it,
- * the photograph edge to edge, a row of actions, the count, the caption,
- * then the comments. What makes it Nima's is in the details: the stylist's
- * line in the serif under every look, "Shop the pieces" on the photograph
- * itself, and "Try it on" where a follow button would be.
+ * The outfit comes first and whoever posted it is small print. The pieces
+ * live on the photograph rather than in a list under it, so a whole post fits
+ * on one phone screen: the tag opens a card on the photo with each piece's
+ * picture, name and price.
  *
- * Love and save answer at once and settle with the server afterwards, so
- * the heart fills on the tap and not a round trip later. A double tap on
- * the photograph loves it, and never takes the love away.
+ * The four actions are their own objects, with the word curving along the top
+ * edge: a heart, a speech bubble, a paper plane and a hanger. Love and hang
+ * answer at once and settle with the server afterwards. Counts of loves stay
+ * off the page, so nobody is judged by a number.
  */
 
 import { useMutation } from '@tanstack/react-query';
+import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { memo, useEffect, useRef, useState } from 'react';
-import { Animated, Pressable, View } from 'react-native';
-import Svg, { Path } from 'react-native-svg';
+import { Animated, Platform, Pressable, View } from 'react-native';
+import Svg, { Defs, Path, Text as SvgText, TextPath } from 'react-native-svg';
 import { ApiError, api, type LookCardData } from '../lib/api';
-import { compactCount, timeAgo } from '../lib/time';
+import { timeAgo } from '../lib/time';
 import { useTheme } from '../theme/index';
 import { useAuthGate } from './auth-gate';
-import { Body, BodyStrong, Caption, Micro } from './text';
-import { useTryOnAvailable } from './try-on';
+import { Button } from './button';
+import { Body, BodyStrong, Caption, Price } from './text';
 
 const BLUR = 'L6Pj0^jE.AyE_3t7t7R**0o#DgR4';
 const DOUBLE_TAP_MS = 260;
 
-/** Captions on seeded looks end with the photographer's credit. */
-function splitCredit(caption: string | null): { text: string | null; credit: string | null } {
-  if (!caption) return { text: null, credit: null };
-  const at = caption.lastIndexOf('\n\nPhoto: ');
-  if (at < 0) return { text: caption, credit: null };
-  return { text: caption.slice(0, at).trim() || null, credit: caption.slice(at + 2).trim() };
-}
+/** Wide enough to set the photo and its details side by side. */
+const SPREAD_FROM = 860;
+
+const tick = () => {
+  if (Platform.OS !== 'web') void Haptics.selectionAsync();
+};
+
+const shillings = (cents: number) => `KSh ${Math.round(cents / 100).toLocaleString('en-KE')}`;
+
+const totalOf = (look: LookCardData) =>
+  look.pieces.reduce((sum, piece) => sum + (piece.priceCents ?? 0), 0);
 
 export function Avatar({
   url,
@@ -85,166 +90,132 @@ export function Avatar({
   );
 }
 
-function Icon({
+type MarkName = 'love' | 'ask' | 'send' | 'hang';
+
+/** One word set along a curve. */
+function Curved({ id, d, color, word }: { id: string; d: string; color: string; word: string }) {
+  return (
+    <>
+      <Defs>
+        <Path id={id} d={d} />
+      </Defs>
+      <SvgText fontFamily="DMSans_500Medium" fontSize={11} fill={color} textAnchor="middle">
+        <TextPath href={`#${id}`} startOffset="50%">
+          {word}
+        </TextPath>
+      </SvgText>
+    </>
+  );
+}
+
+function Mark({
   name,
+  uid,
   color,
-  filled = false,
-  size = 25,
+  on = false,
 }: {
-  name: 'heart' | 'comment' | 'send' | 'bookmark' | 'bag' | 'badge' | 'sparkle' | 'hanger';
+  name: MarkName;
+  uid: string;
   color: string;
-  filled?: boolean;
-  size?: number;
+  on?: boolean;
 }) {
-  const stroke = {
-    stroke: color,
-    strokeWidth: 1.6,
-    strokeLinecap: 'round' as const,
-    strokeLinejoin: 'round' as const,
-    fill: filled ? color : 'none',
-  };
+  const line = { stroke: color, strokeWidth: 1.4, strokeLinejoin: 'round' as const };
 
   return (
-    <Svg width={size} height={size} viewBox="0 0 24 24">
-      {name === 'heart' ? (
-        <Path
-          d="M12 20s-7-4.4-7-9.4A4.1 4.1 0 0 1 12 7a4.1 4.1 0 0 1 7 3.6c0 5-7 9.4-7 9.4Z"
-          {...stroke}
-        />
-      ) : name === 'comment' ? (
-        <Path d="M20 12a7 7 0 0 1-9.9 6.4L5 20l1.6-4.6A7 7 0 1 1 20 12Z" {...stroke} fill="none" />
+    <Svg width={72} height={64} viewBox="0 0 72 64">
+      {name === 'love' ? (
+        <>
+          <Path
+            d="M36 30C32 21 20 20 18 31 16 42 30 49 36 57 42 49 56 42 54 31 52 20 40 21 36 30Z"
+            {...line}
+            fill={on ? color : 'none'}
+          />
+          <Curved id={`${uid}a`} d="M12 34C11 15 29 12 35 25" color={color} word="love" />
+          <Curved id={`${uid}b`} d="M38 25C44 12 61 15 60 34" color={color} word="it" />
+        </>
+      ) : name === 'ask' ? (
+        <>
+          <Path
+            d="M36 23C47 23 56 29 56 37 56 45 47 51 36 51 33 51 30 50.6 28 50L20 56 22 47C18 44 16 41 16 37 16 29 25 23 36 23Z"
+            {...line}
+            fill="none"
+          />
+          <Curved id={`${uid}a`} d="M13 36A23 19 0 0 1 59 36" color={color} word="ask" />
+        </>
       ) : name === 'send' ? (
-        <Path d="M21 4 3 11l7 2.5L21 4Zm0 0-7.5 16-3.5-6.5" {...stroke} fill="none" />
-      ) : name === 'bookmark' ? (
-        <Path d="M7 4h10a1 1 0 0 1 1 1v15l-6-4-6 4V5a1 1 0 0 1 1-1Z" {...stroke} />
-      ) : name === 'bag' ? (
-        <Path
-          d="M6 8h12l-1 11a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L6 8Zm3 0V6a3 3 0 0 1 6 0v2"
-          {...stroke}
-          fill="none"
-        />
-      ) : name === 'hanger' ? (
-        <Path
-          d="M12 7.5a2 2 0 1 1 2 2c-1.1 0-2 .6-2 1.7v.8m0 0-8.2 5.6c-.8.5-.5 1.4.4 1.4h15.6c.9 0 1.2-.9.4-1.4L12 12Z"
-          {...stroke}
-          fill="none"
-          strokeWidth={2}
-        />
-      ) : name === 'sparkle' ? (
-        <Path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z" fill={color} />
+        <>
+          <Path d="M12 37L60 17 46 56 35 41ZM35 41L60 17" {...line} fill="none" />
+          <Curved id={`${uid}a`} d="M9 31L57 11" color={color} word="send" />
+        </>
       ) : (
         <>
           <Path
-            d="M12 2l2.4 2.1 3.2-.3.7 3.1 2.8 1.6-1.3 2.9 1.3 2.9-2.8 1.6-.7 3.1-3.2-.3L12 22l-2.4-2.1-3.2.3-.7-3.1-2.8-1.6L4.2 12 2.9 9.1l2.8-1.6.7-3.1 3.2.3z"
-            fill={color}
+            d="M36 31L11 50C8 53 9 55 13 55H59C63 55 64 53 61 50Z"
+            {...line}
+            fill={on ? color : 'none'}
           />
           <Path
-            d="M8.5 12.2l2.3 2.3 4.7-4.8"
-            stroke="#FFFFF0"
-            strokeWidth={1.8}
-            fill="none"
+            d="M36 31V25C36 22 41 21 41 16 41 12.5 38.8 10 36 10 33.2 10 31 12 31 15"
+            {...line}
             strokeLinecap="round"
-            strokeLinejoin="round"
+            fill="none"
           />
+          <Curved id={`${uid}a`} d="M6 46L33 27" color={color} word="hang" />
+          <Curved id={`${uid}b`} d="M39 27L66 46" color={color} word="it" />
         </>
       )}
     </Svg>
   );
 }
 
-function IconButton({
-  label,
-  caption,
-  active = false,
-  onPress,
-  children,
-}: {
-  label: string;
-  /** The word under the icon. Without one it is a bare icon. */
-  caption?: string;
-  active?: boolean;
-  onPress?: () => void;
-  children: React.ReactNode;
-}) {
-  const { colors } = useTheme();
-
+function SmallHeart({ color, filled }: { color: string; filled: boolean }) {
   return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      hitSlop={4}
-      style={({ pressed }) => ({
-        ...(caption ? { flex: 1, paddingVertical: 6, gap: 3 } : { width: 42, height: 42 }),
-        alignItems: 'center',
-        justifyContent: 'center',
-        transform: [{ scale: pressed ? 0.92 : 1 }],
-      })}
-    >
-      {children}
-      {caption ? (
-        <Micro
-          numberOfLines={1}
-          style={{
-            fontSize: 12,
-            lineHeight: 15,
-            color: active ? colors.accent : colors.ink,
-            fontFamily: active ? 'DMSans_600SemiBold' : 'DMSans_500Medium',
-          }}
-        >
-          {caption}
-        </Micro>
-      ) : null}
-    </Pressable>
+    <Svg width={18} height={18} viewBox="0 0 24 24">
+      <Path
+        d="M12 20s-7-4.4-7-9.4A4.1 4.1 0 0 1 12 7a4.1 4.1 0 0 1 7 3.6c0 5-7 9.4-7 9.4Z"
+        stroke={color}
+        strokeWidth={1.6}
+        strokeLinejoin="round"
+        fill={filled ? color : 'none'}
+      />
+    </Svg>
   );
 }
 
-export interface FeedPostProps {
-  look: LookCardData;
-  onPieces: (lookId: string) => void;
-  onComments: (lookId: string) => void;
-  onTryOn: (lookId: string) => void;
-  onSend: (lookId: string) => void;
-  /** The look id currently being dressed, so its button can say so. */
-  dressing?: boolean;
+/** A quick spring, for the moment something is chosen. */
+function usePop() {
+  const value = useRef(new Animated.Value(1)).current;
+  const pop = () => {
+    value.setValue(0.72);
+    Animated.spring(value, {
+      toValue: 1,
+      friction: 3.5,
+      tension: 180,
+      useNativeDriver: true,
+    }).start();
+  };
+  return [value, pop] as const;
 }
 
-export const FeedPost = memo(function FeedPost({
-  look,
-  onPieces,
-  onComments,
-  onTryOn,
-  onSend,
-  dressing = false,
-}: FeedPostProps) {
-  const { colors, radius, isWide, scheme } = useTheme();
-  const router = useRouter();
+/** Love and hang: answer at once, settle with the server afterwards. */
+function useLookActions(look: LookCardData) {
   const { requireAccount } = useAuthGate();
-  const canTryOn = useTryOnAvailable();
-
   const [liked, setLiked] = useState(look.likedByMe);
-  const [likes, setLikes] = useState(look.likeCount);
   const [saved, setSaved] = useState(look.savedByMe);
-  const [expanded, setExpanded] = useState(false);
 
   // A refetch brings the server's view; take it.
   useEffect(() => {
     setLiked(look.likedByMe);
-    setLikes(look.likeCount);
     setSaved(look.savedByMe);
-  }, [look.likedByMe, look.likeCount, look.savedByMe]);
+  }, [look.likedByMe, look.savedByMe]);
 
   const like = useMutation({
     mutationFn: () => api.likeLook(look.id),
-    onSuccess: (result) => {
-      setLiked(result.liked);
-      setLikes(result.likeCount);
-    },
+    onSuccess: (result) => setLiked(result.liked),
     onError: (error) => {
       setLiked(look.likedByMe);
-      setLikes(look.likeCount);
       if (error instanceof ApiError && error.needsAccount) {
-        requireAccount('Create an account to save what you love');
+        requireAccount('Create an account to keep what you love');
       }
     },
   });
@@ -260,14 +231,36 @@ export const FeedPost = memo(function FeedPost({
     },
   });
 
-  const toggleLike = () => {
-    setLiked(!liked);
-    setLikes(likes + (liked ? -1 : 1));
-    like.mutate();
+  return {
+    liked,
+    saved,
+    toggleLike: () => {
+      tick();
+      setLiked(!liked);
+      like.mutate();
+    },
+    toggleSave: () => {
+      tick();
+      setSaved(!saved);
+      save.mutate();
+    },
   };
+}
 
-  // The heart that blooms over the photograph on a double tap.
-  const bloom = useRef(new Animated.Value(0)).current;
+/** The photograph, whole. One tap opens the look, two love it. */
+function Plate({
+  look,
+  liked,
+  toggleLike,
+  children,
+}: {
+  look: LookCardData;
+  liked: boolean;
+  toggleLike: () => void;
+  children?: React.ReactNode;
+}) {
+  const { colors } = useTheme();
+  const router = useRouter();
   const lastTap = useRef(0);
   const singleTap = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -278,287 +271,419 @@ export const FeedPost = memo(function FeedPost({
     [],
   );
 
-  const onPhotoPress = () => {
+  const onPress = () => {
     const now = Date.now();
-
     if (now - lastTap.current < DOUBLE_TAP_MS) {
       lastTap.current = 0;
       if (singleTap.current) clearTimeout(singleTap.current);
       if (!liked) toggleLike();
-      bloom.setValue(0);
-      Animated.sequence([
-        Animated.spring(bloom, { toValue: 1, friction: 4, tension: 120, useNativeDriver: true }),
-        Animated.delay(350),
-        Animated.timing(bloom, { toValue: 2, duration: 220, useNativeDriver: true }),
-      ]).start();
       return;
     }
-
     lastTap.current = now;
     singleTap.current = setTimeout(() => {
       router.push({ pathname: '/look/[id]', params: { id: look.id } });
     }, DOUBLE_TAP_MS);
   };
 
-  const curated = !look.author;
-  const name = look.author?.displayName ?? 'Nima Edit';
-  const { text, credit } = splitCredit(look.caption);
-  const ratio = look.image?.width && look.image.height ? look.image.width / look.image.height : 0.8;
-
-  const openAuthor = () => {
-    if (look.author) {
-      router.push({ pathname: '/u/[handle]', params: { handle: look.author.handle } });
-    }
-  };
-
   return (
-    <View style={{ paddingBottom: 18 }}>
-      {/* Who */}
-      <View
-        style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          gap: 10,
-          paddingHorizontal: 14,
-          paddingVertical: 10,
-        }}
-      >
-        <Pressable
-          onPress={openAuthor}
-          disabled={curated}
-          accessibilityRole={curated ? undefined : 'link'}
-          style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1, minWidth: 0 }}
-        >
-          <Avatar url={look.author?.avatar?.url} name={name} nima={curated} />
-          <View style={{ flex: 1, minWidth: 0 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-              <BodyStrong numberOfLines={1} style={{ fontSize: 14, lineHeight: 18, flexShrink: 1 }}>
-                {name}
-              </BodyStrong>
-              {curated ? <Icon name="badge" color={colors.accent} size={14} /> : null}
-            </View>
-            <Caption numberOfLines={1} style={{ fontSize: 12, lineHeight: 16 }}>
-              {curated ? 'Picked by your stylist' : `@${look.author?.handle}`}
-            </Caption>
-          </View>
-        </Pressable>
-
-        {look.canRecreate && canTryOn ? (
-          <Pressable
-            onPress={() => onTryOn(look.id)}
-            disabled={dressing}
-            accessibilityRole="button"
-            accessibilityLabel={`Try ${look.title ?? 'this look'} on`}
-            style={({ pressed }) => ({
-              height: 32,
-              paddingHorizontal: 13,
-              borderRadius: radius.pill,
-              backgroundColor: colors.primarySoft,
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: 5,
-              opacity: pressed || dressing ? 0.7 : 1,
-            })}
-          >
-            <Icon name="hanger" color={colors.primary} size={15} />
-            <BodyStrong style={{ fontSize: 13, lineHeight: 17, color: colors.primary }}>
-              {dressing ? 'Dressing you' : 'Try it on'}
-            </BodyStrong>
-          </Pressable>
-        ) : null}
-      </View>
-
-      {/* The photograph */}
+    <View
+      style={{
+        width: '100%',
+        aspectRatio: 0.8,
+        backgroundColor: colors.sunk,
+        borderRadius: 14,
+        overflow: 'hidden',
+      }}
+    >
       <Pressable
-        onPress={onPhotoPress}
+        onPress={onPress}
         accessibilityLabel={look.title ?? 'A look on Nima'}
         accessibilityHint="Double tap to love it"
+        style={{ width: '100%', height: '100%' }}
       >
-        <View
-          style={{
-            width: '100%',
-            aspectRatio: Math.min(1, Math.max(0.8, ratio)),
-            backgroundColor: colors.sunk,
-            borderRadius: isWide ? radius.image : 0,
-            overflow: 'hidden',
-          }}
-        >
-          {look.image ? (
-            <Image
-              source={{ uri: look.image.url }}
-              placeholder={{ blurhash: look.image.blurhash ?? BLUR }}
-              contentFit="cover"
-              transition={200}
-              style={{ width: '100%', height: '100%' }}
+        {look.image ? (
+          <Image
+            source={{ uri: look.image.url }}
+            placeholder={{ blurhash: look.image.blurhash ?? BLUR }}
+            contentFit="cover"
+            transition={200}
+            style={{ width: '100%', height: '100%' }}
+          />
+        ) : null}
+      </Pressable>
+      {children}
+    </View>
+  );
+}
+
+/** The pieces, one at a time, on the photograph itself. */
+function PieceCard({
+  look,
+  index,
+  onNext,
+  onClose,
+}: {
+  look: LookCardData;
+  index: number;
+  onNext: () => void;
+  onClose: () => void;
+}) {
+  const { colors } = useTheme();
+  const router = useRouter();
+  const { requireAccount } = useAuthGate();
+  const piece = look.pieces[index];
+  const [loved, setLoved] = useState<Record<string, boolean>>({});
+  const [scale, pop] = usePop();
+
+  const love = useMutation({
+    mutationFn: (productId: string) => api.lovePiece(productId),
+    onError: (error) => {
+      if (error instanceof ApiError && error.needsAccount) {
+        requireAccount('Create an account to keep the pieces you love');
+      }
+    },
+  });
+
+  if (!piece) return null;
+
+  const isLoved = loved[piece.id] ?? piece.lovedByMe;
+  const productId = piece.productId;
+
+  return (
+    <View
+      style={{
+        position: 'absolute',
+        left: 8,
+        right: 8,
+        bottom: 8,
+        padding: 6,
+        borderRadius: 12,
+        backgroundColor: colors.surface,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
+      }}
+    >
+      <Pressable
+        disabled={!productId}
+        onPress={() => {
+          if (productId) router.push({ pathname: '/product/[id]', params: { id: productId } });
+        }}
+        accessibilityRole="link"
+        accessibilityLabel={piece.title}
+        style={{ flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 10 }}
+      >
+        {piece.image ? (
+          <Image
+            source={{ uri: piece.image.url }}
+            style={{ width: 44, height: 54, borderRadius: 8, backgroundColor: colors.sunk }}
+            contentFit="cover"
+          />
+        ) : null}
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <BodyStrong numberOfLines={1} style={{ fontSize: 14, lineHeight: 19 }}>
+            {piece.title}
+          </BodyStrong>
+          {piece.priceCents ? (
+            <Price
+              cents={piece.priceCents}
+              style={{ fontSize: 13, lineHeight: 18, fontFamily: 'DMSans_400Regular' }}
             />
-          ) : null}
-
-          <Animated.View
-            pointerEvents="none"
-            style={{
-              position: 'absolute',
-              top: 0,
-              bottom: 0,
-              left: 0,
-              right: 0,
-              alignItems: 'center',
-              justifyContent: 'center',
-              opacity: bloom.interpolate({ inputRange: [0, 0.3, 1, 2], outputRange: [0, 1, 1, 0] }),
-              transform: [
-                {
-                  scale: bloom.interpolate({ inputRange: [0, 1, 2], outputRange: [0.4, 1, 1.15] }),
-                },
-              ],
-            }}
-          >
-            <Icon name="heart" color="#FFFFF0" filled size={96} />
-          </Animated.View>
-
-          {look.itemCount > 0 ? (
-            <Pressable
-              onPress={() => onPieces(look.id)}
-              accessibilityRole="button"
-              accessibilityLabel={`Shop the ${look.itemCount} pieces`}
-              style={({ pressed }) => ({
-                position: 'absolute',
-                left: 12,
-                bottom: 12,
-                height: 34,
-                paddingLeft: 10,
-                paddingRight: 13,
-                borderRadius: 999,
-                backgroundColor: 'rgba(29, 22, 18, 0.62)',
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: 7,
-                opacity: pressed ? 0.8 : 1,
-              })}
-            >
-              <Icon name="bag" color="#FFFFF0" size={16} />
-              <BodyStrong style={{ fontSize: 13, lineHeight: 17, color: '#FFFFF0' }}>
-                {`Shop ${look.itemCount} ${look.itemCount === 1 ? 'piece' : 'pieces'}`}
-              </BodyStrong>
-            </Pressable>
           ) : null}
         </View>
       </Pressable>
 
-      {/* What you can do */}
+      {productId ? (
+        <Pressable
+          onPress={() => {
+            tick();
+            if (!isLoved) pop();
+            setLoved({ ...loved, [piece.id]: !isLoved });
+            love.mutate(productId);
+          }}
+          accessibilityRole="button"
+          accessibilityLabel={isLoved ? `Stop loving ${piece.title}` : `Love ${piece.title}`}
+          style={{ width: 36, height: 44, alignItems: 'center', justifyContent: 'center' }}
+        >
+          <Animated.View style={{ transform: [{ scale }] }}>
+            <SmallHeart color={isLoved ? colors.accent : colors.muted} filled={isLoved} />
+          </Animated.View>
+        </Pressable>
+      ) : null}
+
+      <Pressable
+        onPress={index === look.pieces.length - 1 ? onClose : onNext}
+        accessibilityRole="button"
+        accessibilityLabel={index === look.pieces.length - 1 ? 'Close' : 'Next piece'}
+        style={{ width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}
+      >
+        <Caption style={{ fontSize: 11, lineHeight: 14 }}>
+          {index === look.pieces.length - 1 ? 'Done' : 'Next'}
+        </Caption>
+        <Caption style={{ fontSize: 11, lineHeight: 14 }}>
+          {`${index + 1} of ${look.pieces.length}`}
+        </Caption>
+      </Pressable>
+    </View>
+  );
+}
+
+export interface FeedPostProps {
+  look: LookCardData;
+  onPieces: (lookId: string) => void;
+  onComments: (lookId: string) => void;
+  onTryOn: (lookId: string) => void;
+  onSend: (lookId: string) => void;
+  /** True while this look is being dressed. */
+  dressing?: boolean;
+}
+
+export const FeedPost = memo(function FeedPost({
+  look,
+  onPieces,
+  onComments,
+  onSend,
+}: FeedPostProps) {
+  const { colors, width } = useTheme();
+  const router = useRouter();
+  const { liked, saved, toggleLike, toggleSave } = useLookActions(look);
+  const [piece, setPiece] = useState<number | null>(null);
+  const [heartScale, popHeart] = usePop();
+
+  // The hanger swings on its hook when you hang something on it.
+  const sway = useRef(new Animated.Value(0)).current;
+  const swing = () => {
+    sway.setValue(1);
+    Animated.spring(sway, {
+      toValue: 0,
+      friction: 2.2,
+      tension: 90,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const curated = !look.author;
+  const name = look.author?.store?.name ?? look.author?.displayName ?? 'Nima Edit';
+  const total = totalOf(look);
+  const spread = width >= SPREAD_FROM;
+
+  const plate = (
+    <Plate look={look} liked={liked} toggleLike={toggleLike}>
+      {piece === null && look.pieces.length > 0 ? (
+        <Pressable
+          onPress={() => setPiece(0)}
+          accessibilityRole="button"
+          accessibilityLabel={`See the ${look.pieces.length} pieces`}
+          style={{
+            position: 'absolute',
+            left: 10,
+            bottom: 10,
+            height: 32,
+            paddingHorizontal: 12,
+            borderRadius: 16,
+            justifyContent: 'center',
+            backgroundColor: colors.surface,
+          }}
+        >
+          <BodyStrong style={{ fontSize: 12.5, lineHeight: 17 }}>
+            {`${look.pieces.length} ${look.pieces.length === 1 ? 'piece' : 'pieces'}`}
+          </BodyStrong>
+        </Pressable>
+      ) : null}
+      {piece !== null ? (
+        <PieceCard
+          look={look}
+          index={piece}
+          onNext={() => setPiece(piece + 1)}
+          onClose={() => setPiece(null)}
+        />
+      ) : null}
+    </Plate>
+  );
+
+  const details = (
+    <View style={{ flex: spread ? 1 : undefined, minWidth: 0 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 4 }}>
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <Body
+            numberOfLines={spread ? 2 : 1}
+            style={{
+              fontFamily: 'CormorantGaramond_500Medium',
+              fontSize: spread ? 44 : 24,
+              lineHeight: spread ? 46 : 28,
+            }}
+          >
+            {look.title ?? 'A look'}
+          </Body>
+          <Pressable
+            disabled={curated}
+            onPress={() => {
+              if (look.author) {
+                router.push({ pathname: '/u/[handle]', params: { handle: look.author.handle } });
+              }
+            }}
+          >
+            <Caption numberOfLines={1} style={{ fontSize: 12.5, lineHeight: 17 }}>
+              {`${name}, ${timeAgo(look.createdAt)}`}
+            </Caption>
+          </Pressable>
+        </View>
+        {!spread && look.itemCount > 0 ? (
+          <Button
+            full={false}
+            label={total > 0 ? `Shop, ${shillings(total)}` : 'See pieces'}
+            onPress={() => onPieces(look.id)}
+            style={{ height: 44, paddingHorizontal: 18 }}
+          />
+        ) : null}
+      </View>
+
+      {spread && look.itemCount > 0 ? (
+        <Button
+          full={false}
+          label={total > 0 ? `Shop ${look.itemCount} pieces, ${shillings(total)}` : 'See pieces'}
+          onPress={() => onPieces(look.id)}
+          style={{ marginTop: 24, alignSelf: 'flex-start' }}
+        />
+      ) : null}
+
       <View
         style={{
           flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'space-around',
-          paddingHorizontal: 8,
-          paddingTop: 6,
-          paddingBottom: 4,
+          justifyContent: spread ? 'flex-start' : 'space-around',
+          gap: spread ? 16 : 0,
+          marginTop: spread ? 20 : 6,
         }}
       >
-        <IconButton
-          label={liked ? 'Loved' : 'Love it'}
-          caption={liked ? 'Loved' : 'Love it'}
-          active={liked}
-          onPress={toggleLike}
-        >
-          <Icon name="heart" color={liked ? colors.accent : colors.ink} filled={liked} size={25} />
-        </IconButton>
-        <IconButton label="Comments" caption="Comment" onPress={() => onComments(look.id)}>
-          <Icon name="comment" color={colors.ink} size={24} />
-        </IconButton>
-        <IconButton label="Send to a friend" caption="Send" onPress={() => onSend(look.id)}>
-          <Icon name="send" color={colors.ink} size={23} />
-        </IconButton>
-        <IconButton
-          label={saved ? 'Saved' : 'Save'}
-          caption={saved ? 'Saved' : 'Save'}
-          active={saved}
+        <Pressable
           onPress={() => {
-            setSaved(!saved);
-            save.mutate();
+            if (!liked) popHeart();
+            toggleLike();
           }}
+          accessibilityRole="button"
+          accessibilityLabel={liked ? 'Loved' : 'Love it'}
+          accessibilityState={{ selected: liked }}
         >
-          <Icon
-            name="bookmark"
-            color={saved ? colors.accent : colors.ink}
-            filled={saved}
-            size={23}
-          />
-        </IconButton>
-      </View>
-
-      {/* What it is */}
-      <View style={{ paddingHorizontal: 14, gap: 6 }}>
-        {likes > 0 ? (
-          <BodyStrong style={{ fontSize: 14, lineHeight: 18 }}>
-            {`${compactCount(likes)} ${likes === 1 ? 'love' : 'loves'}`}
-          </BodyStrong>
-        ) : null}
-
-        {look.title || text ? (
-          <Pressable
-            onPress={() => setExpanded(!expanded)}
-            accessibilityRole="button"
-            accessibilityLabel={expanded ? 'Show less' : 'Show more'}
-          >
-            <Body numberOfLines={expanded ? undefined : 2} style={{ fontSize: 14, lineHeight: 20 }}>
-              {look.title ? (
-                <BodyStrong
-                  style={{ fontSize: 14, lineHeight: 20 }}
-                >{`${look.title}  `}</BodyStrong>
-              ) : null}
-              {text}
-            </Body>
-            {expanded && credit ? (
-              <Caption style={{ fontSize: 12, marginTop: 4 }}>{credit}</Caption>
-            ) : null}
-          </Pressable>
-        ) : null}
-
-        {look.nimaSays ? (
-          <View
-            style={{
-              flexDirection: 'row',
-              gap: 10,
-              alignItems: 'flex-start',
-              marginTop: 2,
-              paddingVertical: 10,
-              paddingHorizontal: 12,
-              borderRadius: 16,
-              backgroundColor: colors.primarySoft,
-            }}
-          >
-            <Avatar nima size={22} />
-            <Body
-              style={{
-                flex: 1,
-                fontFamily: 'CormorantGaramond_500Medium_Italic',
-                fontSize: 18,
-                lineHeight: 22,
-                color: scheme === 'dark' ? colors.ink : colors.primary,
-              }}
-            >
-              {look.nimaSays}
-            </Body>
-          </View>
-        ) : null}
-
+          <Animated.View style={{ transform: [{ scale: heartScale }] }}>
+            <Mark name="love" uid={`l${look.id}`} color={liked ? colors.accent : colors.ink} on={liked} />
+          </Animated.View>
+        </Pressable>
         <Pressable
           onPress={() => onComments(look.id)}
           accessibilityRole="button"
-          style={{ paddingTop: 2 }}
+          accessibilityLabel="Ask about this look"
         >
-          <Caption style={{ fontSize: 14, lineHeight: 19 }}>
-            {look.commentCount > 1
-              ? `View all ${look.commentCount} comments`
-              : look.commentCount === 1
-                ? 'View 1 comment'
-                : 'Add a comment'}
-          </Caption>
+          <Mark name="ask" uid={`a${look.id}`} color={colors.ink} />
         </Pressable>
+        <Pressable
+          onPress={() => onSend(look.id)}
+          accessibilityRole="button"
+          accessibilityLabel="Send to a friend"
+        >
+          <Mark name="send" uid={`s${look.id}`} color={colors.ink} />
+        </Pressable>
+        <Pressable
+          onPress={() => {
+            if (!saved) swing();
+            toggleSave();
+          }}
+          accessibilityRole="button"
+          accessibilityLabel={saved ? 'Hung up' : 'Hang it'}
+          accessibilityState={{ selected: saved }}
+        >
+          <Animated.View
+            style={{
+              transform: [
+                { translateY: -18 },
+                { rotate: sway.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '-14deg'] }) },
+                { translateY: 18 },
+              ],
+            }}
+          >
+            <Mark name="hang" uid={`h${look.id}`} color={saved ? colors.primary : colors.ink} on={saved} />
+          </Animated.View>
+        </Pressable>
+      </View>
+    </View>
+  );
 
-        <Caption style={{ fontSize: 11.5, lineHeight: 15 }}>
-          {timeAgo(look.createdAt, 'long')}
-        </Caption>
+  return (
+    <View
+      style={{
+        paddingHorizontal: 12,
+        paddingBottom: 28,
+        flexDirection: spread ? 'row' : 'column',
+        alignItems: spread ? 'center' : 'stretch',
+        gap: spread ? 56 : 12,
+      }}
+    >
+      <View style={spread ? { width: '50%' } : undefined}>{plate}</View>
+      {details}
+    </View>
+  );
+});
+
+/** The smaller page. Two of these share a row, for the pace of a magazine. */
+export const FeedTile = memo(function FeedTile({ look }: { look: LookCardData }) {
+  const { colors } = useTheme();
+  const { liked, toggleLike } = useLookActions(look);
+  const [scale, pop] = usePop();
+  const total = totalOf(look);
+
+  return (
+    <View style={{ flex: 1, minWidth: 0, gap: 8 }}>
+      <Plate look={look} liked={liked} toggleLike={toggleLike}>
+        <Pressable
+          onPress={() => {
+            if (!liked) pop();
+            toggleLike();
+          }}
+          accessibilityRole="button"
+          accessibilityLabel={liked ? 'Loved' : 'Love it'}
+          accessibilityState={{ selected: liked }}
+          style={{
+            position: 'absolute',
+            right: 4,
+            bottom: 4,
+            width: 44,
+            height: 44,
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <View
+            style={{
+              width: 32,
+              height: 32,
+              borderRadius: 16,
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: liked ? colors.accent : colors.surface,
+            }}
+          >
+            <Animated.View style={{ transform: [{ scale }] }}>
+              <SmallHeart color={liked ? colors.onAccent : colors.ink} filled={liked} />
+            </Animated.View>
+          </View>
+        </Pressable>
+      </Plate>
+
+      <View style={{ paddingHorizontal: 2 }}>
+        {look.title ? (
+          <Body
+            numberOfLines={2}
+            style={{ fontFamily: 'CormorantGaramond_500Medium', fontSize: 19, lineHeight: 22 }}
+          >
+            {look.title}
+          </Body>
+        ) : null}
+        {look.itemCount > 0 ? (
+          <Caption numberOfLines={1} style={{ fontSize: 12.5, lineHeight: 17 }}>
+            {`${look.itemCount} ${look.itemCount === 1 ? 'piece' : 'pieces'}${
+              total > 0 ? `, ${shillings(total)}` : ''
+            }`}
+          </Caption>
+        ) : null}
       </View>
     </View>
   );

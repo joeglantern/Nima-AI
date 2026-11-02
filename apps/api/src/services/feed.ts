@@ -35,7 +35,29 @@ type LookWithRelations = Prisma.LookGetPayload<{
   include: {
     owner: { include: { profile: true; store: true } };
     _count: { select: { items: true; comments: { where: { hiddenAt: null } } } };
-    items: { include: { product: { select: { tags: true; occasions: true; category: true } } } };
+    items: {
+      include: {
+        product: {
+          select: {
+            tags: true;
+            occasions: true;
+            category: true;
+            id: true;
+            title: true;
+            priceFromCents: true;
+            status: true;
+            inStock: true;
+            store: { select: { name: true } };
+            images: {
+              take: 1;
+              orderBy: { position: 'asc' };
+              select: { processedKey: true; originalKey: true; width: true; height: true };
+            };
+          };
+        };
+        wardrobeItem: { select: { label: true } };
+      };
+    };
   };
 }>;
 
@@ -93,7 +115,28 @@ export class FeedService {
         owner: { include: { profile: true, store: true } },
         _count: { select: { items: true, comments: { where: { hiddenAt: null } } } },
         items: {
-          include: { product: { select: { tags: true, occasions: true, category: true } } },
+          orderBy: { position: 'asc' },
+          include: {
+            product: {
+              select: {
+                tags: true,
+                occasions: true,
+                category: true,
+                id: true,
+                title: true,
+                priceFromCents: true,
+                status: true,
+                inStock: true,
+                store: { select: { name: true } },
+                images: {
+                  take: 1,
+                  orderBy: { position: 'asc' },
+                  select: { processedKey: true, originalKey: true, width: true, height: true },
+                },
+              },
+            },
+            wardrobeItem: { select: { label: true } },
+          },
         },
       },
     });
