@@ -6,10 +6,12 @@
  * passed, this removes what was theirs.
  *
  * The user row itself stays, scrubbed: orders hang off it and a shop has to
- * be able to account for what it sold. Everything that was about the person
- * rather than the sale goes: profile, photographs, wardrobe, looks, the
- * files behind them, sessions and sign in methods. Events lose their link
- * to the person and stay as counts.
+ * be able to account for what it sold, and the credit ledger stays with it
+ * for the same reason. Everything that was about the person rather than the
+ * sale goes: profile, style answers and measurements, photographs, wardrobe,
+ * looks, the files behind them, conversations with Nima, messages they sent,
+ * blocks, sessions and sign in methods. Events lose their link to the person
+ * and stay as counts.
  *
  * It runs on a timer inside the API, once an hour, behind a short lock so
  * two instances never sweep at once. There is no nightly job runner yet, and
@@ -101,6 +103,14 @@ async function eraseAccount(app: FastifyInstance, userId: string): Promise<void>
     prisma.pushToken.deleteMany({ where: { userId } }),
     prisma.notification.deleteMany({ where: { userId } }),
     prisma.event.updateMany({ where: { userId }, data: { userId: null } }),
+    // What they told Nima about themselves, and what they said to it.
+    prisma.styleProfile.deleteMany({ where: { userId } }),
+    prisma.stylistMessage.deleteMany({ where: { thread: { userId } } }),
+    prisma.stylistThread.deleteMany({ where: { userId } }),
+    // Their side of every conversation. The other person keeps theirs.
+    prisma.message.deleteMany({ where: { senderId: userId } }),
+    prisma.conversationMember.deleteMany({ where: { userId } }),
+    prisma.block.deleteMany({ where: { OR: [{ blockerId: userId }, { blockedId: userId }] } }),
     prisma.profile.deleteMany({ where: { userId } }),
     prisma.session.deleteMany({ where: { userId } }),
     prisma.account.deleteMany({ where: { userId } }),

@@ -68,6 +68,9 @@ export function EmailSteps({
   }, [resendIn]);
 
   const quietText = onSurface === 'deep' ? colors.onEspresso : colors.muted;
+  // An error must not look like a hint. On the deep brown sheet the usual
+  // red disappears, so it gets a light rose there.
+  const errorText = onSurface === 'deep' ? '#F3B7B2' : colors.critical;
 
   const inputStyle = {
     backgroundColor: colors.surface,
@@ -201,7 +204,7 @@ export function EmailSteps({
         </View>
 
         {error ? (
-          <Caption style={{ color: quietText }} align="center">
+          <Caption style={{ color: errorText }} align="center" accessibilityLiveRegion="polite">
             {error}
           </Caption>
         ) : null}
@@ -227,7 +230,7 @@ export function EmailSteps({
       ) : null}
 
       {error ? (
-        <Caption style={{ color: colors.critical }} align="center">
+        <Caption style={{ color: errorText }} align="center" accessibilityLiveRegion="polite">
           {error}
         </Caption>
       ) : null}
