@@ -20,6 +20,7 @@ import { memo, useEffect, useRef, useState } from 'react';
 import { Animated, Platform, Pressable, View } from 'react-native';
 import Svg, { Defs, Path, Text as SvgText, TextPath } from 'react-native-svg';
 import { ApiError, api, type LookCardData } from '../lib/api';
+import { sized } from '../lib/media';
 import { useSignedIn } from '../lib/social';
 import { timeAgo } from '../lib/time';
 import { useTheme } from '../theme/index';
@@ -59,7 +60,7 @@ export function Avatar({
   if (url && !nima) {
     return (
       <Image
-        source={{ uri: url }}
+        source={{ uri: sized(url, 240) }}
         style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: colors.sunk }}
         contentFit="cover"
       />
@@ -336,11 +337,14 @@ function Plate({
   look,
   liked,
   toggleLike,
+  pixels,
   children,
 }: {
   look: LookCardData;
   liked: boolean;
   toggleLike: () => void;
+  /** How wide a copy of the photo to ask for. */
+  pixels: 480 | 1080;
   children?: React.ReactNode;
 }) {
   const { colors } = useTheme();
@@ -387,7 +391,7 @@ function Plate({
       >
         {look.image ? (
           <Image
-            source={{ uri: look.image.url }}
+            source={{ uri: sized(look.image.url, pixels) }}
             placeholder={{ blurhash: look.image.blurhash ?? BLUR }}
             contentFit="cover"
             transition={200}
@@ -460,7 +464,7 @@ function PieceCard({
       >
         {piece.image ? (
           <Image
-            source={{ uri: piece.image.url }}
+            source={{ uri: sized(piece.image.url, 240) }}
             style={{ width: 44, height: 54, borderRadius: 8, backgroundColor: colors.sunk }}
             contentFit="cover"
           />
@@ -561,7 +565,7 @@ export const FeedPost = memo(function FeedPost({
   const spread = width >= SPREAD_FROM;
 
   const plate = (
-    <Plate look={look} liked={liked} toggleLike={toggleLike}>
+    <Plate look={look} liked={liked} toggleLike={toggleLike} pixels={1080}>
       {piece === null && look.pieces.length > 0 ? (
         <Pressable
           onPress={() => setPiece(0)}
@@ -667,8 +671,10 @@ export const FeedPost = memo(function FeedPost({
         </Pressable>
         <Pressable
           onPress={() => {
+            // The clip starts first, so the tap is seen before the sheet
+            // rises over the row.
             play('ask');
-            onComments(look.id);
+            setTimeout(() => onComments(look.id), 350);
           }}
           accessibilityRole="button"
           accessibilityLabel="Ask about this look"
@@ -681,7 +687,7 @@ export const FeedPost = memo(function FeedPost({
         <Pressable
           onPress={() => {
             play('send');
-            onSend(look.id);
+            setTimeout(() => onSend(look.id), 350);
           }}
           accessibilityRole="button"
           accessibilityLabel="Send to a friend"
@@ -745,7 +751,7 @@ export const FeedTile = memo(function FeedTile({ look }: { look: LookCardData })
 
   return (
     <View style={{ flex: 1, minWidth: 0, gap: 8 }}>
-      <Plate look={look} liked={liked} toggleLike={toggleLike}>
+      <Plate look={look} liked={liked} toggleLike={toggleLike} pixels={480}>
         <Pressable
           onPress={() => {
             if (!liked) pop();

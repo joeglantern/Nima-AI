@@ -11,6 +11,7 @@ import { Link } from 'expo-router';
 import { Pressable, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import type { FeedItem, ProductCard as ProductCardData } from '../lib/api';
+import { sized } from '../lib/media';
 import { useTheme } from '../theme/index';
 import { Body, Caption, Eyebrow, Micro, Price } from './text';
 
@@ -52,7 +53,7 @@ export function ProductCard({ product }: { product: ProductCardData }) {
         >
           {product.image ? (
             <Image
-              source={{ uri: product.image.url }}
+              source={{ uri: sized(product.image.url, 480) }}
               placeholder={{ blurhash: BLUR }}
               contentFit="cover"
               transition={180}
@@ -169,7 +170,7 @@ export function LookCard({ look, onLike, onSave, onComment, variant = 'feed' }: 
           >
             {look.image ? (
               <Image
-                source={{ uri: look.image.url }}
+                source={{ uri: sized(look.image.url, 480) }}
                 placeholder={{ blurhash: BLUR }}
                 contentFit="cover"
                 transition={200}

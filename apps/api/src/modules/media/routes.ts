@@ -24,7 +24,9 @@
  * bucket listens on loopback and cannot be reached any other way.
  */
 
+import { buffer } from 'node:stream/consumers';
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
+import sharp from 'sharp';
 import { z } from 'zod';
 import { errors } from '../../lib/errors.js';
 import { verifyMediaToken } from '../../lib/media-token.js';
@@ -45,7 +47,11 @@ export const mediaRoutes: FastifyPluginAsyncZod = async (app) => {
           'server is set up. Private media is refused unless the caller owns it, it is part ' +
           'of something published, or the link was issued for it.',
         params: z.object({ '*': z.string().min(1).max(300) }),
-        querystring: z.object({ t: z.string().max(2000).optional() }),
+        querystring: z.object({
+          t: z.string().max(2000).optional(),
+          /** A copy no wider than this: 240, 480, 720 or 1080. */
+          w: z.coerce.number().int().optional(),
+        }),
         response: {
           // The bytes themselves, in proxy mode. Streams bypass the
           // serialiser, so this only describes the route.
@@ -75,25 +81,34 @@ export const mediaRoutes: FastifyPluginAsyncZod = async (app) => {
         }
       }
 
+      // A public key never changes under the same name. A private link
+      // expires with its token, so it is cached for as long as it lasts.
+      const cacheControl = isPublic
+        ? 'public, max-age=86400, stale-while-revalidate=604800'
+        : 'private, max-age=3600';
+
+      // A sized copy, made once from the original and kept beside it. A
+      // phone on costly data should not download a 1080 pixel photo to
+      // show it at 180.
+      const width = request.query.w;
+      const resizable = width !== undefined && SIZES.has(width) && /\.(jpe?g|png|webp)$/i.test(key);
+      const served = resizable ? derivedKey(key, width) : key;
+
       if (app.env.MEDIA_DELIVERY === 'proxy') {
         let object: Awaited<ReturnType<typeof app.storage.stream>>;
         try {
-          object = await app.storage.stream(key);
+          object = await app.storage.stream(served);
         } catch (error) {
-          if ((error as { name?: string }).name === 'NoSuchKey') {
-            throw errors.notFound('That image');
-          }
-          throw error;
+          if ((error as { name?: string }).name !== 'NoSuchKey') throw error;
+          if (!resizable) throw errors.notFound('That image');
+          // The first request for this size makes it.
+          const made = await makeDerived(app, key, served, width);
+          reply.header('cache-control', cacheControl);
+          reply.type('image/webp');
+          return reply.send(made);
         }
 
-        // A public key never changes under the same name. A private link
-        // expires with its token, so it is cached for as long as it lasts.
-        reply.header(
-          'cache-control',
-          isPublic
-            ? 'public, max-age=86400, stale-while-revalidate=604800'
-            : 'private, max-age=3600',
-        );
+        reply.header('cache-control', cacheControl);
         if (object.contentType) reply.type(object.contentType);
         if (object.contentLength !== null) reply.header('content-length', object.contentLength);
         if (object.etag) reply.header('etag', object.etag);
@@ -101,7 +116,17 @@ export const mediaRoutes: FastifyPluginAsyncZod = async (app) => {
         return reply.send(object.body);
       }
 
-      const url = await app.storage.presignDownload(key, 60 * 60);
+      if (resizable) {
+        try {
+          const probe = await app.storage.stream(served);
+          probe.body.destroy();
+        } catch (error) {
+          if ((error as { name?: string }).name !== 'NoSuchKey') throw error;
+          await makeDerived(app, key, served, width);
+        }
+      }
+
+      const url = await app.storage.presignDownload(served, 60 * 60);
 
       // A browser may cache the image itself, but not this redirect, because
       // the signature expires.
@@ -110,6 +135,43 @@ export const mediaRoutes: FastifyPluginAsyncZod = async (app) => {
     },
   );
 };
+
+const SIZES = new Set([240, 480, 720, 1080]);
+
+/** Where the sized copy of a key lives. Always WebP, whatever the original. */
+function derivedKey(key: string, width: number): string {
+  return `derived/w${width}/${key.replace(/\.[^./]+$/, '')}.webp`;
+}
+
+/** Makes the sized copy from the original, keeps it, and returns its bytes. */
+async function makeDerived(
+  app: Parameters<FastifyPluginAsyncZod>[0],
+  key: string,
+  target: string,
+  width: number,
+): Promise<Buffer> {
+  let original: Awaited<ReturnType<typeof app.storage.stream>>;
+  try {
+    original = await app.storage.stream(key);
+  } catch (error) {
+    if ((error as { name?: string }).name === 'NoSuchKey') throw errors.notFound('That image');
+    throw error;
+  }
+
+  const input = await buffer(original.body);
+  const made = await sharp(input)
+    .rotate()
+    .resize({ width, withoutEnlargement: true })
+    .webp({ quality: 78 })
+    .toBuffer();
+
+  // Kept for next time. A failure to keep it is not a failure to serve it.
+  await app.storage.put(target, made, 'image/webp').catch((error: unknown) => {
+    app.log.warn({ err: error, target }, 'Could not keep a sized image');
+  });
+
+  return made;
+}
 
 /**
  * Media under a person's own prefix. Visible when they are the owner, or

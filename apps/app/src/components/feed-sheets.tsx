@@ -12,6 +12,7 @@ import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, TextInput, View } from 'react-native';
 import { ApiError, api } from '../lib/api';
+import { sized } from '../lib/media';
 import { timeAgo } from '../lib/time';
 import { useTheme } from '../theme/index';
 import { useAuthGate } from './auth-gate';
@@ -66,7 +67,7 @@ export function PiecesSheet({
           <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center' }}>
             {item.image ? (
               <Image
-                source={{ uri: item.image.url }}
+                source={{ uri: sized(item.image.url, 240) }}
                 style={{ width: 52, height: 65, borderRadius: 10, backgroundColor: colors.sunk }}
                 contentFit="cover"
               />
@@ -124,7 +125,7 @@ export function PiecesSheet({
                   >
                     {image ? (
                       <Image
-                        source={{ uri: image.url }}
+                        source={{ uri: sized(image.url, 240) }}
                         style={{ width: '100%', height: '100%' }}
                         contentFit="cover"
                       />

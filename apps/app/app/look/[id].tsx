@@ -9,6 +9,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { sized } from '../../src/lib/media';
 import { PageTitle } from '../../src/lib/page-title';
 import { back } from '../../src/lib/routes';
 import { useState } from 'react';
@@ -73,7 +74,7 @@ export default function LookScreen() {
           <View style={{ flex: isWide ? 1 : undefined }}>
             {item.image ? (
               <Image
-                source={{ uri: item.image.url }}
+                source={{ uri: sized(item.image.url, 1080) }}
                 contentFit="cover"
                 transition={150}
                 style={{

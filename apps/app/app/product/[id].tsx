@@ -23,6 +23,7 @@ import { LovePiece } from '../../src/components/love-piece';
 import { Body, BodyStrong, Caption, Micro, Price, Title } from '../../src/components/text';
 import { TryOnResultSheet, useTryOn, useTryOnAvailable } from '../../src/components/try-on';
 import { ApiError, api } from '../../src/lib/api';
+import { sized } from '../../src/lib/media';
 import { useTheme } from '../../src/theme/index';
 
 export default function ProductScreen() {
@@ -117,7 +118,7 @@ export default function ProductScreen() {
               {item.images.map((image, index) => (
                 <Image
                   key={image.url}
-                  source={{ uri: image.url }}
+                  source={{ uri: sized(image.url, 1080) }}
                   contentFit="cover"
                   transition={150}
                   style={{
