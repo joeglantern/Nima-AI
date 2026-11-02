@@ -1049,6 +1049,14 @@ model CheckoutGroup {
 enum DeliveryMethod {
   PICKUP_POINT
   DOORSTEP
+  /// Bought at a shop's booth and handed over on the spot.
+  AT_BOOTH
+}
+
+/// How a sale was made. Vendor reports for an event group on this.
+enum OrderChannel {
+  ONLINE
+  BOOTH
 }
 
 model Order {
@@ -1063,6 +1071,7 @@ model Order {
   store           Store         @relation(fields: [storeId], references: [id], onDelete: Restrict)
 
   status          OrderStatus   @default(PENDING_PAYMENT)
+  channel         OrderChannel  @default(ONLINE)
   subtotalCents   Int
   deliveryCents   Int           @default(0)
   totalCents      Int
@@ -1086,6 +1095,7 @@ model Order {
 
   @@index([buyerId, placedAt])
   @@index([storeId, status])
+  @@index([storeId, channel, paidAt])
   @@map("orders")
 }
 
@@ -1152,6 +1162,8 @@ model Payment {
 
 enum PaymentProvider {
   FINGO
+  /// M-Pesa through Paystack. The provider in use from November 2026.
+  PAYSTACK
   APPLE_IAP
   GOOGLE_PLAY
   MANUAL

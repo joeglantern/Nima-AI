@@ -9,13 +9,14 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { Image } from 'expo-image';
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { Redirect, Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { EmptyState } from '../../src/components/empty-state';
 import { Body, BodyStrong, Caption, Micro, Price, Title } from '../../src/components/text';
 import { api } from '../../src/lib/api';
 import { useServerFrame } from '../../src/lib/realtime';
+import { boothReceipt } from '../../src/lib/routes';
 import { useTheme } from '../../src/theme/index';
 
 const STEPS: Array<{ key: string; label: string }> = [
@@ -55,6 +56,9 @@ export default function OrderScreen() {
 
   const item = order.data;
   if (!item) return <EmptyState art="cart" message="That order is not here." />;
+
+  // Nothing was packed or posted. The receipt is the whole story.
+  if (item.channel === 'BOOTH') return <Redirect href={boothReceipt(item.id)} />;
 
   const reached = STEPS.findIndex((step) => step.key === item.status);
   const cancelled = item.status === 'CANCELLED' || item.status === 'REFUNDED';

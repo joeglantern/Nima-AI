@@ -12,13 +12,19 @@
  * decision here follows from that:
  *
  *   - `charge` returns "we asked", not "they paid".
- *   - The webhook is the only thing that marks an order paid.
+ *   - Only a confirmed result marks an order paid. With Paystack that means
+ *     Transaction Verify agreeing on the reference, amount and currency, never
+ *     a webhook on its own.
  *   - Every request carries an idempotency key, because a retried push that
  *     charges twice is the worst bug this system can have.
+ *
+ * Paystack is used whenever its secret key is set. Fingo stays only because
+ * the test scripts still drive it; nothing in production configures it.
  */
 
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import type { Env } from '@nima/config';
+import { PaystackGateway } from './paystack.js';
 
 export interface ChargeRequest {
   amountCents: number;
@@ -29,8 +35,10 @@ export interface ChargeRequest {
   description: string;
   /** Replaying this key must never take the money twice. */
   idempotencyKey: string;
-  /** Where the provider posts the result. */
+  /** Where the provider posts the result. Paystack uses the dashboard setting instead. */
   callbackUrl: string;
+  /** The buyer's email, when there is one. Paystack requires an email on a charge. */
+  email?: string | null;
 }
 
 export interface ChargeResult {
@@ -38,8 +46,41 @@ export interface ChargeResult {
   providerRef: string;
   /** PROCESSING means the prompt is on the phone. Nothing is paid yet. */
   status: 'PROCESSING' | 'FAILED';
+  /** Written for the buyer: what happened and what to do next. */
   failureReason?: string;
+  /** The provider's own words, for the logs. */
+  providerMessage?: string | null;
 }
+
+/** What Transaction Verify says about a payment, read straight from the provider. */
+export interface VerifiedPayment {
+  state: 'SUCCEEDED' | 'FAILED' | 'ABANDONED' | 'PENDING' | 'NOT_FOUND';
+  /** The reference the provider echoed back. Must equal the one we asked about. */
+  reference: string | null;
+  amountCents: number | null;
+  currency: string | null;
+  failureReason: string | null;
+  /** The provider's transaction id. Paystack needs it to list refunds. */
+  providerId: string | null;
+  /** A small, safe summary kept on the payment row. No phone numbers. */
+  raw: Record<string, unknown> | null;
+}
+
+export type RefundState = 'PENDING' | 'PROCESSED' | 'FAILED' | 'NEEDS_ATTENTION';
+
+export interface RefundResult {
+  providerRef: string;
+  state: RefundState;
+}
+
+/**
+ * What a signed webhook asked us to look at. It is a prompt to check, not a
+ * fact: the money question is answered by `verify`.
+ */
+export type WebhookNotice =
+  | { kind: 'charge'; event: string; reference: string; externalId: string }
+  | { kind: 'refund'; event: string; reference: string; externalId: string }
+  | { kind: 'other'; event: string; reference: null; externalId: null };
 
 export interface WebhookResult {
   providerRef: string;
@@ -48,22 +89,56 @@ export interface WebhookResult {
   status: 'SUCCEEDED' | 'FAILED' | 'CANCELLED';
   failureReason: string | null;
   amountCents: number | null;
+  /** When the provider says, so a payment in the wrong currency is never credited. */
+  currency?: string | null;
 }
 
 export interface PaymentGateway {
-  readonly name: 'FINGO' | 'SANDBOX';
+  readonly name: 'PAYSTACK' | 'FINGO' | 'SANDBOX';
+  /** The value written to `payments.provider`. */
+  readonly provider: 'PAYSTACK' | 'FINGO' | 'MANUAL';
   /** False when the gateway has no credentials, which gates checkout. */
   readonly configured: boolean;
+  /**
+   * Our reference for a payment, known before the provider is called, so a
+   * result can always be matched even when the charge call timed out. Null
+   * when the provider makes up its own.
+   */
+  referenceFor(idempotencyKey: string): string | null;
   charge(request: ChargeRequest): Promise<ChargeResult>;
   /** Constant time check over the exact bytes received. */
-  verifySignature(rawBody: string, signature: string | undefined): boolean;
-  parseWebhook(payload: unknown): WebhookResult | null;
+  verifySignature(rawBody: string | Buffer, signature: string | undefined): boolean;
+}
+
+/** A gateway that can be asked for the truth, and can send money back. */
+export interface VerifyingGateway extends PaymentGateway {
+  readonly name: 'PAYSTACK';
+  readonly live: boolean;
+  isOurReference(reference: string): boolean;
+  verify(reference: string): Promise<VerifiedPayment>;
+  parseWebhook(payload: unknown): WebhookNotice | null;
+  refund(input: { reference: string; amountCents: number; note: string }): Promise<RefundResult>;
+  fetchRefund(providerRef: string): Promise<{ state: RefundState; amountCents: number | null }>;
+  listRefunds(
+    transactionId: string,
+  ): Promise<Array<{ providerRef: string; amountCents: number | null }>>;
+}
+
+export function canVerify(gateway: PaymentGateway): gateway is VerifyingGateway {
+  return gateway.name === 'PAYSTACK';
 }
 
 export class PaymentGatewayError extends Error {
   constructor(
     message: string,
     readonly retryable: boolean,
+    /**
+     * True when we cannot tell whether the provider acted: a timeout, a
+     * dropped connection, a 5xx. The payment is then left waiting and
+     * checked later, never cancelled on the spot, because the prompt may
+     * already be on the phone.
+     */
+    readonly ambiguous = false,
   ) {
     super(message);
     this.name = 'PaymentGatewayError';
@@ -97,8 +172,9 @@ interface FingoChargeResponse {
  * Their STK endpoint answers with an acknowledgement and an id. The money
  * question is answered later, on the webhook.
  */
-class FingoGateway implements PaymentGateway {
+export class FingoGateway implements PaymentGateway {
   readonly name = 'FINGO' as const;
+  readonly provider = 'FINGO' as const;
 
   constructor(
     private readonly apiKey: string,
@@ -108,6 +184,11 @@ class FingoGateway implements PaymentGateway {
 
   get configured(): boolean {
     return true;
+  }
+
+  /** Fingo makes its own id, which arrives with the charge answer. */
+  referenceFor(): null {
+    return null;
   }
 
   async charge(request: ChargeRequest): Promise<ChargeResult> {
@@ -163,7 +244,7 @@ class FingoGateway implements PaymentGateway {
     return { providerRef, status: 'PROCESSING' };
   }
 
-  verifySignature(rawBody: string, signature: string | undefined): boolean {
+  verifySignature(rawBody: string | Buffer, signature: string | undefined): boolean {
     if (!signature) return false;
 
     const expected = createHmac('sha256', this.webhookSecret).update(rawBody).digest('hex');
@@ -209,7 +290,7 @@ class FingoGateway implements PaymentGateway {
 // ------------------------------------------------------------------ sandbox ---
 
 /**
- * The gateway used before Fingo credentials exist.
+ * The gateway used before Paystack credentials exist.
  *
  * `configured` is false, and that is the whole protection. `CheckoutService`
  * refuses to start a payment against an unconfigured gateway, and the
@@ -222,7 +303,12 @@ class FingoGateway implements PaymentGateway {
  */
 class SandboxGateway implements PaymentGateway {
   readonly name = 'SANDBOX' as const;
+  readonly provider = 'MANUAL' as const;
   readonly configured = false;
+
+  referenceFor(): null {
+    return null;
+  }
 
   async charge(request: ChargeRequest): Promise<ChargeResult> {
     return { providerRef: `sandbox_${request.idempotencyKey}`, status: 'PROCESSING' };
@@ -231,13 +317,13 @@ class SandboxGateway implements PaymentGateway {
   verifySignature(): boolean {
     return false;
   }
-
-  parseWebhook(): WebhookResult | null {
-    return null;
-  }
 }
 
 export function createPaymentGateway(env: Env): PaymentGateway {
+  if (env.PAYSTACK_SECRET_KEY) {
+    return new PaystackGateway(env.PAYSTACK_SECRET_KEY, env.PAYSTACK_BASE_URL.replace(/\/+$/, ''));
+  }
+
   if (env.FINGO_API_KEY && env.FINGO_WEBHOOK_SECRET) {
     return new FingoGateway(env.FINGO_API_KEY, env.FINGO_WEBHOOK_SECRET, env.FINGO_BASE_URL);
   }

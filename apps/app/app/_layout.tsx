@@ -161,6 +161,8 @@ function Shell({ showWelcome }: { showWelcome: boolean }) {
   useEffect(() => {
     if (!viewer || viewer.isAnonymous || viewer.handle !== null) return;
     if (pathname === '/welcome' || pathname === '/setup' || pathname === '/profile') return;
+    // Mid purchase at a booth, with a queue behind them. It can wait.
+    if (pathname.startsWith('/booth')) return;
     if (offeredSetupTo.current === viewer.id) return;
     offeredSetupTo.current = viewer.id;
 
@@ -204,6 +206,7 @@ function Shell({ showWelcome }: { showWelcome: boolean }) {
         <Stack.Screen name="u/[handle]" options={{ presentation: 'card' }} />
         <Stack.Screen name="activity" options={{ presentation: 'card' }} />
         <Stack.Screen name="circle" options={{ presentation: 'card' }} />
+        <Stack.Screen name="saved" options={{ presentation: 'card' }} />
         <Stack.Screen name="messages/index" options={{ presentation: 'card' }} />
         <Stack.Screen name="messages/[id]" options={{ presentation: 'card' }} />
         <Stack.Screen name="sell/index" options={{ presentation: 'card' }} />
@@ -212,6 +215,9 @@ function Shell({ showWelcome }: { showWelcome: boolean }) {
         <Stack.Screen name="s/[slug]" options={{ presentation: 'card' }} />
         <Stack.Screen name="cart" options={{ presentation: 'modal' }} />
         <Stack.Screen name="checkout" options={{ presentation: 'card' }} />
+        <Stack.Screen name="booth/[slug]" options={{ presentation: 'card' }} />
+        <Stack.Screen name="booth/receipt/[id]" options={{ presentation: 'card' }} />
+        <Stack.Screen name="sell/booth" options={{ presentation: 'card' }} />
       </Stack>
     </View>
   );

@@ -54,13 +54,24 @@ export default function SellerHome() {
     initialPageParam: null as string | null,
     getNextPageParam: (last) => last.nextCursor,
     enabled: Boolean(store.data?.store),
+    // In case the socket has dropped, which is likely in a crowded hall.
+    refetchInterval: tab === 'orders' ? 10_000 : false,
   });
+
+  const refreshOrders = () => {
+    void queryClient.invalidateQueries({ queryKey: ['seller-orders'] });
+    void queryClient.invalidateQueries({ queryKey: ['seller-store'] });
+  };
 
   // A new order lands as a notification. Refresh the counter when one does.
   useServerFrame('notification.new', (frame) => {
-    if (frame.kind !== 'ORDER_PLACED') return;
-    void queryClient.invalidateQueries({ queryKey: ['seller-orders'] });
-    void queryClient.invalidateQueries({ queryKey: ['seller-store'] });
+    if (frame.kind === 'ORDER_PLACED') refreshOrders();
+  });
+
+  // The direct word from the payment. A vendor with a buyer standing there
+  // should not wait on the notification queue.
+  useServerFrame('order.updated', (frame) => {
+    if (frame.status === 'PAID') refreshOrders();
   });
 
   if (store.isLoading) {
@@ -218,20 +229,22 @@ function ShopHeader({ shop }: { shop: SellerStore }) {
           </Caption>
         </View>
       </View>
-      <View style={{ flexDirection: 'row', gap: 8 }}>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
         {[
           {
             label: 'See it as a customer',
             onPress: () => router.push({ pathname: '/s/[slug]', params: { slug: shop.slug } }),
           },
           { label: 'Edit details', onPress: () => router.push('/sell/setup') },
+          { label: 'Your booth QR', onPress: () => router.push('/sell/booth') },
         ].map((b) => (
           <Pressable
             key={b.label}
             onPress={b.onPress}
             accessibilityRole="button"
             style={({ pressed }) => ({
-              flex: 1,
+              flexGrow: 1,
+              flexBasis: '45%',
               alignItems: 'center',
               paddingHorizontal: 12,
               paddingVertical: 9,
@@ -483,6 +496,12 @@ const ORDER_WORDS: Record<string, string> = {
   REFUNDED: 'Refunded',
 };
 
+/** A booth sale has no packing or courier, so it needs its own words. */
+const BOOTH_WORDS: Record<string, string> = {
+  PAID: 'Paid, hand it over',
+  DELIVERED: 'Handed over',
+};
+
 function OrderRow({ order }: { order: SellerOrder }) {
   const { colors, radius } = useTheme();
   const queryClient = useQueryClient();
@@ -490,7 +509,7 @@ function OrderRow({ order }: { order: SellerOrder }) {
   const [problem, setProblem] = useState<string | null>(null);
 
   const act = useMutation({
-    mutationFn: (action: 'accept' | 'mark_ready' | 'cancel') =>
+    mutationFn: (action: 'accept' | 'mark_ready' | 'hand_over' | 'cancel') =>
       api.sellerOrderAction(
         order.id,
         action,
@@ -509,6 +528,11 @@ function OrderRow({ order }: { order: SellerOrder }) {
   const waiting = order.actions.length > 0;
   const next = order.actions.find((a) => a !== 'cancel');
   const pieces = order.items.reduce((sum, item) => sum + item.quantity, 0);
+  const booth = order.channel === 'BOOTH';
+  const handOver = booth && order.status === 'PAID';
+  const words = booth
+    ? (BOOTH_WORDS[order.status] ?? ORDER_WORDS[order.status])
+    : ORDER_WORDS[order.status];
 
   return (
     <View
@@ -533,11 +557,14 @@ function OrderRow({ order }: { order: SellerOrder }) {
             paddingHorizontal: 10,
             paddingVertical: 3,
             borderRadius: radius.pill,
-            backgroundColor: waiting ? colors.accentSoft : colors.sunk,
+            backgroundColor: handOver ? colors.primary : waiting ? colors.accentSoft : colors.sunk,
           }}
         >
-          <Micro tone={waiting ? 'ink' : 'muted'}>
-            {ORDER_WORDS[order.status] ?? order.status}
+          <Micro
+            tone={waiting ? 'ink' : 'muted'}
+            style={handOver ? { color: colors.onPrimary, fontSize: 14, lineHeight: 20 } : undefined}
+          >
+            {words ?? order.status}
           </Micro>
         </View>
       </View>
@@ -590,7 +617,11 @@ function OrderRow({ order }: { order: SellerOrder }) {
           <View style={{ flex: 1 }}>
             <Button
               label={
-                next === 'accept' ? 'Accept and start packing' : 'Packed, ready for the courier'
+                next === 'hand_over'
+                  ? 'Handed over'
+                  : next === 'accept'
+                    ? 'Accept and start packing'
+                    : 'Packed, ready for the courier'
               }
               loading={act.isPending && act.variables !== 'cancel'}
               onPress={() => act.mutate(next)}

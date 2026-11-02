@@ -92,9 +92,11 @@ export function createMailer(env: Env, log?: MailLogger): Mailer {
 
       // A server can accept the conversation and still refuse the
       // recipient. That is a successful call and a message nobody receives.
-      if (result.rejected.length > 0 || result.accepted.length === 0) {
+      const rejected = result.rejected ?? [];
+      const accepted = result.accepted ?? [];
+      if (rejected.length > 0 || accepted.length === 0) {
         log?.error(
-          { kind, to: maskEmail(to), rejected: result.rejected, response: result.response },
+          { kind, to: maskEmail(to), rejected, response: result.response },
           'The mail server refused the recipient',
         );
         throw new MailNotSentError('That address was refused by the mail server', to);

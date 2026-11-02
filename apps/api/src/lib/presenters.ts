@@ -168,11 +168,13 @@ interface OrderRow {
   id: string;
   reference: string;
   status: string;
+  channel: 'ONLINE' | 'BOOTH';
   store: StoreRow;
   subtotalCents: number;
   deliveryCents: number;
   totalCents: number;
   placedAt: Date;
+  paidAt: Date | null;
   deliveredAt: Date | null;
   completedAt: Date | null;
   items: Array<{
@@ -207,6 +209,7 @@ export function order(storage: Storage, row: OrderRow) {
     id: row.id,
     reference: row.reference,
     status: row.status as never,
+    channel: row.channel,
     store: storeCard(storage, row.store),
     items: row.items.map((item) => ({
       id: item.id,
@@ -223,6 +226,7 @@ export function order(storage: Storage, row: OrderRow) {
     deliveryCents: row.deliveryCents,
     totalCents: row.totalCents,
     placedAt: row.placedAt.toISOString(),
+    paidAt: row.paidAt?.toISOString() ?? null,
     shipment: row.shipment
       ? {
           status: row.shipment.status,

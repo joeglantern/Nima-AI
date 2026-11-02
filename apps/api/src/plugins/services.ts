@@ -9,7 +9,12 @@ import fp from 'fastify-plugin';
 import { CartService } from '../services/cart.js';
 import { CheckoutService } from '../services/checkout.js';
 import { CreditsService } from '../services/credits.js';
-import { createPaymentGateway, type PaymentGateway } from '../services/payments/index.js';
+import { PaymentSync, startPaymentReconcile } from '../services/payment-sync.js';
+import {
+  canVerify,
+  createPaymentGateway,
+  type PaymentGateway,
+} from '../services/payments/index.js';
 import { SettingsService } from '../services/settings.js';
 
 export interface Services {
@@ -23,6 +28,8 @@ export interface Services {
    * rather than inside the versioned route tree.
    */
   payments: PaymentGateway;
+  /** Confirms payments and refunds with Paystack. */
+  paymentSync: PaymentSync;
 }
 
 declare module 'fastify' {
@@ -38,14 +45,25 @@ export default fp(
     const cart = new CartService(app.prisma, app.storage);
     const payments = createPaymentGateway(app.env);
     const checkout = new CheckoutService(app, payments);
+    const paymentSync = new PaymentSync(app, payments, checkout);
 
-    app.decorate('services', { settings, credits, cart, checkout, payments });
+    app.decorate('services', { settings, credits, cart, checkout, payments, paymentSync });
 
     if (!payments.configured) {
       app.log.warn(
         'No payment credentials, so checkout will refuse to start. ' +
-          'Set FINGO_API_KEY and FINGO_WEBHOOK_SECRET to take money.',
+          'Set PAYSTACK_SECRET_KEY to take money.',
       );
+    }
+
+    if (canVerify(payments)) {
+      const production = app.env.NODE_ENV === 'production';
+      if (production && !payments.live) {
+        app.log.warn('Paystack is using a TEST key in production. No real money will move.');
+      } else if (!production && payments.live) {
+        app.log.warn('Paystack is using a LIVE key outside production. Real money will move.');
+      }
+      startPaymentReconcile(app, paymentSync, app.env.PAYMENT_RECONCILE_SECONDS);
     }
 
     // Another node changed the settings: drop the local cache.

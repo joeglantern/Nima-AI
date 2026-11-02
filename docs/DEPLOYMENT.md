@@ -221,7 +221,7 @@ t.verify().then(() => console.log('ok')).catch((e) => console.log('failed:', e.m
 
 | Thing | Why | What it needs |
 |---|---|---|
-| Checkout | No payment provider | `FINGO_API_KEY`, `FINGO_WEBHOOK_SECRET`, then the `checkout` flag in `app_settings` |
+| Checkout | No payment provider | `PAYSTACK_SECRET_KEY` (and the dashboard webhook URL `API_URL/webhooks/paystack`), then the `checkout` flag in `app_settings` |
 | Try-on images | No image provider | `GEMINI_API_KEY`. Jobs queue and wait until there is one |
 | Ask Nima, full | No language model | `LLM_BASE_URL`. It answers from the catalogue meanwhile |
 | Google and Apple sign in | No OAuth credentials | The client id and secret pairs. Email codes work without them |

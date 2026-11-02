@@ -13,6 +13,7 @@
 
 import type { FastifyPluginAsync } from 'fastify';
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
+import { boothRoutes } from './modules/booth/routes.js';
 import { cartRoutes } from './modules/cart/routes.js';
 import { checkoutRoutes } from './modules/checkout/routes.js';
 import { creditRoutes } from './modules/credits/routes.js';
@@ -51,6 +52,7 @@ export const registerRoutes: FastifyPluginAsync = async (app) => {
     stylistRoutes(stylist),
     cartRoutes(app.services.cart),
     checkoutRoutes(app.services.checkout),
+    boothRoutes(app.services.checkout),
     sellerRoutes,
   ];
 

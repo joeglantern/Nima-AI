@@ -23,7 +23,7 @@ import {
   upsertProductSchema,
   upsertStoreSchema,
 } from '@nima/contracts';
-import type { OrderStatus, Prisma } from '@nima/db';
+import type { OrderChannel, OrderStatus, Prisma } from '@nima/db';
 import type { FastifyInstance } from 'fastify';
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 import { z } from 'zod';
@@ -53,7 +53,12 @@ function suffix(): string {
 }
 
 /** What a seller can do with an order in each state. */
-function actionsFor(status: OrderStatus): Array<'accept' | 'mark_ready' | 'cancel'> {
+function actionsFor(
+  status: OrderStatus,
+  channel: OrderChannel,
+): Array<'accept' | 'mark_ready' | 'hand_over' | 'cancel'> {
+  // A booth sale has no packing and no courier. It is paid, then handed over.
+  if (channel === 'BOOTH') return status === 'PAID' ? ['hand_over', 'cancel'] : [];
   if (status === 'PAID') return ['accept', 'cancel'];
   if (status === 'PREPARING') return ['mark_ready', 'cancel'];
   return [];
@@ -619,7 +624,7 @@ export const sellerRoutes: FastifyPluginAsyncZod = async (app) => {
         displayName: row.buyer.profile?.displayName ?? row.buyer.name ?? 'A buyer',
         handle: row.buyer.profile?.handle ?? null,
       },
-      actions: actionsFor(row.status),
+      actions: actionsFor(row.status, row.channel),
     };
   }
 
@@ -685,7 +690,7 @@ export const sellerRoutes: FastifyPluginAsyncZod = async (app) => {
         include: { items: true },
       });
       if (!current) throw errors.notFound('That order');
-      if (!actionsFor(current.status).includes(action)) {
+      if (!actionsFor(current.status, current.channel).includes(action)) {
         throw errors.conflict('That order has already moved on');
       }
 
@@ -707,20 +712,30 @@ export const sellerRoutes: FastifyPluginAsyncZod = async (app) => {
             data: { status: 'BOOKED' },
           }),
         ]);
+      } else if (action === 'hand_over') {
+        // The buyer has it in their hands, so this is the delivery.
+        next = 'DELIVERED';
+        await app.prisma.order.update({
+          where: { id: current.id },
+          data: { status: next, deliveredAt: now },
+        });
       } else {
         next = 'CANCELLED';
         // Stock goes back, the sale comes off the shop's ledger, and a
         // refund is opened for the buyer. The refund itself is sent by the
         // payments side, which owns the money.
-        await app.prisma.$transaction(async (tx) => {
-          await tx.order.update({
-            where: { id: current.id },
+        const refundId = await app.prisma.$transaction(async (tx) => {
+          // Only from the state we checked. Two taps on cancel must not
+          // return stock or refund the buyer twice.
+          const moved = await tx.order.updateMany({
+            where: { id: current.id, status: current.status },
             data: {
               status: next,
               cancelledAt: now,
               cancelReason: reason?.trim() || 'Cancelled by the shop',
             },
           });
+          if (moved.count !== 1) throw errors.conflict('That order has already moved on');
           for (const item of current.items) {
             await tx.productVariant.update({
               where: { id: item.variantId },
@@ -745,13 +760,25 @@ export const sellerRoutes: FastifyPluginAsyncZod = async (app) => {
               },
             ],
           });
-          await tx.refund.create({
+          const paid = await tx.payment.findFirst({
+            where: { checkoutGroupId: current.checkoutGroupId, status: 'SUCCEEDED' },
+            select: { id: true },
+          });
+          const refund = await tx.refund.create({
             data: {
               orderId: current.id,
+              paymentId: paid?.id ?? null,
               amountCents: current.totalCents,
               reason: reason?.trim() || 'Cancelled by the shop',
             },
+            select: { id: true },
           });
+          return refund.id;
+        });
+
+        // Sent now. If Paystack cannot be reached the reconcile pass sends it.
+        await app.services.paymentSync.sendRefund(refundId).catch((error: unknown) => {
+          app.log.error({ err: error, refundId }, 'Could not send a refund; it will be retried');
         });
       }
 

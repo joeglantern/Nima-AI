@@ -9,6 +9,13 @@ import type { Href } from 'expo-router';
 
 export const SELL_HOME = '/sell' as Href;
 
+/** Hung up: the looks and pieces someone kept. Not in the generated types yet. */
+export const SAVED = '/saved' as Href;
+
+export function boothReceipt(id: string): Href {
+  return { pathname: '/booth/receipt/[id]', params: { id } } as unknown as Href;
+}
+
 export function sellOrders(): Href {
   return { pathname: '/sell', params: { tab: 'orders' } } as unknown as Href;
 }

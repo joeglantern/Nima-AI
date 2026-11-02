@@ -112,6 +112,23 @@ export const envSchema = z.object({
   LLM_API_KEY: z.string().default('not-needed-for-local'),
 
   // payments and logistics
+  /**
+   * Paystack takes the money when this is set. The secret key signs every
+   * API call and every webhook, so it lives only on the server. A test key
+   * (sk_test_) never moves real money.
+   */
+  PAYSTACK_SECRET_KEY: z.string().optional(),
+  /** Only needed by a client that opens Paystack's own checkout. Not secret. */
+  PAYSTACK_PUBLIC_KEY: z.string().optional(),
+  /** Changed only by tests, which point it at a local fake. */
+  PAYSTACK_BASE_URL: z.url().default('https://api.paystack.co'),
+  /**
+   * How often stuck payments are checked with Paystack, in seconds. Paystack
+   * only sends a webhook for a successful charge, so a wrong PIN or a prompt
+   * that timed out is only ever learned this way. 0 turns it off.
+   */
+  PAYMENT_RECONCILE_SECONDS: z.coerce.number().int().min(0).default(15),
+  /** Kept for the test scripts. Paystack wins when both are set. */
   FINGO_API_KEY: z.string().optional(),
   FINGO_WEBHOOK_SECRET: z.string().optional(),
   FINGO_BASE_URL: z.url().default('https://api.fingopay.io'),
@@ -133,6 +150,7 @@ const SECRET_KEYS = [
   'SMTP_PASSWORD',
   'GEMINI_API_KEY',
   'LLM_API_KEY',
+  'PAYSTACK_SECRET_KEY',
   'FINGO_API_KEY',
   'FINGO_WEBHOOK_SECRET',
   'PICKUP_MTAANI_API_KEY',

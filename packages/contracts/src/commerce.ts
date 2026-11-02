@@ -128,16 +128,21 @@ export const orderItemSchema = z.object({
   productId: idSchema,
 });
 
+/** ONLINE is delivered or collected from an agent. BOOTH is handed over on the spot. */
+export const orderChannelSchema = z.enum(['ONLINE', 'BOOTH']);
+
 export const orderSchema = z.object({
   id: idSchema,
   reference: z.string(),
   status: orderStatusSchema,
+  channel: orderChannelSchema,
   store: storeCardSchema,
   items: z.array(orderItemSchema),
   subtotalCents: z.number().int(),
   deliveryCents: z.number().int(),
   totalCents: z.number().int(),
   placedAt: z.string(),
+  paidAt: z.string().nullable(),
   shipment: z
     .object({
       status: z.string(),
@@ -163,7 +168,7 @@ export const createReviewSchema = z.object({
 // ----------------------------------------------------------- seller side ---
 
 export const sellerOrderActionSchema = z.object({
-  action: z.enum(['accept', 'mark_ready', 'cancel']),
+  action: z.enum(['accept', 'mark_ready', 'hand_over', 'cancel']),
   reason: z.string().max(280).optional(),
 });
 
@@ -262,5 +267,51 @@ export const sellerProductDetailSchema = z.object({
 export const sellerOrderSchema = orderSchema.extend({
   buyer: z.object({ displayName: z.string(), handle: z.string().nullable() }),
   /** What the seller can do next, so the app never offers a step that will be refused. */
-  actions: z.array(z.enum(['accept', 'mark_ready', 'cancel'])),
+  actions: z.array(z.enum(['accept', 'mark_ready', 'hand_over', 'cancel'])),
+});
+
+// ------------------------------------------------------------------ booth ---
+
+/** One piece on a booth page, with the sizes a buyer can pick from. */
+export const boothItemSchema = z.object({
+  id: idSchema,
+  title: z.string(),
+  image: imageSchema.nullable(),
+  priceFromCents: z.number().int(),
+  inStock: z.boolean(),
+  variants: z.array(
+    z.object({
+      id: idSchema,
+      size: z.string().nullable(),
+      colour: z.string().nullable(),
+      priceCents: z.number().int(),
+      inStock: z.boolean(),
+    }),
+  ),
+});
+
+/** Everything a phone needs after scanning a booth QR, in one request. */
+export const boothPageSchema = z.object({
+  store: storeCardSchema,
+  /** False when checkout is switched off or no payment provider is connected. */
+  paymentsOpen: z.boolean(),
+  /** The last number this account paid with, when it has paid before. */
+  payerPhone: z.string().nullable(),
+  /** The address the shop's QR points at. */
+  url: z.url(),
+  items: z.array(boothItemSchema),
+});
+
+export const startBoothCheckoutSchema = z.object({
+  items: z
+    .array(z.object({ variantId: idSchema, quantity: z.number().int().min(1).max(20) }))
+    .min(1)
+    .max(30),
+  /** The number that receives the M-Pesa prompt. */
+  payerPhone: phoneSchema,
+  /**
+   * Made by the app, one per basket. Sending it twice gets the first checkout
+   * back, so a double tap or a retry on a bad network cannot charge twice.
+   */
+  idempotencyKey: z.string().min(16).max(64),
 });

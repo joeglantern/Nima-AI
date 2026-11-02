@@ -26,6 +26,7 @@ import { WardrobeTab } from '../../src/components/wardrobe-tab';
 import { api, type SessionUser, type TryOnJob } from '../../src/lib/api';
 import { SELL_HOME } from '../../src/lib/routes';
 import { elevation } from '../../src/theme/elevation';
+import { SAVED } from '../../src/lib/routes';
 import { useTheme } from '../../src/theme/index';
 
 const TABS = [
@@ -518,6 +519,24 @@ function ProfileCard({
               ))}
             </View>
             <Caption tone="ink">Your circle</Caption>
+          </Pressable>
+        ) : null}
+
+        {user ? (
+          <Pressable
+            onPress={() => router.push(SAVED)}
+            accessibilityRole="button"
+            accessibilityLabel="Hung up, the looks and pieces you kept"
+            style={({ pressed }) => ({
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 6,
+              marginTop: 8,
+              opacity: pressed ? 0.7 : 1,
+            })}
+          >
+            <Caption tone="ink">Hung up</Caption>
+            <Caption>the looks and pieces you kept</Caption>
           </Pressable>
         ) : null}
 

@@ -11,6 +11,8 @@
  */
 
 import type {
+  boothItemSchema,
+  boothPageSchema,
   cartSchema,
   checkoutSchema,
   commentSchema,
@@ -110,6 +112,8 @@ export type CreditBalance = Infer<typeof creditBalanceSchema>;
 export type Cart = Infer<typeof cartSchema>;
 export type Order = Infer<typeof orderSchema>;
 export type Checkout = Infer<typeof checkoutSchema>;
+export type BoothItem = Infer<typeof boothItemSchema>;
+export type BoothPage = Infer<typeof boothPageSchema>;
 export type PickupPoint = Infer<typeof pickupPointSchema>;
 export type WardrobeItem = Infer<typeof wardrobeItemSchema>;
 export type Lookbook = Infer<typeof lookbookSchema>;
@@ -201,6 +205,11 @@ interface RequestOptions {
   body?: unknown;
   query?: Record<string, string | number | boolean | undefined>;
   signal?: AbortSignal;
+}
+
+/** The printable board for a shop. A plain link, so any browser can save it. */
+export function boothBoardUrl(slug: string, download = false): string {
+  return buildUrl(`/v1/booth/${slug}/board.png`, download ? { download: 1 } : undefined);
 }
 
 function buildUrl(path: string, query?: RequestOptions['query']): string {
@@ -524,6 +533,17 @@ export const api = {
 
   checkout: (id: string) => request<Checkout>(`/v1/checkout/${id}`),
 
+  boothPage: (slug: string) => request<BoothPage>(`/v1/booth/${slug}`),
+
+  startBoothCheckout: (
+    slug: string,
+    body: {
+      items: Array<{ variantId: string; quantity: number }>;
+      payerPhone: string;
+      idempotencyKey: string;
+    },
+  ) => request<Checkout>(`/v1/booth/${slug}/checkout`, { method: 'POST', body }),
+
   orders: (params: { cursor?: string; limit?: number; status?: string } = {}) =>
     request<Page<Order>>('/v1/orders', { query: params }),
 
@@ -616,7 +636,11 @@ export const api = {
   sellerOrders: (params: { cursor?: string; status?: string } = {}) =>
     request<Page<SellerOrder>>('/v1/seller/orders', { query: { ...params, limit: 30 } }),
 
-  sellerOrderAction: (id: string, action: 'accept' | 'mark_ready' | 'cancel', reason?: string) =>
+  sellerOrderAction: (
+    id: string,
+    action: 'accept' | 'mark_ready' | 'hand_over' | 'cancel',
+    reason?: string,
+  ) =>
     request<SellerOrder>(`/v1/seller/orders/${id}/action`, {
       method: 'POST',
       body: { action, reason },

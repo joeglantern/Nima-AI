@@ -254,3 +254,19 @@ private, including on your own profile. In their place:
 Shops are the exception, and only behind the counter: a seller sees how many
 people follow their shop on their own dashboard, because that is a business
 number they need. It is never shown to customers.
+
+## 17. For You is built around the outfit, not the poster
+
+Posts are flat lays and clothes on doors, so the photograph comes first and the poster is small print under the title. Pieces live on the photograph: a small tag opens a card with each piece's picture, price and heart, so a whole post fits on one phone screen. The feed paces one big post then two smaller ones side by side. The four actions are drawn as their own objects with the word set along the top edge: a heart for love, a speech bubble for ask, a paper plane for send, a hanger for hang. Love counts are never shown. (3 November 2026)
+
+## 18. White ground, not cream
+
+The brand book names cream as the background. The owner found cream made the app feel homely rather than sharp, so the app's ground is white, with a near white for sunk areas. Printed and event material may still use cream; the two sit together without clashing.
+
+## 19. Payments go through Paystack
+
+Fingo Pay is dropped before it ever took a live payment. Paystack handles M-Pesa and cards in KES. The gateway interface stays, so the rest of the system never learns the provider's name. Nothing is marked paid until the webhook is signature checked and the transaction is verified with Paystack.
+
+## 20. Booth sales are their own channel
+
+A sale made by scanning a shop's QR at an event is an order with channel BOOTH and delivery AT_BOOTH: no delivery fee, no courier, handed over on the spot once the seller sees the payment. Vendor reports for an event group on this channel. Printed boards point at the configured public address, never at a temporary link.
