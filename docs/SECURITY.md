@@ -42,7 +42,7 @@ What protects people's photos, messages and money on Nima, what was checked, and
 3. **Two factor authentication** on GitHub, Expo, Apple, Google Play, Paystack and the domain registrar, with an app or a hardware key.
 4. **A real domain** for the API and web app, with a certificate. Printed QR codes and Instagram links must never point at a temporary tunnel.
 5. **Paystack:** keep the secret key only in `.env.prod` on the server. Use test keys until a real test payment has been made end to end.
-6. **Dependency updates** when the current build settles: `sharp` to 0.35.5 or later, `nodemailer` to 10.0.6 or later, `zod` to 4.6.6 or later. These close published issues in image decoding, address parsing and oversized input. `tinypool` is a test only dependency and is not shipped.
+6. ~~Dependency updates~~ Done on 3 November 2026: `sharp` 0.35.5, `nodemailer` 10.3.1, `zod` 4.6.7. The remaining audit items are `tinypool` (test runner only, never shipped), `node-forge` and `decode-uri-component` (inside Expo's build tooling, not in the shipped app) and `deepmerge-ts` (inside Prisma's config loader). Re-check with `pnpm audit --prod` each month.
 
 ## Not yet built
 
