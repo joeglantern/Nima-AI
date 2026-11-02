@@ -30,12 +30,13 @@ import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import * as SystemUI from 'expo-system-ui';
 import { useEffect, useRef, useState } from 'react';
-import { View } from 'react-native';
+import { Platform, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import '../global.css';
 import { AuthGateProvider } from '../src/components/auth-gate';
+import { NimaSplash } from '../src/components/nima-splash';
 import { ApiError, api } from '../src/lib/api';
 import { ensureGuestSession, useSession } from '../src/lib/auth';
 import { hasBeenOfferedProfile, hasSeenWelcome, markProfileOffered } from '../src/lib/first-run';
@@ -91,11 +92,26 @@ export default function RootLayout() {
 
   const fontsLoaded = cormorantLoaded && dmSansLoaded && monoLoaded;
 
-  useEffect(() => {
-    if (fontsLoaded && sessionReady) void SplashScreen.hideAsync();
-  }, [fontsLoaded, sessionReady]);
+  const ready = fontsLoaded && sessionReady;
 
-  if (!fontsLoaded || !sessionReady) return null;
+  /*
+   * The opening scene. On the web it is drawn in public/index.html, before
+   * any JavaScript, and fades out here once the app can take over. On the
+   * phone the NimaSplash component plays it over the still native splash and
+   * tells us when it has left.
+   */
+  const [splashGone, setSplashGone] = useState(Platform.OS === 'web');
+
+  useEffect(() => {
+    if (!ready || Platform.OS !== 'web') return;
+    const scene = document.getElementById('nima-splash');
+    if (!scene) return;
+    scene.classList.add('done');
+    const timer = setTimeout(() => scene.remove(), 450);
+    return () => clearTimeout(timer);
+  }, [ready]);
+
+  if (!ready && Platform.OS === 'web') return null;
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -103,7 +119,14 @@ export default function RootLayout() {
         <SafeAreaProvider>
           <GestureHandlerRootView style={{ flex: 1 }}>
             <AuthGateProvider>
-              <Shell showWelcome={showWelcome} />
+              {ready ? <Shell showWelcome={showWelcome} /> : null}
+              {!splashGone ? (
+                <NimaSplash
+                  ready={ready}
+                  fontsReady={fontsLoaded}
+                  onGone={() => setSplashGone(true)}
+                />
+              ) : null}
             </AuthGateProvider>
           </GestureHandlerRootView>
         </SafeAreaProvider>

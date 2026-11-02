@@ -32,7 +32,7 @@
         overflow: hidden;
         margin: 0;
         /* The app's own ground, so there is no white flash before it paints. */
-        background-color: #FAF8F5;
+        background-color: #FFFFFF;
       }
       @media (prefers-color-scheme: dark) {
         body {
@@ -45,10 +45,125 @@
         flex: 1;
       }
     </style>
+      <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500&display=swap" rel="stylesheet" />
+    <style id="nima-splash-style">
+      #nima-splash {
+        position: fixed;
+        inset: 0;
+        z-index: 10;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 18px;
+        background: #FFFFFF;
+        color: #5C2A33;
+        transition: opacity 0.35s ease;
+      }
+      #nima-splash.done {
+        opacity: 0;
+        pointer-events: none;
+      }
+      .nima-scene {
+        position: relative;
+        width: 220px;
+        height: 330px;
+      }
+      .nima-hanger {
+        position: absolute;
+        left: 0;
+        top: 0;
+        display: block;
+        transform-origin: 50% 20%;
+        animation:
+          nima-drop 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) both,
+          nima-settle 1.3s 0.9s ease-out both,
+          nima-sway 3.2s 2.2s ease-in-out infinite;
+      }
+      .nima-thread { stroke: #D9CFC3; stroke-width: 1.2; }
+      .nima-hook { fill: none; stroke: #A67C52; stroke-width: 3; stroke-linecap: round; }
+      .nima-wood { fill: #A67C52; }
+      .nima-dress { fill: #5C2A33; }
+      .nima-peek {
+        position: absolute;
+        right: -70px;
+        bottom: -12px;
+        width: 140px;
+        height: 140px;
+        animation:
+          nima-peek 0.7s 1.5s cubic-bezier(0.34, 1.4, 0.64, 1) both,
+          nima-bob 2.8s 2.4s ease-in-out infinite;
+      }
+      .nima-word {
+        font-family: 'Cormorant Garamond', Georgia, 'Times New Roman', serif;
+        font-weight: 500;
+        font-size: 36px;
+        line-height: 40px;
+        letter-spacing: -0.01em;
+        animation: nima-word 0.5s 2s ease-out both;
+      }
+      @keyframes nima-drop {
+        from { transform: translateY(-120%) rotate(0deg); }
+        to { transform: translateY(0) rotate(0deg); }
+      }
+      @keyframes nima-settle {
+        0% { transform: translateY(0) rotate(0deg); }
+        22% { transform: translateY(0) rotate(-7deg); }
+        55% { transform: translateY(0) rotate(4deg); }
+        80% { transform: translateY(0) rotate(-1.5deg); }
+        100% { transform: translateY(0) rotate(0deg); }
+      }
+      @keyframes nima-sway {
+        0%, 100% { transform: translateY(0) rotate(0deg); }
+        50% { transform: translateY(0) rotate(2deg); }
+      }
+      @keyframes nima-peek {
+        from { transform: translateY(70px); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+      }
+      @keyframes nima-bob {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-5px); }
+      }
+      @keyframes nima-word {
+        from { opacity: 0; transform: translateY(6px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+      @media (prefers-color-scheme: dark) {
+        #nima-splash { background: #1A1614; color: #F5F0E8; }
+        .nima-thread { stroke: #352C27; }
+        .nima-hook { stroke: #C9A07A; }
+        .nima-wood { fill: #C9A07A; }
+        .nima-dress { fill: #BA635F; }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .nima-hanger, .nima-peek, .nima-word { animation: none; transform: none; opacity: 1; }
+      }
+    </style>
   </head>
 
   <body>
     <noscript>Nima needs JavaScript turned on to run.</noscript>
     <div id="root"></div>
+    <!--
+      The loading scene. It paints before any JavaScript arrives and the app
+      fades it out the moment it is ready (see app/_layout.tsx). A thread
+      lowers a hanger with a dress on it, the dress swings once and settles,
+      and Nima peeks out from behind it: see yourself in every outfit.
+    -->
+    <div id="nima-splash" aria-hidden="true">
+      <div class="nima-scene">
+        <img class="nima-peek" src="/mascot-peek.webp" alt="" width="140" height="140" />
+        <svg class="nima-hanger" viewBox="0 0 200 300" width="220" height="330">
+          <line x1="100" y1="0" x2="100" y2="58" class="nima-thread" />
+          <path d="M100 70 V60 C100 50 88 50 88 58" class="nima-hook" />
+          <path d="M100 70 L38 104 Q34 108 40 110 L160 110 Q166 108 162 104 Z" class="nima-wood" />
+          <path d="M72 106 Q100 116 128 106 C130 124 124 140 120 150 C150 190 158 236 158 268 Q100 288 42 268 C42 236 50 190 80 150 C76 140 70 124 72 106 Z" class="nima-dress" />
+        </svg>
+      </div>
+      <div class="nima-word">Nima</div>
+    </div>
   </body>
 </html>
