@@ -475,6 +475,10 @@ export default function BoothScreen() {
             item={item}
             canBuy={open}
             onPress={() => {
+              if (!open) {
+                router.push({ pathname: '/product/[id]', params: { id: item.id } });
+                return;
+              }
               const only = item.variants.length === 1 ? item.variants[0] : null;
               if (only) change(only.id, 1);
               else setPicking(item);
@@ -559,7 +563,9 @@ function ItemRow({
   onPress: () => void;
 }) {
   const { colors, radius } = useTheme();
-  const tappable = canBuy && item.inStock;
+  // With payments open a row goes into the basket. Closed, it still opens
+  // the piece itself, so the rail is never a list of things you cannot touch.
+  const tappable = canBuy ? item.inStock : true;
 
   const content = (
     <>
@@ -602,8 +608,8 @@ function ItemRow({
   return (
     <Pressable
       onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel={`${item.title}, add to basket`}
+      accessibilityRole={canBuy ? 'button' : 'link'}
+      accessibilityLabel={canBuy ? `${item.title}, add to basket` : `${item.title}, see the piece`}
       style={({ pressed }) => [row, { opacity: pressed ? 0.7 : 1 }]}
     >
       {content}

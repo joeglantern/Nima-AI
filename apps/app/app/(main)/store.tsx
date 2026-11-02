@@ -489,7 +489,9 @@ function ProfileCard({
             {user.handle ? `@${user.handle}` : (user.email ?? '')}
           </Caption>
         ) : (
-          <Caption align="center">Sign in to keep your looks, wardrobe and orders</Caption>
+          <Caption align="center">
+            Sign in to keep your looks, wardrobe and orders, or to open a shop of your own
+          </Caption>
         )}
 
         {faces.length ? (
