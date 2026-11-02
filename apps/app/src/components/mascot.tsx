@@ -17,11 +17,11 @@ import { View } from 'react-native';
 export type MascotMood = 'happy' | 'thinking' | 'delighted' | 'resting' | 'peek';
 
 const ART = {
-  happy: require('../../assets/mascot.png'),
-  thinking: require('../../assets/mascot-thinking.png'),
-  delighted: require('../../assets/mascot-delighted.png'),
-  resting: require('../../assets/mascot-resting.png'),
-  peek: require('../../assets/mascot-peek.png'),
+  happy: require('../../assets/mascot.webp'),
+  thinking: require('../../assets/mascot-thinking.webp'),
+  delighted: require('../../assets/mascot-delighted.webp'),
+  resting: require('../../assets/mascot-resting.webp'),
+  peek: require('../../assets/mascot-peek.webp'),
 } as const;
 
 const SAID = {

@@ -12,6 +12,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
+import { usePageTitle } from '../../src/lib/page-title';
 import { useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 import Svg, { Circle, Path } from 'react-native-svg';
@@ -52,6 +53,7 @@ const TABS = [
 ] as const;
 
 export default function StoreScreen() {
+  usePageTitle('My Store');
   const { colors, gutter, radius, width, floatingClearance } = useTheme();
   const { requireAccount } = useAuthGate();
   const queryClient = useQueryClient();

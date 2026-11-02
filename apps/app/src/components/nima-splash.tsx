@@ -149,7 +149,7 @@ export function NimaSplash({
             peekStyle,
           ]}
         >
-          <Image source={require('../../assets/mascot-peek.png')} style={{ width: '100%', height: '100%' }} contentFit="contain" />
+          <Image source={require('../../assets/mascot-peek.webp')} style={{ width: '100%', height: '100%' }} contentFit="contain" />
         </Animated.View>
 
         <Animated.View style={[{ position: 'absolute', left: 0, top: 0, width: sceneW, height: sceneH }, hangerStyle]}>

@@ -13,6 +13,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Redirect, Stack, useRouter } from 'expo-router';
+import { back } from '../src/lib/routes';
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -170,7 +171,7 @@ function CheckoutScreen() {
           }}
         >
           <Pressable
-            onPress={() => router.back()}
+            onPress={() => back(router)}
             accessibilityLabel="Back"
             style={{
               width: 36,

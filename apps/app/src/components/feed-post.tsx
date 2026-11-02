@@ -20,6 +20,7 @@ import { memo, useEffect, useRef, useState } from 'react';
 import { Animated, Platform, Pressable, View } from 'react-native';
 import Svg, { Defs, Path, Text as SvgText, TextPath } from 'react-native-svg';
 import { ApiError, api, type LookCardData } from '../lib/api';
+import { useSignedIn } from '../lib/social';
 import { timeAgo } from '../lib/time';
 import { useTheme } from '../theme/index';
 import { useAuthGate } from './auth-gate';
@@ -200,6 +201,9 @@ function usePop() {
 /** Love and hang: answer at once, settle with the server afterwards. */
 function useLookActions(look: LookCardData) {
   const { requireAccount } = useAuthGate();
+  // A guest gets the sign in sheet straight away, with no failed request
+  // and no heart that fills and empties again.
+  const signedIn = useSignedIn();
   const [liked, setLiked] = useState(look.likedByMe);
   const [saved, setSaved] = useState(look.savedByMe);
 
@@ -235,11 +239,19 @@ function useLookActions(look: LookCardData) {
     liked,
     saved,
     toggleLike: () => {
+      if (!signedIn) {
+        requireAccount('Create an account to keep what you love');
+        return;
+      }
       tick();
       setLiked(!liked);
       like.mutate();
     },
     toggleSave: () => {
+      if (!signedIn) {
+        requireAccount('Create an account to keep your looks');
+        return;
+      }
       tick();
       setSaved(!saved);
       save.mutate();
@@ -331,6 +343,7 @@ function PieceCard({
   const { colors } = useTheme();
   const router = useRouter();
   const { requireAccount } = useAuthGate();
+  const signedIn = useSignedIn();
   const piece = look.pieces[index];
   const [loved, setLoved] = useState<Record<string, boolean>>({});
   const [scale, pop] = usePop();
@@ -396,6 +409,10 @@ function PieceCard({
       {productId ? (
         <Pressable
           onPress={() => {
+            if (!signedIn) {
+              requireAccount('Create an account to keep the pieces you love');
+              return;
+            }
             tick();
             if (!isLoved) pop();
             setLoved({ ...loved, [piece.id]: !isLoved });

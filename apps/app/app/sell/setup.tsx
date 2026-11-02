@@ -24,7 +24,7 @@ import { Chips, Field, TextField } from '../../src/components/form';
 import { ScreenHeader } from '../../src/components/screen-header';
 import { Body, Caption, Title } from '../../src/components/text';
 import { ApiError, api } from '../../src/lib/api';
-import { SELL_HOME } from '../../src/lib/routes';
+import { back, SELL_HOME } from '../../src/lib/routes';
 import { uploadImage } from '../../src/lib/upload';
 import { useTheme } from '../../src/theme/index';
 
@@ -82,7 +82,7 @@ export default function ShopSetupScreen() {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['seller-store'] });
       void queryClient.invalidateQueries({ queryKey: ['bootstrap'] });
-      if (editing) router.back();
+      if (editing) back(router);
       else router.replace(SELL_HOME);
     },
     onError: (error) => setProblem(error instanceof ApiError ? error.message : 'That did not save'),

@@ -13,6 +13,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { Stack, useRouter } from 'expo-router';
+import { back } from '../src/lib/routes';
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
@@ -107,7 +108,7 @@ export default function PhotosScreen() {
           </View>
 
           <Pressable
-            onPress={() => router.back()}
+            onPress={() => back(router)}
             accessibilityLabel="Close"
             style={{
               width: 40,

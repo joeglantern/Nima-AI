@@ -11,6 +11,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
+import { usePageTitle } from '../src/lib/page-title';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -33,6 +34,7 @@ import { elevation } from '../src/theme/elevation';
 import { useTheme } from '../src/theme/index';
 
 export default function WelcomeScreen() {
+  usePageTitle('Welcome');
   const { colors, isWide } = useTheme();
   const insets = useSafeAreaInsets();
   const router = useRouter();

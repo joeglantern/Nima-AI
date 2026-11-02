@@ -13,7 +13,96 @@
 import { createReadStream } from 'node:fs';
 import { readFile, stat } from 'node:fs/promises';
 import { extname, join, normalize, sep } from 'node:path';
-import type { FastifyReply, FastifyRequest } from 'fastify';
+import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
+import { publicImage } from './presenters.js';
+
+/**
+ * What a shared link shows before anyone taps it.
+ *
+ * WhatsApp, which is how links move here, reads the page's title, description
+ * and image from the HTML it is given, without running any JavaScript. So for
+ * a look, a piece or a shop, those tags carry the real thing rather than the
+ * app's general line.
+ */
+interface SocialCard {
+  title: string;
+  description: string;
+  image: string | null;
+}
+
+const escapeHtml = (value: string) =>
+  value.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] ?? c);
+
+const firstLine = (value: string | null | undefined) =>
+  value?.split('\n').map((line) => line.trim()).find(Boolean) ?? null;
+
+async function socialCardFor(app: FastifyInstance, path: string): Promise<SocialCard | null> {
+  try {
+    const look = path.match(/^\/look\/([A-Za-z0-9_-]{5,40})\/?$/);
+    if (look) {
+      const row = await app.prisma.look.findFirst({
+        where: { id: look[1], visibility: 'PUBLIC' },
+        select: { title: true, caption: true, nimaSays: true, coverKey: true, width: true, height: true },
+      });
+      if (!row) return null;
+      return {
+        title: row.title ?? 'A look on Nima',
+        description: firstLine(row.caption) ?? row.nimaSays ?? 'See yourself in every outfit.',
+        image: publicImage(app.storage, row.coverKey, row.width, row.height)?.url ?? null,
+      };
+    }
+
+    const product = path.match(/^\/product\/([A-Za-z0-9_-]{5,40})\/?$/);
+    if (product) {
+      const row = await app.prisma.product.findFirst({
+        where: { id: product[1], status: 'ACTIVE' },
+        select: {
+          title: true,
+          priceFromCents: true,
+          store: { select: { name: true } },
+          images: { take: 1, orderBy: { position: 'asc' }, select: { processedKey: true, originalKey: true, width: true, height: true } },
+        },
+      });
+      if (!row) return null;
+      const picture = row.images[0];
+      return {
+        title: row.title,
+        description: `KSh ${Math.round(row.priceFromCents / 100).toLocaleString('en-KE')}, from ${row.store.name} on Nima.`,
+        image: picture ? (publicImage(app.storage, picture.processedKey ?? picture.originalKey, picture.width, picture.height)?.url ?? null) : null,
+      };
+    }
+
+    const shop = path.match(/^\/s\/([a-z0-9-]{2,80})\/?$/);
+    if (shop) {
+      const row = await app.prisma.store.findUnique({
+        where: { slug: shop[1] },
+        select: { name: true, about: true },
+      });
+      if (!row) return null;
+      return { title: row.name, description: firstLine(row.about) ?? 'A shop on Nima.', image: null };
+    }
+  } catch (error) {
+    app.log.warn({ err: error, path }, 'Could not build the link preview; serving the default');
+  }
+  return null;
+}
+
+/** Puts the card into the page's head, in place of the general tags. */
+function withSocialCard(html: string, card: SocialCard): string {
+  const title = escapeHtml(`${card.title}, Nima`);
+  const description = escapeHtml(card.description);
+  let out = html
+    .replace(/<title>[^<]*<\/title>/, `<title>${title}</title>`)
+    .replace(/(<meta name="description" content=")[^"]*(")/, `$1${description}$2`)
+    .replace(/(<meta property="og:title" content=")[^"]*(")/, `$1${title}$2`)
+    .replace(/(<meta property="og:description" content=")[^"]*(")/, `$1${description}$2`);
+  if (card.image) {
+    out = out
+      .replace(/(<meta property="og:image" content=")[^"]*(")/, `$1${escapeHtml(card.image)}$2`)
+      .replace(/\s*<meta property="og:image:(?:width|height)" content="[^"]*" \/>/g, '');
+  }
+  return out;
+}
 
 const API_PREFIXES = ['/v1/', '/api/', '/ws', '/health', '/docs', '/webhooks/'];
 
@@ -112,7 +201,9 @@ export async function serveWebApp(request: FastifyRequest, reply: FastifyReply):
   // address is whatever the visitor used, which changes with the tunnel.
   if (file.endsWith('index.html')) {
     const origin = `${request.protocol}://${request.host}`;
-    const html = (await readFile(file, 'utf8')).replaceAll('__ORIGIN__', origin);
+    let html = (await readFile(file, 'utf8')).replaceAll('__ORIGIN__', origin);
+    const card = await socialCardFor(request.server, path);
+    if (card) html = withSocialCard(html, card);
     return Boolean(reply.send(request.method === 'HEAD' ? undefined : html));
   }
 

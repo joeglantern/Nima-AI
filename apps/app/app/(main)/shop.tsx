@@ -15,6 +15,7 @@ import { PeopleResults } from '../../src/components/people-results';
 import { BodyStrong, Caption } from '../../src/components/text';
 import { api, type ProductCard as ProductCardData } from '../../src/lib/api';
 import { useTheme } from '../../src/theme/index';
+import { usePageTitle } from '../../src/lib/page-title';
 
 const CATEGORIES = [
   { label: 'Everything', value: undefined },
@@ -27,6 +28,7 @@ const CATEGORIES = [
 ] as const;
 
 export default function ShopScreen() {
+  usePageTitle('Shop');
   const { colors, gutter, gridColumns, radius, floatingClearance } = useTheme();
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState<string | undefined>();

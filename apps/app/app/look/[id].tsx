@@ -9,6 +9,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { PageTitle } from '../../src/lib/page-title';
+import { back } from '../../src/lib/routes';
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, useWindowDimensions, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
@@ -52,6 +54,7 @@ export default function LookScreen() {
   return (
     <>
       <Stack.Screen options={{ title: item.title ?? 'A look' }} />
+      <PageTitle title={item.title ?? 'A look'} />
 
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -84,7 +87,7 @@ export default function LookScreen() {
             ) : null}
 
             <Pressable
-              onPress={() => router.back()}
+              onPress={() => back(router)}
               accessibilityLabel="Back"
               style={{
                 position: 'absolute',

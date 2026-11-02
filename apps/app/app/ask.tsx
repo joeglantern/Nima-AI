@@ -11,6 +11,7 @@
 
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { back } from '../src/lib/routes';
 import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -187,7 +188,7 @@ export default function AskScreen() {
           }}
         >
           <Pressable
-            onPress={() => router.back()}
+            onPress={() => back(router)}
             accessibilityLabel="Close"
             style={{
               width: 36,

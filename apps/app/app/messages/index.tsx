@@ -8,6 +8,7 @@
 
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { Stack, useRouter } from 'expo-router';
+import { usePageTitle } from '../../src/lib/page-title';
 import { useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
@@ -22,6 +23,7 @@ import { timeAgo } from '../../src/lib/time';
 import { useTheme } from '../../src/theme/index';
 
 export default function InboxScreen() {
+  usePageTitle('Messages');
   const { colors, floatingClearance, isWide } = useTheme();
   const signedIn = useSignedIn();
   const [composing, setComposing] = useState(false);

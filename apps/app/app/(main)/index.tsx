@@ -13,6 +13,7 @@
 
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
+import { usePageTitle } from '../../src/lib/page-title';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, RefreshControl, View } from 'react-native';
 import { Button } from '../../src/components/button';
@@ -61,6 +62,7 @@ function greeting(): string {
 }
 
 export default function ForYouScreen() {
+  usePageTitle('For You');
   const { colors, gutter, isWide, floatingClearance, radius } = useTheme();
   const router = useRouter();
 

@@ -12,11 +12,14 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { PageTitle } from '../../src/lib/page-title';
+import { back } from '../../src/lib/routes';
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, useWindowDimensions, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { useAuthGate } from '../../src/components/auth-gate';
 import { Button } from '../../src/components/button';
+import { LovePiece } from '../../src/components/love-piece';
 import { Body, BodyStrong, Caption, Micro, Price, Title } from '../../src/components/text';
 import { TryOnResultSheet, useTryOn, useTryOnAvailable } from '../../src/components/try-on';
 import { ApiError, api } from '../../src/lib/api';
@@ -87,6 +90,7 @@ export default function ProductScreen() {
   return (
     <>
       <Stack.Screen options={{ title: item.title }} />
+      <PageTitle title={item.title} />
 
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -127,7 +131,7 @@ export default function ProductScreen() {
             </ScrollView>
 
             <Pressable
-              onPress={() => router.back()}
+              onPress={() => back(router)}
               accessibilityLabel="Back"
               style={{
                 position: 'absolute',
@@ -169,7 +173,17 @@ export default function ProductScreen() {
                 <Micro tone="primary">{`${item.store.name}  ›`}</Micro>
               </Pressable>
               <Title>{item.title}</Title>
-              <Price cents={price} style={{ fontSize: 20 }} />
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: 12,
+                }}
+              >
+                <Price cents={price} style={{ fontSize: 20 }} />
+                <LovePiece productId={item.id} loved={item.savedByMe} title={item.title} />
+              </View>
             </View>
 
             {item.variants.length > 1 ? (
@@ -207,10 +221,11 @@ export default function ProductScreen() {
             ) : null}
 
             {canTryOn ? null : (
-              <Caption align="center">
-                Seeing pieces on yourself is switched off in this preview. It is back soon.
-              </Caption>
+              <Caption align="center">Try-on is off for now. It will be back soon.</Caption>
             )}
+            {bootstrap.data && !bootstrap.data.features.checkout ? (
+              <Caption align="center">Buying opens soon. Love it to keep it for then.</Caption>
+            ) : null}
             {canTryOn ? (
               <Button
                 label={tryOn.busy ? 'Nima is dressing you' : 'See it on me'}

@@ -8,6 +8,7 @@
 
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { PageTitle } from '../../src/lib/page-title';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, View } from 'react-native';
 import { useAuthGate } from '../../src/components/auth-gate';
@@ -87,6 +88,7 @@ export default function ShopFront() {
   return (
     <>
       <Stack.Screen options={{ title: store?.name ?? 'Shop' }} />
+      <PageTitle title={store?.name ?? 'Shop'} />
       <View style={{ flex: 1, width: '100%', backgroundColor: colors.ground }}>
         <ScreenHeader title={store?.name ?? ''} />
         <FlatList

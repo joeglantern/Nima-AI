@@ -12,6 +12,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { Stack, useRouter } from 'expo-router';
+import { usePageTitle } from '../src/lib/page-title';
+import { back } from '../src/lib/routes';
 import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { Button } from '../src/components/button';
@@ -21,6 +23,7 @@ import { api, type Cart } from '../src/lib/api';
 import { useTheme } from '../src/theme/index';
 
 export default function CartScreen() {
+  usePageTitle('Basket');
   const { colors, gutter, radius, isWide } = useTheme();
   const queryClient = useQueryClient();
   const router = useRouter();
@@ -51,7 +54,7 @@ export default function CartScreen() {
       <Stack.Screen options={{ title: 'Basket' }} />
 
       <View style={{ flex: 1, width: '100%', backgroundColor: colors.ground }}>
-        <Header onClose={() => router.back()} />
+        <Header onClose={() => back(router)} />
 
         {cart.isLoading ? (
           <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>

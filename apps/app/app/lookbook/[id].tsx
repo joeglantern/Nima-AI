@@ -9,6 +9,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { back } from '../../src/lib/routes';
 import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { EmptyState } from '../../src/components/empty-state';
@@ -81,7 +82,7 @@ export default function LookbookScreen() {
       >
         <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 12 }}>
           <Pressable
-            onPress={() => router.back()}
+            onPress={() => back(router)}
             accessibilityLabel="Back"
             style={{
               width: 36,

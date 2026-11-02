@@ -9,6 +9,7 @@
 import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { Stack, useRouter } from 'expo-router';
+import { usePageTitle } from '../src/lib/page-title';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, SectionList, View } from 'react-native';
 import { EmptyState } from '../src/components/empty-state';
@@ -32,6 +33,7 @@ function bucket(iso: string): string {
 }
 
 export default function ActivityScreen() {
+  usePageTitle('Activity');
   const { colors, gutter, floatingClearance, isWide } = useTheme();
   const signedIn = useSignedIn();
   const queryClient = useQueryClient();

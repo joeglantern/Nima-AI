@@ -10,6 +10,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { back } from '../../../src/lib/routes';
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -200,7 +201,7 @@ export default function ProductEditor() {
       void queryClient.invalidateQueries({ queryKey: ['seller-products'] });
       void queryClient.invalidateQueries({ queryKey: ['seller-store'] });
       void queryClient.invalidateQueries({ queryKey: ['seller-product', id] });
-      router.back();
+      back(router);
     },
     onError: (error) => setProblem(error instanceof ApiError ? error.message : 'That did not save'),
   });

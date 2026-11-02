@@ -16,7 +16,7 @@ import { EmptyState } from '../../src/components/empty-state';
 import { Body, BodyStrong, Caption, Micro, Price, Title } from '../../src/components/text';
 import { api } from '../../src/lib/api';
 import { useServerFrame } from '../../src/lib/realtime';
-import { boothReceipt } from '../../src/lib/routes';
+import { back, boothReceipt } from '../../src/lib/routes';
 import { useTheme } from '../../src/theme/index';
 
 const STEPS: Array<{ key: string; label: string }> = [
@@ -81,7 +81,7 @@ export default function OrderScreen() {
       >
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
           <Pressable
-            onPress={() => router.back()}
+            onPress={() => back(router)}
             accessibilityLabel="Back"
             style={{
               width: 36,

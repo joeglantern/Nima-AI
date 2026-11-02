@@ -8,6 +8,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Stack, useRouter } from 'expo-router';
+import { back } from '../src/lib/routes';
 import { useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
@@ -93,7 +94,7 @@ export default function StyleScreen() {
           </View>
 
           <Pressable
-            onPress={() => router.back()}
+            onPress={() => back(router)}
             accessibilityLabel="Close"
             style={{
               width: 40,
@@ -183,7 +184,7 @@ export default function StyleScreen() {
           </View>
         </Section>
 
-        <Button label="Done for now" variant="quiet" onPress={() => router.back()} />
+        <Button label="Done for now" variant="quiet" onPress={() => back(router)} />
       </ScrollView>
     </>
   );

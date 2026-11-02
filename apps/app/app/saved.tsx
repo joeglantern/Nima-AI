@@ -8,6 +8,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { Stack, useRouter } from 'expo-router';
+import { usePageTitle } from '../src/lib/page-title';
 import { ActivityIndicator, RefreshControl, ScrollView, View } from 'react-native';
 import { Button } from '../src/components/button';
 import { ProductCard } from '../src/components/cards';
@@ -20,6 +21,7 @@ import { useSignedIn } from '../src/lib/social';
 import { useTheme } from '../src/theme/index';
 
 export default function SavedScreen() {
+  usePageTitle('Hung up');
   const { colors, floatingClearance, isWide } = useTheme();
   const router = useRouter();
   const signedIn = useSignedIn();

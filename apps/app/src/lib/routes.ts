@@ -9,6 +9,19 @@ import type { Href } from 'expo-router';
 
 export const SELL_HOME = '/sell' as Href;
 
+/**
+ * Back, with somewhere to go. A screen opened from a shared link has no
+ * history behind it, and a Back that does nothing reads as broken.
+ */
+export function back(router: {
+  canGoBack: () => boolean;
+  back: () => void;
+  replace: (href: Href) => void;
+}): void {
+  if (router.canGoBack()) router.back();
+  else router.replace('/' as Href);
+}
+
 /** Hung up: the looks and pieces someone kept. Not in the generated types yet. */
 export const SAVED = '/saved' as Href;
 

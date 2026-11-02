@@ -9,7 +9,7 @@
  * sign in gate: you can see what you are being asked to sign up for.
  */
 
-import { type ReactNode, useEffect } from 'react';
+import { type ReactNode, useEffect, useRef } from 'react';
 import {
   KeyboardAvoidingView,
   Modal,
@@ -48,6 +48,37 @@ export function Sheet({ open, onClose, title, children, dismissable = true }: Sh
     globalThis.addEventListener?.('keydown', handler);
     return () => globalThis.removeEventListener?.('keydown', handler);
   }, [open, dismissable, onClose]);
+
+  /*
+   * The browser's Back button closes it rather than leaving the app. An
+   * open sheet puts one entry on the history; Back pops it and we close;
+   * closing any other way pops it ourselves. The flag keeps the two from
+   * popping twice, which would step out of the page.
+   */
+  const pushed = useRef(false);
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof window === 'undefined') return;
+
+    if (open && !pushed.current) {
+      window.history.pushState({ nimaSheet: true }, '');
+      pushed.current = true;
+    }
+
+    const onPop = () => {
+      if (!pushed.current) return;
+      pushed.current = false;
+      onClose();
+    };
+    window.addEventListener('popstate', onPop);
+
+    return () => {
+      window.removeEventListener('popstate', onPop);
+      if (!open && pushed.current) {
+        pushed.current = false;
+        if (window.history.state?.nimaSheet) window.history.back();
+      }
+    };
+  }, [open, onClose]);
 
   return (
     <Modal

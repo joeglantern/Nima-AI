@@ -10,6 +10,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Constants from 'expo-constants';
 import { Stack, useRouter } from 'expo-router';
+import { usePageTitle } from '../src/lib/page-title';
+import { back } from '../src/lib/routes';
 import { useState } from 'react';
 import { Alert, Platform, Pressable, ScrollView, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
@@ -23,6 +25,7 @@ import { useSetupProgress } from '../src/lib/setup';
 import { useTheme } from '../src/theme/index';
 
 export default function SettingsScreen() {
+  usePageTitle('Settings');
   const { colors, gutter, radius, isWide } = useTheme();
   const { requireAccount } = useAuthGate();
   const queryClient = useQueryClient();
@@ -84,7 +87,7 @@ export default function SettingsScreen() {
           }}
         >
           <Pressable
-            onPress={() => router.back()}
+            onPress={() => back(router)}
             accessibilityLabel="Back"
             style={{
               width: 36,
