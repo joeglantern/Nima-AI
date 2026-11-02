@@ -146,7 +146,9 @@ export const feedRoutes: FastifyPluginAsyncZod = async (app) => {
         });
       }
 
-      const nextSeen = [...seenIds, ...lookIds].slice(-120);
+      // Eighty ids keep the cursor under three kilobytes. Older ones are
+      // already down-ranked through the view events.
+      const nextSeen = [...seenIds, ...lookIds].slice(-80);
 
       return {
         items,

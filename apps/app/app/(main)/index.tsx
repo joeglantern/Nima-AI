@@ -292,7 +292,9 @@ export default function ForYouScreen() {
 
     // A feed that quietly shows nothing when the network failed is the most
     // confusing state there is, so say what happened and offer a retry.
-    if (feed.isError) {
+    // Only when there is nothing to show. A failed "load more" keeps the
+    // posts already on screen and says so at the bottom instead.
+    if (feed.isError && items.length === 0) {
       return (
         <EmptyState
           art="cloud"
@@ -341,7 +343,11 @@ export default function ForYouScreen() {
         }
         onEndReachedThreshold={0.6}
         onEndReached={() => {
-          if (feed.hasNextPage && !feed.isFetchingNextPage) void feed.fetchNextPage();
+          // After a failure the next page waits for a tap, so a broken
+          // request is never retried on every scroll frame.
+          if (feed.hasNextPage && !feed.isFetchingNextPage && !feed.isFetchNextPageError) {
+            void feed.fetchNextPage();
+          }
         }}
         ListEmptyComponent={
           body ?? (
@@ -363,7 +369,12 @@ export default function ForYouScreen() {
           )
         }
         ListFooterComponent={
-          feed.isFetchingNextPage ? (
+          feed.isFetchNextPageError ? (
+            <View style={{ paddingVertical: 28, alignItems: 'center', gap: 10 }}>
+              <Caption>More looks did not load</Caption>
+              <Button label="Try again" full={false} onPress={() => void feed.fetchNextPage()} />
+            </View>
+          ) : feed.isFetchingNextPage ? (
             <View style={{ paddingVertical: 28 }}>
               <ActivityIndicator color={colors.primary} />
             </View>

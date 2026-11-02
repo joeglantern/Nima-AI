@@ -89,6 +89,12 @@ export const lookDetailSchema = lookCardSchema.extend({
 });
 
 export const feedQuerySchema = paginationQuerySchema.extend({
+  /**
+   * The feed's cursor carries the ids already shown, so the next page can
+   * leave them out. Up to eighty of them, which is far past the ordinary
+   * cursor limit.
+   */
+  cursor: z.string().max(6000).optional(),
   /** `foryou` is personalised; `explore` is fresh public looks. */
   surface: z.enum(['foryou', 'explore', 'following']).default('foryou'),
   occasion: z.string().max(40).optional(),
