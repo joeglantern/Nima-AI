@@ -104,6 +104,7 @@ export const socialRoutes: FastifyPluginAsyncZod = async (app) => {
   app.post(
     '/profiles/:handle/follow',
     {
+      config: { rateLimit: { max: 30, timeWindow: '1 minute' } },
       preHandler: app.requireAccount,
       schema: {
         tags: ['social'],
@@ -184,6 +185,7 @@ export const socialRoutes: FastifyPluginAsyncZod = async (app) => {
   app.post(
     '/stores/:slug/follow',
     {
+      config: { rateLimit: { max: 30, timeWindow: '1 minute' } },
       preHandler: app.requireAccount,
       schema: {
         tags: ['social'],
@@ -689,6 +691,7 @@ export const socialRoutes: FastifyPluginAsyncZod = async (app) => {
   app.get(
     '/conversations',
     {
+      config: { rateLimit: { max: 20, timeWindow: '1 minute' } },
       preHandler: app.requireAccount,
       schema: {
         tags: ['messages'],
@@ -826,6 +829,7 @@ export const socialRoutes: FastifyPluginAsyncZod = async (app) => {
   app.get(
     '/conversations/:id/messages',
     {
+      config: { rateLimit: { max: 30, timeWindow: '1 minute' } },
       preHandler: app.requireAccount,
       schema: {
         tags: ['messages'],
@@ -946,6 +950,7 @@ export const socialRoutes: FastifyPluginAsyncZod = async (app) => {
   app.post(
     '/share',
     {
+      config: { rateLimit: { max: 10, timeWindow: '1 minute' } },
       preHandler: app.requireAccount,
       schema: {
         tags: ['messages'],
@@ -992,6 +997,7 @@ export const socialRoutes: FastifyPluginAsyncZod = async (app) => {
   app.post(
     '/profiles/:handle/block',
     {
+      config: { rateLimit: { max: 20, timeWindow: '1 minute' } },
       preHandler: app.requireAccount,
       schema: {
         tags: ['social'],

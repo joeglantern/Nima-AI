@@ -17,6 +17,24 @@ import type { FastifyReply, FastifyRequest } from 'fastify';
 
 const API_PREFIXES = ['/v1/', '/api/', '/ws', '/health', '/docs', '/webhooks/'];
 
+/**
+ * Nobody may put Nima inside a frame, which is how clickjacking works. The rest
+ * of the policy starts in report only mode, so a mistake shows in the browser
+ * console rather than breaking checkout. Enforce it once it has run clean.
+ */
+const FRAME_POLICY = "frame-ancestors 'none'";
+const REPORT_POLICY = [
+  "default-src 'self'",
+  "script-src 'self' 'unsafe-inline'",
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data: blob: https:",
+  "font-src 'self' data:",
+  "connect-src 'self' https: wss:",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+].join('; ');
+
 const TYPES: Record<string, string> = {
   '.html': 'text/html; charset=utf-8',
   '.js': 'application/javascript; charset=utf-8',
@@ -82,6 +100,10 @@ export async function serveWebApp(request: FastifyRequest, reply: FastifyReply):
     reply.header('cache-control', 'public, max-age=3600');
   } else {
     reply.header('cache-control', 'no-cache');
+    reply.header('content-security-policy', FRAME_POLICY);
+    reply.header('content-security-policy-report-only', REPORT_POLICY);
+    reply.header('x-frame-options', 'DENY');
+    reply.header('permissions-policy', 'geolocation=(), microphone=(), payment=(self)');
   }
 
   reply.status(200);

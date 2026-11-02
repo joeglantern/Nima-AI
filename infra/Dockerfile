@@ -77,12 +77,14 @@ WORKDIR /app/apps/api
 EXPOSE 3333
 HEALTHCHECK --interval=20s --timeout=5s --start-period=40s --retries=5 \
   CMD curl -fsS http://127.0.0.1:3333/health || exit 1
+USER node
 CMD ["node", "dist/server.js"]
 
 # ---------------------------------------------------------- worker ---
 FROM build AS worker
 ENV NODE_ENV=production
 WORKDIR /app/apps/worker
+USER node
 CMD ["node", "dist/index.js"]
 
 # -------------------------------------------------------- migrate ---

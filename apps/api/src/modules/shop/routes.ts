@@ -119,6 +119,7 @@ export const shopRoutes: FastifyPluginAsyncZod = async (app) => {
   app.post(
     '/products/:id/save',
     {
+      config: { rateLimit: { max: 60, timeWindow: '1 minute' } },
       preHandler: app.requireAccount,
       schema: {
         tags: ['shop'],

@@ -1,0 +1,46 @@
+#!/bin/sh
+#
+# Refuse a commit that would put a secret in the repository.
+#
+# Installed by the same step as commit-msg:
+#   git config core.hooksPath .githooks
+#
+# Two checks, both on what is staged, never on the working tree:
+#
+#   1. No secret files: .env (other than .env.example), private keys,
+#      keystores, service account files.
+#   2. No secret values in the staged text: live payment keys, API keys,
+#      private key blocks, personal access tokens, or a real value next to
+#      a name that ends in _SECRET or _KEY in anything other than an example
+#      file.
+#
+# A key that reaches GitHub has to be rotated, even on a private repository,
+# so stopping it here is the cheap option.
+
+staged=$(git diff --cached --name-only --diff-filter=ACMR)
+[ -z "$staged" ] && exit 0
+
+problem=""
+
+bad_files=$(printf '%s\n' "$staged" | grep -E '(^|/)\.env(\.[a-z]+)?$|\.(pem|p8|p12|key|keystore|jks)$|service-account.*\.json$|google-services\.json$|GoogleService-Info\.plist$' | grep -v -E '\.env\.example$')
+if [ -n "$bad_files" ]; then
+  problem="${problem}  secret files:\n$(printf '%s\n' "$bad_files" | sed 's/^/    /')\n"
+fi
+
+pattern='sk_live_[A-Za-z0-9]{8,}|sk_test_[A-Za-z0-9]{16,}|pk_live_[A-Za-z0-9]{8,}|AIza[0-9A-Za-z_-]{30,}|-----BEGIN [A-Z ]*PRIVATE KEY|ghp_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{30,}|xox[abp]-[A-Za-z0-9-]{10,}|AKIA[0-9A-Z]{16}|eyJ[A-Za-z0-9_-]{20,}\.eyJ[A-Za-z0-9_-]{20,}'
+hits=$(git diff --cached -U0 --diff-filter=ACMR -- . ':!pnpm-lock.yaml' ':!*.example' | grep -E '^\+' | grep -v -E '^\+\+\+' | grep -E -n "$pattern" | cut -c1-80)
+if [ -n "$hits" ]; then
+  problem="${problem}  what looks like a key or token in the staged changes:\n$(printf '%s\n' "$hits" | sed 's/^/    /')\n"
+fi
+
+assigned=$(git diff --cached -U0 --diff-filter=ACMR -- . ':!*.example' ':!*.md' ':!pnpm-lock.yaml' | grep -E '^\+' | grep -v -E '^\+\+\+' | grep -E -i '(_SECRET|_KEY|_TOKEN|PASSWORD)\s*[=:]\s*["'"'"']?[A-Za-z0-9+/_-]{24,}' | grep -v -E 'process\.env|env\.|\$\{|<|>|example|placeholder|changeme' | cut -c1-80)
+if [ -n "$assigned" ]; then
+  problem="${problem}  a long value assigned to a secret-looking name:\n$(printf '%s\n' "$assigned" | sed 's/^/    /')\n"
+fi
+
+if [ -n "$problem" ]; then
+  printf 'Commit refused. It contains:\n%b\nKeep secrets in .env on the server, and in .env.example put names only.\nIf this is a false alarm, commit with --no-verify and say why in the message.\n' "$problem" >&2
+  exit 1
+fi
+
+exit 0
