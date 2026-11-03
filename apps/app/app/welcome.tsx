@@ -18,8 +18,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 import { Button } from '../src/components/button';
 import { EmailSteps } from '../src/components/email-steps';
-import { Mascot } from '../src/components/mascot';
-import { Body, Caption, Display, Label } from '../src/components/text';
+import { Body, Caption, Display } from '../src/components/text';
+import { WelcomeWall } from '../src/components/welcome-wall';
 import { api } from '../src/lib/api';
 import {
   sendEmailCode,
@@ -50,6 +50,10 @@ export default function WelcomeScreen() {
   const showApple = Platform.OS !== 'android';
   const showGoogle = true;
   const ready = bootstrap.data?.signIn;
+
+  // Everything above the sheet sits on photographs, so it is set in the
+  // same light tone the sheet uses for its own text.
+  const cream = colors.onEspresso;
 
   const social = (provider: 'apple' | 'google', action: () => Promise<void>) => {
     if (!ready?.[provider]) {
@@ -90,24 +94,26 @@ export default function WelcomeScreen() {
       it end up behind the keys.
     */
     <KeyboardAvoidingView
-      style={{ flex: 1, width: '100%', backgroundColor: colors.ground }}
+      style={{ flex: 1, width: '100%', backgroundColor: colors.espresso }}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
+      {/* The looks themselves, drifting behind everything. */}
+      <WelcomeWall hidden={typing} />
+
       {/*
         The top half: who this is.
 
-        Three blocks with air between them rather than one evenly spaced
-        column. The wordmark sits high, the character takes the middle, and
-        the promise sits just above the sheet, so the eye travels down to
-        the buttons instead of stopping in a gap.
+        The wordmark sits high and the promise sits just above the sheet,
+        with the wall showing between them, so the eye travels down through
+        the clothes to the buttons.
       */}
       <View
         style={{
           flex: 1,
           alignItems: 'center',
           justifyContent: typing ? 'center' : 'space-between',
-          paddingTop: insets.top + (typing ? 12 : 34),
-          paddingBottom: typing ? 12 : 30,
+          paddingTop: insets.top + (typing ? 12 : 30),
+          paddingBottom: typing ? 12 : 26,
           paddingHorizontal: 24,
         }}
       >
@@ -130,14 +136,14 @@ export default function WelcomeScreen() {
               borderRadius: 999,
               alignItems: 'center',
               justifyContent: 'center',
-              backgroundColor: colors.sunk,
+              backgroundColor: 'rgba(0, 0, 0, 0.32)',
               opacity: pressed ? 0.6 : 1,
             })}
           >
             <Svg width={18} height={18} viewBox="0 0 24 24">
               <Path
                 d="m14 6-6 6 6 6"
-                stroke={colors.ink}
+                stroke={cream}
                 strokeWidth={1.8}
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -147,42 +153,43 @@ export default function WelcomeScreen() {
           </Pressable>
         ) : null}
 
-        <View style={{ alignItems: 'center', gap: typing ? 2 : 10 }}>
-          <Display
-            style={typing ? { fontSize: 36, lineHeight: 40 } : { fontSize: 56, lineHeight: 62 }}
-          >
-            Nima
-          </Display>
-          <Label>AI stylist</Label>
-        </View>
+        {/*
+          The wordmark alone, the way a label sits on a lookbook. No
+          strapline under it: the wall behind says what Nima is.
+        */}
+        <Display
+          style={{
+            color: cream,
+            ...(typing ? { fontSize: 34, lineHeight: 38 } : { fontSize: 44, lineHeight: 48 }),
+          }}
+        >
+          Nima
+        </Display>
 
         {/*
           With the keyboard up there is room for the wordmark and nothing
-          else. The character and the promise go, rather than being crushed
-          into whatever strip is left above the sheet.
+          else. The promise goes, rather than being crushed into whatever
+          strip is left above the sheet.
         */}
         {typing ? null : (
           <>
-            {/* Takes the slack, so the gap above and below it is even. */}
-            <View style={{ flex: 1, justifyContent: 'center', paddingVertical: 8 }}>
-              <Mascot size={200} mood="delighted" />
-            </View>
+            <View style={{ flex: 1 }} />
 
-            <View style={{ alignItems: 'center', gap: 6 }}>
-              <Body
-                align="center"
-                style={{
-                  fontFamily: 'CormorantGaramond_600SemiBold',
-                  fontSize: 26,
-                  lineHeight: 32,
-                }}
-              >
-                Your personal stylist
-              </Body>
-              <Body tone="muted" align="center">
-                See yourself in every outfit
-              </Body>
-            </View>
+            <Body
+              align="center"
+              style={{
+                color: cream,
+                fontFamily: 'CormorantGaramond_500Medium',
+                fontSize: 27,
+                lineHeight: 32,
+                maxWidth: 260,
+                textShadowColor: 'rgba(0, 0, 0, 0.35)',
+                textShadowOffset: { width: 0, height: 1 },
+                textShadowRadius: 10,
+              }}
+            >
+              See yourself in every outfit.
+            </Body>
           </>
         )}
       </View>
