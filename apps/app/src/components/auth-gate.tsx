@@ -182,7 +182,10 @@ function AuthSheet({ reason, onClose }: { reason: string | null; onClose: () => 
             label="Continue with email"
             variant="provider"
             icon={<MailMark color={colors.ink} />}
-            onPress={() => setStep('email')}
+            onPress={() => {
+              setError(null);
+              setStep('email');
+            }}
           />
 
           <Button label="Not now" variant="quiet" onPress={close} />

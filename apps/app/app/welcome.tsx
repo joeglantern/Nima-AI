@@ -253,7 +253,10 @@ export default function WelcomeScreen() {
               label="Continue with email"
               variant="provider"
               icon={<MailMark color={colors.ink} />}
-              onPress={() => setMode('email')}
+              onPress={() => {
+                setError(null);
+                setMode('email');
+              }}
             />
           </>
         ) : (

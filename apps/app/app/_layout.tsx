@@ -153,10 +153,28 @@ function Shell({ showWelcome }: { showWelcome: boolean }) {
    */
   const sentToWelcome = useRef(false);
 
+  // Being on the welcome screen counts as having been sent there. A page
+  // that reloads while it is up, which phones do when someone goes to read
+  // their code, must not treat the sign in that follows as a first launch.
+  useEffect(() => {
+    if (pathname === '/welcome') sentToWelcome.current = true;
+  }, [pathname]);
+
   useEffect(() => {
     if (sentToWelcome.current || !showWelcome || pathname !== '/') return;
     sentToWelcome.current = true;
-    router.replace('/welcome');
+
+    // Read storage again rather than trusting the launch time value. The
+    // welcome screen marks itself seen before it leaves, so a fresh read
+    // is what tells a first launch from a sign in that just finished.
+    let stale = false;
+    void hasSeenWelcome().then((seen) => {
+      if (!stale && !seen) router.replace('/welcome');
+    });
+
+    return () => {
+      stale = true;
+    };
   }, [showWelcome, pathname, router]);
 
   // The live connection carries whoever was signed in when it opened, so a
