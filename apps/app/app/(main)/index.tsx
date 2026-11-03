@@ -20,12 +20,12 @@ import { Button } from '../../src/components/button';
 import { ProductCard } from '../../src/components/cards';
 import { EmptyState } from '../../src/components/empty-state';
 import { FeedPost, FeedTile } from '../../src/components/feed-post';
-import { CommentsSheet, PiecesSheet } from '../../src/components/feed-sheets';
+import { PiecesSheet } from '../../src/components/feed-sheets';
 import { InboxButtons } from '../../src/components/inbox-buttons';
 import { OccasionTabs } from '../../src/components/occasion-tabs';
 import { SendSheet, type SendTarget } from '../../src/components/send-sheet';
 import { Body, BodyStrong, Caption, Heading } from '../../src/components/text';
-import { TryOnResultSheet, useTryOn } from '../../src/components/try-on';
+import { TryOnResultSheet, useTryOn, useTryOnAvailable } from '../../src/components/try-on';
 import { ApiError, api, type FeedItem } from '../../src/lib/api';
 import { useTheme } from '../../src/theme/index';
 
@@ -68,7 +68,6 @@ export default function ForYouScreen() {
 
   const [occasion, setOccasion] = useState<string | null>(null);
   const [piecesFor, setPiecesFor] = useState<string | null>(null);
-  const [commentsFor, setCommentsFor] = useState<string | null>(null);
   const [dressing, setDressing] = useState<string | null>(null);
   const [sending, setSending] = useState<SendTarget | null>(null);
 
@@ -77,6 +76,10 @@ export default function ForYouScreen() {
   const firstName = user && !user.isAnonymous ? user.name?.trim().split(/s+/)[0] : null;
 
   const tryOn = useTryOn('Create an account to wear this yourself');
+  const canTryOn = useTryOnAvailable();
+  // Said once at the top when try-ons are switched off, in the same place
+  // a problem with one would be.
+  const [tryOnOff, setTryOnOff] = useState(false);
 
   const feed = useInfiniteQuery({
     queryKey: ['feed', 'foryou', occasion],
@@ -95,10 +98,15 @@ export default function ForYouScreen() {
 
   const startTryOn = useCallback(
     (lookId: string) => {
+      if (!canTryOn) {
+        setTryOnOff(true);
+        return;
+      }
+      setTryOnOff(false);
       setDressing(lookId);
       tryOn.start({ kind: 'RECREATE', lookId });
     },
-    [tryOn],
+    [canTryOn, tryOn],
   );
 
   const sendLook = useCallback((lookId: string) => setSending({ kind: 'LOOK', id: lookId }), []);
@@ -119,7 +127,6 @@ export default function ForYouScreen() {
             <FeedPost
               look={item.look}
               onPieces={setPiecesFor}
-              onComments={setCommentsFor}
               onTryOn={startTryOn}
               onSend={sendLook}
               dressing={tryOn.busy && dressing === item.look.id}
@@ -252,6 +259,11 @@ export default function ForYouScreen() {
       <View style={{ height: 10 }} />
 
       {/* While Nima works, and if it could not, said once at the top. */}
+      {tryOnOff && !tryOn.progress && !tryOn.problem ? (
+        <Caption align="center" style={{ marginHorizontal: gutter, marginTop: 8 }}>
+          Seeing looks on yourself is switched off in this preview. It is back soon.
+        </Caption>
+      ) : null}
       {tryOn.progress || tryOn.problem ? (
         <View
           style={{
@@ -390,7 +402,6 @@ export default function ForYouScreen() {
       />
 
       <PiecesSheet lookId={piecesFor} onClose={() => setPiecesFor(null)} onTryOn={startTryOn} />
-      <CommentsSheet lookId={commentsFor} onClose={() => setCommentsFor(null)} />
       <TryOnResultSheet tryOn={tryOn} label="this look" />
       <SendSheet target={sending} onClose={() => setSending(null)} />
     </>

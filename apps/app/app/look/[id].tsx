@@ -16,6 +16,7 @@ import { useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, useWindowDimensions, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { Button } from '../../src/components/button';
+import { CommentsSheet } from '../../src/components/feed-sheets';
 import { SendSheet } from '../../src/components/send-sheet';
 import { Body, BodyStrong, Caption, Eyebrow, Micro, Price, Title } from '../../src/components/text';
 import { TryOnResultSheet, useTryOn, useTryOnAvailable } from '../../src/components/try-on';
@@ -38,6 +39,7 @@ export default function LookScreen() {
   const canTryOn = useTryOnAvailable();
 
   const [sending, setSending] = useState(false);
+  const [asking, setAsking] = useState(false);
 
   if (look.isLoading) {
     return (
@@ -155,7 +157,15 @@ export default function LookScreen() {
               </Body>
             ) : null}
 
-            <Button label="Send to a friend" variant="quiet" onPress={() => setSending(true)} />
+            {/* The conversation under a look lives here now that the feed row is for wearing it. */}
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              <View style={{ flex: 1 }}>
+                <Button label="Ask about it" variant="quiet" onPress={() => setAsking(true)} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Button label="Send to a friend" variant="quiet" onPress={() => setSending(true)} />
+              </View>
+            </View>
 
             <View style={{ gap: 12 }}>
               <BodyStrong>{`In this look (${item.items.length})`}</BodyStrong>
@@ -238,6 +248,7 @@ export default function LookScreen() {
       </ScrollView>
 
       <TryOnResultSheet tryOn={tryOn} label={item.title ?? 'this look'} />
+      <CommentsSheet lookId={asking ? item.id : null} onClose={() => setAsking(false)} />
       <SendSheet
         target={sending ? { kind: 'LOOK', id: item.id } : null}
         onClose={() => setSending(false)}

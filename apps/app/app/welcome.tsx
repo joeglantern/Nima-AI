@@ -9,7 +9,7 @@
  * this screen has to be obvious rather than hidden.
  */
 
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { usePageTitle } from '../src/lib/page-title';
 import { useState } from 'react';
@@ -38,6 +38,7 @@ export default function WelcomeScreen() {
   const { colors, isWide } = useTheme();
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const queryClient = useQueryClient();
 
   const [mode, setMode] = useState<'choose' | 'email'>('choose');
   const [busy, setBusy] = useState(false);
@@ -74,12 +75,22 @@ export default function WelcomeScreen() {
     router.replace('/');
   }
 
+  /*
+   * After a sign in, everything fetched so far describes the guest. Fetch it
+   * again before the feed shows, or the first heart tapped after signing in
+   * asks for an account a second time.
+   */
+  async function leaveSignedIn() {
+    await queryClient.invalidateQueries();
+    await leave();
+  }
+
   const run = async (action: () => Promise<void>) => {
     setBusy(true);
     setError(null);
     try {
       await action();
-      await leave();
+      await leaveSignedIn();
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'That did not work');
     } finally {
@@ -273,7 +284,7 @@ export default function WelcomeScreen() {
             onSendCode={sendEmailCode}
             onVerify={async (email, code) => {
               await verifyEmailCode(email, code);
-              await leave();
+              await leaveSignedIn();
             }}
             onSurface="deep"
           />

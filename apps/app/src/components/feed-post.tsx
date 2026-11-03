@@ -7,9 +7,9 @@
  * picture, name and price.
  *
  * The four actions are their own objects, with the word curving along the top
- * edge: a heart, a speech bubble, a paper plane and a hanger. Love and hang
- * answer at once and settle with the server afterwards. Counts of loves stay
- * off the page, so nobody is judged by a number.
+ * edge: a heart, a mirror, a paper plane and a hanger. Love and hang answer
+ * at once and settle with the server afterwards. Counts of loves stay off the
+ * page, so nobody is judged by a number.
  */
 
 import { useMutation } from '@tanstack/react-query';
@@ -18,7 +18,7 @@ import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { memo, useEffect, useRef, useState } from 'react';
 import { Animated, Platform, Pressable, View } from 'react-native';
-import Svg, { Defs, Path, Text as SvgText, TextPath } from 'react-native-svg';
+import Svg, { Defs, G, Path, Text as SvgText, TextPath } from 'react-native-svg';
 import { ApiError, api, type LookCardData } from '../lib/api';
 import { sized } from '../lib/media';
 import { useSignedIn } from '../lib/social';
@@ -92,45 +92,98 @@ export function Avatar({
   );
 }
 
-type MarkName = 'love' | 'ask' | 'send' | 'hang';
+type MarkName = 'love' | 'try' | 'send' | 'hang';
+
+/** A box in the mark's 72 by 64 drawing space. */
+interface Box {
+  left: number;
+  top: number;
+  right: number;
+  bottom: number;
+}
+
+/**
+ * Where each drawing sits in the mark, measured from its paths. The clip
+ * that replaces a drawing is fitted to this box, so the object lands where
+ * the line drawing was rather than near it.
+ */
+const DRAWN: Record<MarkName, Box> = {
+  love: { left: 17.8, top: 23, right: 54.2, bottom: 57 },
+  try: { left: 13, top: 21, right: 59, bottom: 57 },
+  send: { left: 12, top: 17, right: 60, bottom: 56 },
+  hang: { left: 9.3, top: 10, right: 62.7, bottom: 55 },
+};
 
 /**
  * The clips that play when an action is taken: an embroidered heart stitching
- * itself, a linen speech bubble inflating, a card tag folding into a paper
- * plane, a wooden hanger swinging. Each plays once over the drawn mark, then
- * the ones with a lasting state hold their last frame.
+ * itself, a dress appearing in a mirror, a card tag folding into a paper
+ * plane, a wooden hanger arriving on its hook. Each takes the place of the
+ * drawn mark while it plays, and the ones with a lasting state hold their
+ * last frame.
+ *
+ * `rest` is where the object sits in its square canvas once the clip has
+ * settled, as fractions of the canvas, measured from the last frame. The
+ * clip is scaled so that object fits the drawing's box exactly. A hanger
+ * hangs, so it is set on the drawn bar rather than centred.
  */
 const MOTION = {
   love: {
     clip: require('../../assets/motion/heart.webp'),
     still: require('../../assets/motion/heart-still.webp'),
-    size: 52,
-    top: 13,
+    rest: { left: 0.131, top: 0.156, right: 0.869, bottom: 0.844 },
+    align: 'center',
   },
-  ask: { clip: require('../../assets/motion/bubble.webp'), still: null, size: 56, top: 11 },
-  send: { clip: require('../../assets/motion/plane.webp'), still: null, size: 58, top: 8 },
+  try: {
+    clip: require('../../assets/motion/mirror.webp'),
+    still: null,
+    rest: { left: 0.306, top: 0.081, right: 0.7, bottom: 0.919 },
+    align: 'center',
+  },
+  send: {
+    clip: require('../../assets/motion/plane.webp'),
+    still: null,
+    rest: { left: 0.081, top: 0.194, right: 0.931, bottom: 0.806 },
+    align: 'center',
+  },
   hang: {
-    clip: require('../../assets/motion/hanger.webp'),
+    // The hanger does not need a film: the real one appears and swings on
+    // its hook with a spring, see FeedPost. The same picture plays both parts.
+    clip: require('../../assets/motion/hanger-still.webp'),
     still: require('../../assets/motion/hanger-still.webp'),
-    size: 62,
-    top: 6,
+    rest: { left: 0.094, top: 0.225, right: 0.906, bottom: 0.731 },
+    align: 'bottom',
   },
-} as const;
+} as const satisfies Record<
+  MarkName,
+  { clip: number; still: number | null; rest: Box; align: 'center' | 'bottom' }
+>;
+
+/** The square the clip is drawn in, so that its settled object fills the drawing's box. */
+function placeClip(name: MarkName) {
+  const drawn = DRAWN[name];
+  const { rest, align } = MOTION[name];
+  const drawnW = drawn.right - drawn.left;
+  const drawnH = drawn.bottom - drawn.top;
+  const size = Math.min(drawnW / (rest.right - rest.left), drawnH / (rest.bottom - rest.top));
+  const objectW = (rest.right - rest.left) * size;
+  const objectH = (rest.bottom - rest.top) * size;
+  const objectLeft = drawn.left + (drawnW - objectW) / 2;
+  const objectTop = align === 'bottom' ? drawn.bottom - objectH : drawn.top + (drawnH - objectH) / 2;
+  return { size, left: objectLeft - rest.left * size, top: objectTop - rest.top * size };
+}
+
+const PLACED: Record<MarkName, ReturnType<typeof placeClip>> = {
+  love: placeClip('love'),
+  try: placeClip('try'),
+  send: placeClip('send'),
+  hang: placeClip('hang'),
+};
 
 /** A little longer than the clips, so the last frame is on screen before the swap. */
-const CLIP_MS = 2700;
+const CLIP_MS = 3000;
 
-function Motion({
-  name,
-  playingSince,
-  on,
-}: {
-  name: MarkName;
-  /** When the clip was last started. A new value restarts it. */
-  playingSince: number | null;
-  /** Whether the lasting state holds once the clip has played. */
-  on: boolean;
-}) {
+/** Which picture, if any, stands in for the drawing right now. */
+function useClip(name: MarkName, playingSince: number | null, on: boolean) {
   const spec = MOTION[name];
   const [playing, setPlaying] = useState(false);
 
@@ -142,25 +195,17 @@ function Motion({
   }, [playingSince]);
 
   const source = playing ? spec.clip : on ? spec.still : null;
-  if (!source) return null;
+  return { source, key: playing ? String(playingSince) : 'still' };
+}
 
+function Clip({ name, source, id }: { name: MarkName; source: number; id: string }) {
+  const at = PLACED[name];
   return (
     <View
       pointerEvents="none"
-      style={{
-        position: 'absolute',
-        top: spec.top,
-        left: 36 - spec.size / 2,
-        width: spec.size,
-        height: spec.size,
-      }}
+      style={{ position: 'absolute', top: at.top, left: at.left, width: at.size, height: at.size }}
     >
-      <Image
-        key={playing ? String(playingSince) : 'still'}
-        source={source}
-        style={{ width: '100%', height: '100%' }}
-        contentFit="contain"
-      />
+      <Image key={id} source={source} style={{ width: '100%', height: '100%' }} contentFit="contain" />
     </View>
   );
 }
@@ -181,63 +226,91 @@ function Curved({ id, d, color, word }: { id: string; d: string; color: string; 
   );
 }
 
+/**
+ * One action: the word, the line drawing, and the object that takes the
+ * drawing's place while its clip plays or its lasting state holds. The word
+ * stays; the drawing goes, so there is one heart on screen, never two.
+ */
 function Mark({
   name,
   uid,
   color,
   on = false,
+  playingSince = null,
 }: {
   name: MarkName;
   uid: string;
   color: string;
   on?: boolean;
+  /** When the clip was last started. A new value restarts it. */
+  playingSince?: number | null;
 }) {
   const line = { stroke: color, strokeWidth: 1.4, strokeLinejoin: 'round' as const };
+  const clip = useClip(name, playingSince, on);
+  const drawing = { opacity: clip.source ? 0 : 1 };
 
   return (
-    <Svg width={72} height={64} viewBox="0 0 72 64">
-      {name === 'love' ? (
-        <>
-          <Path
-            d="M36 30C32 21 20 20 18 31 16 42 30 49 36 57 42 49 56 42 54 31 52 20 40 21 36 30Z"
-            {...line}
-            fill={on ? color : 'none'}
-          />
-          <Curved id={`${uid}a`} d="M12 34C11 15 29 12 35 25" color={color} word="love" />
-          <Curved id={`${uid}b`} d="M38 25C44 12 61 15 60 34" color={color} word="it" />
-        </>
-      ) : name === 'ask' ? (
-        <>
-          <Path
-            d="M36 23C47 23 56 29 56 37 56 45 47 51 36 51 33 51 30 50.6 28 50L20 56 22 47C18 44 16 41 16 37 16 29 25 23 36 23Z"
-            {...line}
-            fill="none"
-          />
-          <Curved id={`${uid}a`} d="M13 36A23 19 0 0 1 59 36" color={color} word="ask" />
-        </>
-      ) : name === 'send' ? (
-        <>
-          <Path d="M12 37L60 17 46 56 35 41ZM35 41L60 17" {...line} fill="none" />
-          <Curved id={`${uid}a`} d="M9 31L57 11" color={color} word="send" />
-        </>
-      ) : (
-        <>
-          <Path
-            d="M36 31L11 50C8 53 9 55 13 55H59C63 55 64 53 61 50Z"
-            {...line}
-            fill={on ? color : 'none'}
-          />
-          <Path
-            d="M36 31V25C36 22 41 21 41 16 41 12.5 38.8 10 36 10 33.2 10 31 12 31 15"
-            {...line}
-            strokeLinecap="round"
-            fill="none"
-          />
-          <Curved id={`${uid}a`} d="M6 46L33 27" color={color} word="hang" />
-          <Curved id={`${uid}b`} d="M39 27L66 46" color={color} word="it" />
-        </>
-      )}
-    </Svg>
+    <View>
+      <Svg width={72} height={64} viewBox="0 0 72 64">
+        {name === 'love' ? (
+          <>
+            <G {...drawing}>
+              <Path
+                d="M36 30C32 21 20 20 18 31 16 42 30 49 36 57 42 49 56 42 54 31 52 20 40 21 36 30Z"
+                {...line}
+                fill={on ? color : 'none'}
+              />
+            </G>
+            <Curved id={`${uid}a`} d="M12 34C11 15 29 12 35 25" color={color} word="love" />
+            <Curved id={`${uid}b`} d="M38 25C44 12 61 15 60 34" color={color} word="it" />
+          </>
+        ) : name === 'try' ? (
+          <>
+            {/* A cheval mirror: the oval between two legs, pinned at the pivots, braced near the floor. */}
+            <G {...drawing}>
+              <Path
+                d="M36 21C43.2 21 49 27.7 49 36 49 44.3 43.2 51 36 51 28.8 51 23 44.3 23 36 23 27.7 28.8 21 36 21Z"
+                {...line}
+                fill="none"
+              />
+              <Path
+                d="M19 32L13 57M53 32L59 57M18 36H23M49 36H54M15 51H57"
+                {...line}
+                strokeLinecap="round"
+                fill="none"
+              />
+            </G>
+            <Curved id={`${uid}a`} d="M12 37A24 19 0 0 1 60 37" color={color} word="try on" />
+          </>
+        ) : name === 'send' ? (
+          <>
+            <G {...drawing}>
+              <Path d="M12 37L60 17 46 56 35 41ZM35 41L60 17" {...line} fill="none" />
+            </G>
+            <Curved id={`${uid}a`} d="M9 31L57 11" color={color} word="send" />
+          </>
+        ) : (
+          <>
+            <G {...drawing}>
+              <Path
+                d="M36 31L11 50C8 53 9 55 13 55H59C63 55 64 53 61 50Z"
+                {...line}
+                fill={on ? color : 'none'}
+              />
+              <Path
+                d="M36 31V25C36 22 41 21 41 16 41 12.5 38.8 10 36 10 33.2 10 31 12 31 15"
+                {...line}
+                strokeLinecap="round"
+                fill="none"
+              />
+            </G>
+            <Curved id={`${uid}a`} d="M6 46L33 27" color={color} word="hang" />
+            <Curved id={`${uid}b`} d="M39 27L66 46" color={color} word="it" />
+          </>
+        )}
+      </Svg>
+      {clip.source ? <Clip name={name} source={clip.source} id={clip.key} /> : null}
+    </View>
   );
 }
 
@@ -524,7 +597,6 @@ function PieceCard({
 export interface FeedPostProps {
   look: LookCardData;
   onPieces: (lookId: string) => void;
-  onComments: (lookId: string) => void;
   onTryOn: (lookId: string) => void;
   onSend: (lookId: string) => void;
   /** True while this look is being dressed. */
@@ -534,8 +606,9 @@ export interface FeedPostProps {
 export const FeedPost = memo(function FeedPost({
   look,
   onPieces,
-  onComments,
+  onTryOn,
   onSend,
+  dressing = false,
 }: FeedPostProps) {
   const { colors, width } = useTheme();
   const router = useRouter();
@@ -547,14 +620,16 @@ export const FeedPost = memo(function FeedPost({
   const [motion, setMotion] = useState<Partial<Record<MarkName, number>>>({});
   const play = (name: MarkName) => setMotion((current) => ({ ...current, [name]: Date.now() }));
 
-  // The hanger swings on its hook when you hang something on it.
+  // The hanger swings on its hook when you hang something on it: a kick to
+  // one side, then an underdamped spring back, so it passes centre a couple
+  // of times before it settles, the way a hanger does on a rail.
   const sway = useRef(new Animated.Value(0)).current;
   const swing = () => {
     sway.setValue(1);
     Animated.spring(sway, {
       toValue: 0,
-      friction: 2.2,
-      tension: 90,
+      friction: 2.6,
+      tension: 70,
       useNativeDriver: true,
     }).start();
   };
@@ -665,24 +740,32 @@ export const FeedPost = memo(function FeedPost({
           accessibilityState={{ selected: liked }}
         >
           <Animated.View style={{ transform: [{ scale: heartScale }] }}>
-            <Mark name="love" uid={`l${look.id}`} color={liked ? colors.accent : colors.ink} />
-            <Motion name="love" playingSince={motion.love ?? null} on={liked} />
+            <Mark
+              name="love"
+              uid={`l${look.id}`}
+              color={liked ? colors.accent : colors.ink}
+              on={liked}
+              playingSince={motion.love ?? null}
+            />
           </Animated.View>
         </Pressable>
         <Pressable
           onPress={() => {
-            // The clip starts first, so the tap is seen before the sheet
+            // The clip starts first, so the tap is seen before anything
             // rises over the row.
-            play('ask');
-            setTimeout(() => onComments(look.id), 350);
+            play('try');
+            setTimeout(() => onTryOn(look.id), 350);
           }}
           accessibilityRole="button"
-          accessibilityLabel="Ask about this look"
+          accessibilityLabel={dressing ? 'Nima is dressing you' : 'Try it on'}
+          accessibilityState={{ busy: dressing }}
         >
-          <View>
-            <Mark name="ask" uid={`a${look.id}`} color={colors.ink} />
-            <Motion name="ask" playingSince={motion.ask ?? null} on={false} />
-          </View>
+          <Mark
+            name="try"
+            uid={`t${look.id}`}
+            color={dressing ? colors.primary : colors.ink}
+            playingSince={motion.try ?? null}
+          />
         </Pressable>
         <Pressable
           onPress={() => {
@@ -692,10 +775,7 @@ export const FeedPost = memo(function FeedPost({
           accessibilityRole="button"
           accessibilityLabel="Send to a friend"
         >
-          <View>
-            <Mark name="send" uid={`s${look.id}`} color={colors.ink} />
-            <Motion name="send" playingSince={motion.send ?? null} on={false} />
-          </View>
+          <Mark name="send" uid={`s${look.id}`} color={colors.ink} playingSince={motion.send ?? null} />
         </Pressable>
         <Pressable
           onPress={() => {
@@ -711,15 +791,21 @@ export const FeedPost = memo(function FeedPost({
         >
           <Animated.View
             style={{
+              // Turn about the top of the hook, not the middle of the mark.
               transform: [
-                { translateY: -18 },
-                { rotate: sway.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '-14deg'] }) },
-                { translateY: 18 },
+                { translateY: -9 },
+                { rotate: sway.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '-16deg'] }) },
+                { translateY: 9 },
               ],
             }}
           >
-            <Mark name="hang" uid={`h${look.id}`} color={saved ? colors.primary : colors.ink} />
-            <Motion name="hang" playingSince={motion.hang ?? null} on={saved} />
+            <Mark
+              name="hang"
+              uid={`h${look.id}`}
+              color={saved ? colors.primary : colors.ink}
+              on={saved}
+              playingSince={motion.hang ?? null}
+            />
           </Animated.View>
         </Pressable>
       </View>
