@@ -27,7 +27,7 @@ What protects people's photos, messages and money on Nima, what was checked, and
 
 **Money**
 - Payments go through one gateway interface. The webhook is the only thing that marks an order paid, every charge carries an idempotency key, and signatures are checked in constant time over the raw bytes.
-- PaySasa takes payments with the session read back before any order is marked paid, and a reconcile job for payments whose webhook never arrives. Paystack stays as the second implementation with the same rules.
+- M-Pesa payments go straight to Nima's Till through Safaricom's API. The result callback is unsigned, so it is only a prompt: the STK query is read before any order is marked paid, a secret token in the callback URL drops anything that is not Safaricom's, and a reconcile job covers payments whose callback never arrives. PaySasa and Paystack stay as implementations behind it with the same rules.
 
 **Servers and code**
 - Postgres, Valkey and the storage bucket listen on loopback only. The API and worker containers run as the unprivileged `node` user. Migrations run in a separate one shot container, so the API cannot change the schema.
@@ -39,9 +39,9 @@ What protects people's photos, messages and money on Nima, what was checked, and
 
 1. **Make the GitHub repository private.** `joeglantern/Nima-AI` is public today. The history holds the brand book, the technical plan, event briefs and the server's address, none of which should be public. Settings, General, Danger zone, Change visibility.
 2. **Turn on secret scanning and push protection.** Settings, Code security. Push protection blocks a leaked key before it lands.
-3. **Two factor authentication** on GitHub, Expo, Apple, Google Play, PaySasa and the domain registrar, with an app or a hardware key.
+3. **Two factor authentication** on GitHub, Expo, Apple, Google Play, the Daraja developer portal, the M-Pesa business portal and the domain registrar, with an app or a hardware key.
 4. **A real domain** for the API and web app, with a certificate. Printed QR codes and Instagram links must never point at a temporary tunnel.
-5. **PaySasa:** keep the API key and webhook secret only in `.env.prod` on the server. Use an `apk_test_` key until a real test payment has been made end to end, then swap for `apk_live_`. Revoke a key from the Businesses page the moment it is suspected.
+5. **M-Pesa:** keep the consumer key, secret, passkey and callback token only in `.env.prod` on the server. Stay on the sandbox until a real KSh 10 payment has gone through end to end on production, then set `MPESA_ENV=production`. Rotate the callback token with the key pair if either is ever suspected.
 6. ~~Dependency updates~~ Done on 3 November 2026: `sharp` 0.35.5, `nodemailer` 10.3.1, `zod` 4.6.7. The remaining audit items are `tinypool` (test runner only, never shipped), `node-forge` and `decode-uri-component` (inside Expo's build tooling, not in the shipped app) and `deepmerge-ts` (inside Prisma's config loader). Re-check with `pnpm audit --prod` each month.
 
 ## Not yet built

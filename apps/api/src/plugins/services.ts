@@ -52,7 +52,7 @@ export default fp(
     if (!payments.configured) {
       app.log.warn(
         'No payment credentials, so checkout will refuse to start. ' +
-          'Set PAYSASA_API_KEY and PAYSASA_BUSINESS_ID to take money.',
+          'Set the MPESA_ variables to take money.',
       );
     }
 

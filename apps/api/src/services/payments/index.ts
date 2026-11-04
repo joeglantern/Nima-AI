@@ -1,11 +1,11 @@
 /**
  * Taking money.
  *
- * One interface, three implementations. Everything above this file talks to
- * `PaymentGateway` and never knows whether the shilling came from PaySasa,
- * from Paystack, from a sandbox, or from somewhere we have not integrated
- * yet. When Nima adds cards, or another aggregator, the only folder that
- * changes is this one.
+ * One interface, several implementations. Everything above this file talks
+ * to `PaymentGateway` and never knows whether the shilling came straight
+ * from Safaricom, from PaySasa, from Paystack, from a sandbox, or from
+ * somewhere we have not integrated yet. When Nima adds cards, or another
+ * aggregator, the only folder that changes is this one.
  *
  * M-Pesa is not a card. There is no synchronous "paid" answer: we ask Safaricom
  * to push a prompt to a phone, the person types their PIN somewhere we cannot
@@ -19,13 +19,15 @@
  *   - Every request carries an idempotency key, because a retried push that
  *     charges twice is the worst bug this system can have.
  *
- * PaySasa is used whenever its key and business id are set. Paystack is the
- * second implementation, used when only its key is set. Fingo stays only
- * because the test scripts still drive it; nothing in production configures it.
+ * M-Pesa through Safaricom's own API, paid to Nima's Till, is the provider
+ * in use whenever its credentials are set. PaySasa and Paystack are complete
+ * implementations kept behind it, used only when it is not configured. Fingo
+ * stays only because the test scripts still drive it.
  */
 
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import type { Env } from '@nima/config';
+import { MpesaGateway } from './mpesa.js';
 import { PaysasaGateway } from './paysasa.js';
 import { PaystackGateway } from './paystack.js';
 
@@ -105,9 +107,9 @@ export interface WebhookResult {
 }
 
 export interface PaymentGateway {
-  readonly name: 'PAYSASA' | 'PAYSTACK' | 'FINGO' | 'SANDBOX';
+  readonly name: 'MPESA' | 'PAYSASA' | 'PAYSTACK' | 'FINGO' | 'SANDBOX';
   /** The value written to `payments.provider`. */
-  readonly provider: 'PAYSASA' | 'PAYSTACK' | 'FINGO' | 'MANUAL';
+  readonly provider: 'MPESA' | 'PAYSASA' | 'PAYSTACK' | 'FINGO' | 'MANUAL';
   /** False when the gateway has no credentials, which gates checkout. */
   readonly configured: boolean;
   /**
@@ -123,8 +125,15 @@ export interface PaymentGateway {
 
 /** A gateway that can be asked for the truth, and may be able to send money back. */
 export interface VerifyingGateway extends PaymentGateway {
-  readonly name: 'PAYSASA' | 'PAYSTACK';
+  readonly name: 'MPESA' | 'PAYSASA' | 'PAYSTACK';
   readonly live: boolean;
+  /**
+   * True when the read back states the amount and currency, which are then
+   * checked against the payment. False for M-Pesa, whose query names only
+   * the request: there the push itself fixed the amount, and the callback's
+   * amount is checked whenever it came.
+   */
+  readonly readsBackAmount: boolean;
   /** Where its webhooks arrive, under the API root. */
   readonly webhookPath: string;
   /** The header that carries the signature. */
@@ -147,7 +156,7 @@ export interface VerifyingGateway extends PaymentGateway {
 }
 
 export function canVerify(gateway: PaymentGateway): gateway is VerifyingGateway {
-  return gateway.name === 'PAYSASA' || gateway.name === 'PAYSTACK';
+  return gateway.name === 'MPESA' || gateway.name === 'PAYSASA' || gateway.name === 'PAYSTACK';
 }
 
 export class PaymentGatewayError extends Error {
@@ -342,6 +351,28 @@ class SandboxGateway implements PaymentGateway {
 }
 
 export function createPaymentGateway(env: Env): PaymentGateway {
+  if (
+    env.MPESA_CONSUMER_KEY &&
+    env.MPESA_CONSUMER_SECRET &&
+    env.MPESA_SHORTCODE &&
+    env.MPESA_PASSKEY &&
+    env.MPESA_CALLBACK_TOKEN
+  ) {
+    const live = env.MPESA_ENV === 'production';
+    return new MpesaGateway({
+      consumerKey: env.MPESA_CONSUMER_KEY,
+      consumerSecret: env.MPESA_CONSUMER_SECRET,
+      shortcode: env.MPESA_SHORTCODE,
+      till: env.MPESA_TILL || null,
+      passkey: env.MPESA_PASSKEY,
+      callbackToken: env.MPESA_CALLBACK_TOKEN,
+      baseUrl:
+        env.MPESA_BASE_URL ??
+        (live ? 'https://api.safaricom.co.ke' : 'https://sandbox.safaricom.co.ke'),
+      live,
+    });
+  }
+
   if (env.PAYSASA_API_KEY && env.PAYSASA_BUSINESS_ID) {
     return new PaysasaGateway({
       apiKey: env.PAYSASA_API_KEY,

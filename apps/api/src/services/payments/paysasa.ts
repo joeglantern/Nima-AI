@@ -98,6 +98,7 @@ export class PaysasaGateway implements PaymentGateway {
   readonly signatureHeader = 'x-paysasa-signature';
   readonly webhookProvider = 'paysasa';
   readonly canRefund = false;
+  readonly readsBackAmount = true;
   readonly configured = true;
 
   private readonly apiKey: string;

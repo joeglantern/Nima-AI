@@ -267,9 +267,13 @@ The brand book names cream as the background. The owner found cream made the app
 
 Fingo Pay is dropped before it ever took a live payment. Paystack handles M-Pesa and cards in KES. The gateway interface stays, so the rest of the system never learns the provider's name. Nothing is marked paid until the webhook is signature checked and the transaction is verified with Paystack.
 
-## 21. Payments go through PaySasa
+## 21. Payments go through PaySasa (superseded by 22)
 
 PaySasa (paysasa.com, by Airsoko) replaces Paystack before either took a live payment. It is Kenyan, settles to a PaySasa wallet and out to M-Pesa, and its API is a checkout session: name a session for an amount, push the M-Pesa prompt to a phone, read the session back. Nima keeps the same rules as before: nothing is marked paid until the session is read back from PaySasa and agrees on amount and currency, webhooks are only a prompt to look, and the reconcile timer closes or confirms whatever never got a webhook. Two things are different. The session is named before any money is asked for, so the payment row is given PaySasa's id between those two calls and a timeout on the prompt can still be matched. And PaySasa has no refund API, so a refund is recorded, logged loudly, sent by a person from the PaySasa dashboard and then marked done. Paystack stays in the code as the second implementation, used only when PaySasa is not configured. (4 November 2026)
+
+## 22. Payments go straight to Nima's M-Pesa Till
+
+Nima is getting its own Till, so the money goes to Safaricom directly through the Daraja API and no aggregator sits in between. The same rules hold: an STK push is only "we asked", the result callback is unsigned and treated as a prompt to look, and nothing is marked paid until the STK query says ResultCode 0. Three things are particular to Safaricom. The callback URL carries a long secret token because Safaricom signs nothing. The query does not state the amount, so the amount is held to the push itself (a CheckoutRequestID is bound to the amount it was pushed with) and checked against the callback's amount whenever one came. And a push that times out has no id to query, so that checkout is unwound and the buyer is told not to enter a PIN; money that lands anyway is logged under an unknown id for a refund by hand. Reversals through the API need an initiator and a security credential that Nima does not have yet, so refunds are recorded as BY_HAND and sent from the M-Pesa business portal. PaySasa and Paystack stay in the code as complete implementations behind it. (4 November 2026)
 
 ## 20. Booth sales are their own channel
 

@@ -83,6 +83,7 @@ export class PaystackGateway implements PaymentGateway {
   readonly signatureHeader = 'x-paystack-signature';
   readonly webhookProvider = 'paystack';
   readonly canRefund = true;
+  readonly readsBackAmount = true;
   readonly configured = true;
 
   constructor(

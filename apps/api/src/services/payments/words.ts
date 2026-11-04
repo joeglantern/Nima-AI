@@ -26,6 +26,9 @@ export function describeFailure(...texts: Array<string | null | undefined>): str
   if (/cancel/.test(said)) {
     return 'The M-Pesa prompt was cancelled. Try again when you are ready.';
   }
+  if (/lock subscriber|already in process|in progress|busy/.test(said)) {
+    return 'Your phone is still busy with another M-Pesa request. Finish it or wait a minute, then try again.';
+  }
   if (/invalid phone|phone number|unreachable|not registered|subscriber/.test(said)) {
     return 'That number could not get an M-Pesa prompt. Check the number is on M-Pesa and try again.';
   }
@@ -51,6 +54,10 @@ export function maskPhone(phone: string | null | undefined): string | null {
 export function redactPayload(value: unknown): unknown {
   if (typeof value === 'string') {
     return value.replace(/\+?254\d{9}\b|\b0[17]\d{8}\b/g, (match) => maskPhone(match) ?? '***');
+  }
+  // Safaricom sends the payer's number as a number, not a string.
+  if (typeof value === 'number' && /^254[17]\d{8}$/.test(String(value))) {
+    return maskPhone(String(value));
   }
   if (Array.isArray(value)) return value.map(redactPayload);
   if (value && typeof value === 'object') {

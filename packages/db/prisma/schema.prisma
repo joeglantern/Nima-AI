@@ -1166,8 +1166,10 @@ enum PaymentProvider {
   FINGO
   /// M-Pesa through Paystack. Built in November 2026, kept as the second implementation.
   PAYSTACK
-  /// M-Pesa through PaySasa checkout sessions. The provider in use from November 2026.
+  /// M-Pesa through PaySasa checkout sessions. Built in November 2026, kept behind MPESA.
   PAYSASA
+  /// M-Pesa straight from Safaricom, paid to Nima's Till. The provider in use from November 2026.
+  MPESA
   APPLE_IAP
   GOOGLE_PLAY
   MANUAL

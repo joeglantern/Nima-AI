@@ -576,12 +576,20 @@ export class PaymentSync {
     payment: { amountCents: number; currency: string },
     verified: VerifiedPayment,
   ): boolean {
-    return (
-      verified.amountCents !== null &&
-      verified.amountCents === payment.amountCents &&
+    const gateway = this.verifying();
+    const amountOk = verified.amountCents !== null && verified.amountCents === payment.amountCents;
+    const currencyOk =
       verified.currency !== null &&
-      verified.currency.toUpperCase() === payment.currency.toUpperCase()
-    );
+      verified.currency.toUpperCase() === payment.currency.toUpperCase();
+
+    if (gateway && !gateway.readsBackAmount) {
+      // M-Pesa's query names the request, not the money. The push fixed the
+      // amount, so only an amount it did state (from the callback) is checked.
+      return (
+        (verified.amountCents === null || amountOk) && (verified.currency === null || currencyOk)
+      );
+    }
+    return amountOk && currencyOk;
   }
 
   private verifying(): VerifyingGateway | null {

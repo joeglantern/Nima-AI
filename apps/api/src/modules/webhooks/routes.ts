@@ -1,12 +1,12 @@
 /**
  * Provider webhooks.
  *
- * These sit outside `/v1` and outside the session: the caller is PaySasa
- * or Paystack (or Fingo, in the test scripts), not a person, and it proves
- * itself with a signature over the exact bytes it sent. That is why this
- * route parses the body itself and keeps the raw string: re-serialising
- * parsed JSON changes whitespace and key order, and the HMAC no longer
- * matches.
+ * These sit outside `/v1` and outside the session: the caller is Safaricom,
+ * PaySasa or Paystack (or Fingo, in the test scripts), not a person, and it
+ * proves itself with a signature over the exact bytes it sent, or, for
+ * Safaricom, with a secret token in the path. That is why this route parses
+ * the body itself and keeps the raw string: re-serialising parsed JSON
+ * changes whitespace and key order, and the HMAC no longer matches.
  *
  * Three rules, all learned the expensive way:
  *
@@ -72,6 +72,110 @@ export function webhookRoutes(
       done(null, body),
     );
 
+    /**
+     * One delivery, from whichever provider: written down, checked, acted on.
+     * Returns nothing; every path answers 200 to the caller.
+     */
+    const takeIn = async (
+      provider: string,
+      raw: Buffer,
+      signature: string | undefined,
+      request: { headers: Record<string, unknown>; ip: string },
+    ): Promise<void> => {
+      // Only the provider in use can sign anything. A webhook for another
+      // one is written down and dropped, like a bad signature.
+      const active = canVerify(gateway) && gateway.webhookProvider === provider;
+      const signatureOk = active && gateway.verifySignature(raw, signature);
+      const payload = parseJson(raw);
+      const notice = signatureOk && canVerify(gateway) ? gateway.parseWebhook(payload) : null;
+      const externalId = notice?.externalId ?? null;
+
+      // A repeat of an event we finished is dropped. One that failed half
+      // way is processed again, which is safe: every step is idempotent.
+      let eventId: string | null = null;
+      if (externalId) {
+        const seen = await app.prisma.webhookEvent.findUnique({
+          where: { provider_externalId: { provider, externalId } },
+          select: { id: true, processedAt: true, error: true },
+        });
+        if (seen?.processedAt && !seen.error) return;
+        eventId = seen?.id ?? null;
+      }
+
+      if (!eventId) {
+        try {
+          const created = await app.prisma.webhookEvent.create({
+            data: {
+              provider,
+              eventType: notice?.event ?? null,
+              signatureOk,
+              externalId,
+              // Phone numbers masked and card tokens dropped. The rest is
+              // kept as it came, for support questions.
+              payload: redactPayload(payload) as never,
+              headers: {
+                'content-type': request.headers['content-type'] ?? null,
+                'user-agent': request.headers['user-agent'] ?? null,
+                // Compare with the provider's published addresses when in doubt.
+                ip: request.ip,
+              } as never,
+            },
+            select: { id: true },
+          });
+          eventId = created.id;
+        } catch (error) {
+          // The same event on two nodes at once. The other one has it.
+          if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+            return;
+          }
+          throw error;
+        }
+      }
+
+      if (!signatureOk) {
+        app.log.warn({ eventId, provider }, 'A webhook arrived with a bad signature');
+        return;
+      }
+
+      if (!notice || notice.kind === 'other') {
+        await app.prisma.webhookEvent.update({
+          where: { id: eventId },
+          data: {
+            processedAt: new Date(),
+            error: notice ? null : 'The payload had no reference',
+          },
+        });
+        return;
+      }
+
+      try {
+        let note: string | null = null;
+        if (notice.kind === 'charge') {
+          const outcome = await app.services.paymentSync.confirm(notice.reference, 'webhook');
+          if (outcome === 'ignored') note = 'Not a payment Nima is waiting on';
+          if (outcome === 'mismatch') note = 'Verify did not match; nothing credited';
+          // Left open, so a retry of this event is looked at again.
+          if (outcome === 'waiting') note = 'Verify does not show it paid yet';
+        } else {
+          const open = await app.services.paymentSync.onRefundWebhook(notice.reference);
+          if (open > 0) note = 'The provider does not show the refund finished yet';
+        }
+
+        await app.prisma.webhookEvent.update({
+          where: { id: eventId },
+          data: { processedAt: new Date(), error: note },
+        });
+      } catch (error) {
+        // On record, unprocessed. The reconcile pass and the provider's
+        // own retry both come back to it.
+        app.log.error({ err: error, eventId, provider }, 'Could not act on a webhook');
+        await app.prisma.webhookEvent.update({
+          where: { id: eventId },
+          data: { error: error instanceof Error ? error.message.slice(0, 500) : 'unknown' },
+        });
+      }
+    };
+
     for (const spec of PROVIDERS) {
       app.post(
         spec.path,
@@ -85,114 +189,35 @@ export function webhookRoutes(
           },
         },
         async (request, reply) => {
-          const ok = { received: true as const };
           const raw = Buffer.isBuffer(request.body) ? request.body : Buffer.alloc(0);
           const header = request.headers[spec.header];
-          const signature = Array.isArray(header) ? header[0] : header;
-
-          // Only the provider in use can sign anything. A webhook for the
-          // other one is written down and dropped, like a bad signature.
-          const active = canVerify(gateway) && gateway.webhookProvider === spec.provider;
-          const signatureOk = active && gateway.verifySignature(raw, signature);
-          const payload = parseJson(raw);
-          const notice = signatureOk && canVerify(gateway) ? gateway.parseWebhook(payload) : null;
-          const externalId = notice?.externalId ?? null;
-
-          // A repeat of an event we finished is dropped. One that failed half
-          // way is processed again, which is safe: every step is idempotent.
-          let eventId: string | null = null;
-          if (externalId) {
-            const seen = await app.prisma.webhookEvent.findUnique({
-              where: { provider_externalId: { provider: spec.provider, externalId } },
-              select: { id: true, processedAt: true, error: true },
-            });
-            if (seen?.processedAt && !seen.error) return reply.status(200).send(ok);
-            eventId = seen?.id ?? null;
-          }
-
-          if (!eventId) {
-            try {
-              const created = await app.prisma.webhookEvent.create({
-                data: {
-                  provider: spec.provider,
-                  eventType: notice?.event ?? null,
-                  signatureOk,
-                  externalId,
-                  // Phone numbers masked and card tokens dropped. The rest is
-                  // kept as it came, for support questions.
-                  payload: redactPayload(payload) as never,
-                  headers: {
-                    'content-type': request.headers['content-type'] ?? null,
-                    'user-agent': request.headers['user-agent'] ?? null,
-                    // Compare with the provider's published addresses when in doubt.
-                    ip: request.ip,
-                  } as never,
-                },
-                select: { id: true },
-              });
-              eventId = created.id;
-            } catch (error) {
-              // The same event on two nodes at once. The other one has it.
-              if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
-                return reply.status(200).send(ok);
-              }
-              throw error;
-            }
-          }
-
-          if (!signatureOk) {
-            app.log.warn(
-              { eventId, provider: spec.provider },
-              'A webhook arrived with a bad signature',
-            );
-            return reply.status(200).send(ok);
-          }
-
-          if (!notice || notice.kind === 'other') {
-            await app.prisma.webhookEvent.update({
-              where: { id: eventId },
-              data: {
-                processedAt: new Date(),
-                error: notice ? null : 'The payload had no reference',
-              },
-            });
-            return reply.status(200).send(ok);
-          }
-
-          try {
-            let note: string | null = null;
-            if (notice.kind === 'charge') {
-              const outcome = await app.services.paymentSync.confirm(notice.reference, 'webhook');
-              if (outcome === 'ignored') note = 'Not a payment Nima is waiting on';
-              if (outcome === 'mismatch') note = 'Verify did not match; nothing credited';
-              // Left open, so a retry of this event is looked at again.
-              if (outcome === 'waiting') note = 'Verify does not show it paid yet';
-            } else {
-              const open = await app.services.paymentSync.onRefundWebhook(notice.reference);
-              if (open > 0) note = 'The provider does not show the refund finished yet';
-            }
-
-            await app.prisma.webhookEvent.update({
-              where: { id: eventId },
-              data: { processedAt: new Date(), error: note },
-            });
-          } catch (error) {
-            // On record, unprocessed. The reconcile pass and the provider's
-            // own retry both come back to it.
-            app.log.error(
-              { err: error, eventId, provider: spec.provider },
-              'Could not act on a webhook',
-            );
-            await app.prisma.webhookEvent.update({
-              where: { id: eventId },
-              data: { error: error instanceof Error ? error.message.slice(0, 500) : 'unknown' },
-            });
-          }
-
-          return reply.status(200).send(ok);
+          await takeIn(spec.provider, raw, Array.isArray(header) ? header[0] : header, request);
+          return reply.status(200).send({ received: true as const });
         },
       );
     }
+
+    app.post(
+      '/webhooks/till/:token',
+      {
+        config: { rateLimit: { max: 600, timeWindow: '1 minute' } },
+        schema: {
+          tags: ['webhooks'],
+          summary: 'STK push results from Safaricom',
+          description:
+            'Safaricom signs nothing, so the URL carries a secret token and a result is ' +
+            'only a prompt: the request is read back with the STK query before anything ' +
+            'is marked paid. Answered the way Safaricom expects.',
+          params: z.object({ token: z.string().min(1).max(200) }),
+          response: { 200: z.object({ ResultCode: z.literal(0), ResultDesc: z.string() }) },
+        },
+      },
+      async (request, reply) => {
+        const raw = Buffer.isBuffer(request.body) ? request.body : Buffer.alloc(0);
+        await takeIn('mpesa', raw, request.params.token, request);
+        return reply.status(200).send({ ResultCode: 0 as const, ResultDesc: 'Accepted' });
+      },
+    );
 
     app.post(
       '/webhooks/fingo',

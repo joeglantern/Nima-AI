@@ -221,7 +221,7 @@ t.verify().then(() => console.log('ok')).catch((e) => console.log('failed:', e.m
 
 | Thing | Why | What it needs |
 |---|---|---|
-| Checkout | No payment provider | `PAYSASA_API_KEY` and `PAYSASA_BUSINESS_ID` (from the PaySasa dashboard under Businesses, API Keys), `PAYSASA_WEBHOOK_SECRET` with the webhook URL `API_URL/webhooks/paysasa` set in the business settings, then the `checkout` flag in `app_settings`. Refunds are sent by hand from the PaySasa dashboard; the log says `REFUND BY HAND` with the amount |
+| Checkout | No payment provider | The `MPESA_` variables: consumer key and secret from the Daraja app, the Till's store number as `MPESA_SHORTCODE`, the Till as `MPESA_TILL`, the Lipa na M-Pesa Online passkey, a random `MPESA_CALLBACK_TOKEN`, and `MPESA_ENV=production` once live. The callback URL registered with the push is `API_URL/webhooks/till/<token>`. Then the `checkout` flag in `app_settings`. Refunds are sent by hand from the M-Pesa business portal; the log says `REFUND BY HAND` with the amount |
 | Try-on images | No image provider | `GEMINI_API_KEY`. Jobs queue and wait until there is one |
 | Ask Nima, full | No language model | `LLM_BASE_URL`. It answers from the catalogue meanwhile |
 | Google and Apple sign in | No OAuth credentials | The client id and secret pairs. Email codes work without them |

@@ -113,7 +113,30 @@ export const envSchema = z.object({
 
   // payments and logistics
   /**
-   * PaySasa takes the money when the key and the business id are both set.
+   * M-Pesa, straight from Safaricom (Daraja), paid to Nima's Till. The
+   * provider in use when all five of key, secret, shortcode, passkey and
+   * callback token are set. The sandbox never moves real money.
+   */
+  MPESA_CONSUMER_KEY: z.string().optional(),
+  MPESA_CONSUMER_SECRET: z.string().optional(),
+  /** The shortcode the Daraja app went live with: the Till's store number, or a PayBill. */
+  MPESA_SHORTCODE: z.string().optional(),
+  /** The Till number itself. Leave empty for a PayBill, and the shortcode is used. */
+  MPESA_TILL: z.string().optional(),
+  /** The Lipa na M-Pesa Online passkey. Sandbox has a published one; live arrives by email after Go Live. */
+  MPESA_PASSKEY: z.string().optional(),
+  /**
+   * A long random string that becomes part of the callback URL, because
+   * Safaricom's callbacks carry no signature. Make it with
+   * `openssl rand -hex 24`. Anything that arrives without it is dropped.
+   */
+  MPESA_CALLBACK_TOKEN: z.string().optional(),
+  MPESA_ENV: z.enum(['sandbox', 'production']).default('sandbox'),
+  /** Changed only by tests, which point it at a local fake. */
+  MPESA_BASE_URL: z.url().optional(),
+  /**
+   * PaySasa, kept as a complete second implementation. Used only when
+   * M-Pesa is not set, and the key and the business id are both set.
    * The key is the `x-api-key` on every call, so it lives only on the
    * server. A test key (apk_test_) never moves real money; a live key
    * (apk_live_) needs a verified business.
@@ -167,6 +190,10 @@ const SECRET_KEYS = [
   'SMTP_PASSWORD',
   'GEMINI_API_KEY',
   'LLM_API_KEY',
+  'MPESA_CONSUMER_KEY',
+  'MPESA_CONSUMER_SECRET',
+  'MPESA_PASSKEY',
+  'MPESA_CALLBACK_TOKEN',
   'PAYSASA_API_KEY',
   'PAYSASA_WEBHOOK_SECRET',
   'PAYSTACK_SECRET_KEY',
