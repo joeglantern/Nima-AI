@@ -1,10 +1,11 @@
 /**
  * Taking money.
  *
- * One interface, two implementations. Everything above this file talks to
- * `PaymentGateway` and never knows whether the shilling came from Fingo, from
- * a sandbox, or from somewhere we have not integrated yet. When Nima adds
- * cards, or a second aggregator, the only file that changes is this folder.
+ * One interface, three implementations. Everything above this file talks to
+ * `PaymentGateway` and never knows whether the shilling came from PaySasa,
+ * from Paystack, from a sandbox, or from somewhere we have not integrated
+ * yet. When Nima adds cards, or another aggregator, the only folder that
+ * changes is this one.
  *
  * M-Pesa is not a card. There is no synchronous "paid" answer: we ask Safaricom
  * to push a prompt to a phone, the person types their PIN somewhere we cannot
@@ -12,18 +13,20 @@
  * decision here follows from that:
  *
  *   - `charge` returns "we asked", not "they paid".
- *   - Only a confirmed result marks an order paid. With Paystack that means
- *     Transaction Verify agreeing on the reference, amount and currency, never
- *     a webhook on its own.
+ *   - Only a confirmed result marks an order paid. That means reading the
+ *     payment back from the provider and seeing it agree on the reference,
+ *     amount and currency, never a webhook on its own.
  *   - Every request carries an idempotency key, because a retried push that
  *     charges twice is the worst bug this system can have.
  *
- * Paystack is used whenever its secret key is set. Fingo stays only because
- * the test scripts still drive it; nothing in production configures it.
+ * PaySasa is used whenever its key and business id are set. Paystack is the
+ * second implementation, used when only its key is set. Fingo stays only
+ * because the test scripts still drive it; nothing in production configures it.
  */
 
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import type { Env } from '@nima/config';
+import { PaysasaGateway } from './paysasa.js';
 import { PaystackGateway } from './paystack.js';
 
 export interface ChargeRequest {
@@ -35,10 +38,18 @@ export interface ChargeRequest {
   description: string;
   /** Replaying this key must never take the money twice. */
   idempotencyKey: string;
-  /** Where the provider posts the result. Paystack uses the dashboard setting instead. */
+  /** Where the provider posts the result. PaySasa and Paystack use the dashboard setting instead. */
   callbackUrl: string;
   /** The buyer's email, when there is one. Paystack requires an email on a charge. */
   email?: string | null;
+  /**
+   * Called as soon as the provider has named the payment and before any
+   * money is asked for. The caller writes the name down, so a charge call
+   * that times out after that point can still be matched to its result.
+   * PaySasa names a session first and pushes the prompt second; Paystack
+   * and Fingo never call it.
+   */
+  onReference?: (providerRef: string) => Promise<void>;
 }
 
 export interface ChargeResult {
@@ -60,7 +71,7 @@ export interface VerifiedPayment {
   amountCents: number | null;
   currency: string | null;
   failureReason: string | null;
-  /** The provider's transaction id. Paystack needs it to list refunds. */
+  /** The provider's own id for the payment. Paystack needs it to list refunds. */
   providerId: string | null;
   /** A small, safe summary kept on the payment row. No phone numbers. */
   raw: Record<string, unknown> | null;
@@ -94,9 +105,9 @@ export interface WebhookResult {
 }
 
 export interface PaymentGateway {
-  readonly name: 'PAYSTACK' | 'FINGO' | 'SANDBOX';
+  readonly name: 'PAYSASA' | 'PAYSTACK' | 'FINGO' | 'SANDBOX';
   /** The value written to `payments.provider`. */
-  readonly provider: 'PAYSTACK' | 'FINGO' | 'MANUAL';
+  readonly provider: 'PAYSASA' | 'PAYSTACK' | 'FINGO' | 'MANUAL';
   /** False when the gateway has no credentials, which gates checkout. */
   readonly configured: boolean;
   /**
@@ -110,10 +121,21 @@ export interface PaymentGateway {
   verifySignature(rawBody: string | Buffer, signature: string | undefined): boolean;
 }
 
-/** A gateway that can be asked for the truth, and can send money back. */
+/** A gateway that can be asked for the truth, and may be able to send money back. */
 export interface VerifyingGateway extends PaymentGateway {
-  readonly name: 'PAYSTACK';
+  readonly name: 'PAYSASA' | 'PAYSTACK';
   readonly live: boolean;
+  /** Where its webhooks arrive, under the API root. */
+  readonly webhookPath: string;
+  /** The header that carries the signature. */
+  readonly signatureHeader: string;
+  /** The value written to `webhook_events.provider`. */
+  readonly webhookProvider: string;
+  /**
+   * False when the provider has no refund API. Refunds are still recorded
+   * and then sent by a person from the provider's dashboard.
+   */
+  readonly canRefund: boolean;
   isOurReference(reference: string): boolean;
   verify(reference: string): Promise<VerifiedPayment>;
   parseWebhook(payload: unknown): WebhookNotice | null;
@@ -125,7 +147,7 @@ export interface VerifyingGateway extends PaymentGateway {
 }
 
 export function canVerify(gateway: PaymentGateway): gateway is VerifyingGateway {
-  return gateway.name === 'PAYSTACK';
+  return gateway.name === 'PAYSASA' || gateway.name === 'PAYSTACK';
 }
 
 export class PaymentGatewayError extends Error {
@@ -290,7 +312,7 @@ export class FingoGateway implements PaymentGateway {
 // ------------------------------------------------------------------ sandbox ---
 
 /**
- * The gateway used before Paystack credentials exist.
+ * The gateway used before any provider credentials exist.
  *
  * `configured` is false, and that is the whole protection. `CheckoutService`
  * refuses to start a payment against an unconfigured gateway, and the
@@ -320,6 +342,15 @@ class SandboxGateway implements PaymentGateway {
 }
 
 export function createPaymentGateway(env: Env): PaymentGateway {
+  if (env.PAYSASA_API_KEY && env.PAYSASA_BUSINESS_ID) {
+    return new PaysasaGateway({
+      apiKey: env.PAYSASA_API_KEY,
+      businessId: env.PAYSASA_BUSINESS_ID,
+      webhookSecret: env.PAYSASA_WEBHOOK_SECRET ?? null,
+      baseUrl: env.PAYSASA_BASE_URL.replace(/\/+$/, ''),
+    });
+  }
+
   if (env.PAYSTACK_SECRET_KEY) {
     return new PaystackGateway(env.PAYSTACK_SECRET_KEY, env.PAYSTACK_BASE_URL.replace(/\/+$/, ''));
   }

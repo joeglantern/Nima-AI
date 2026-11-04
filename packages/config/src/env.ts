@@ -113,9 +113,25 @@ export const envSchema = z.object({
 
   // payments and logistics
   /**
-   * Paystack takes the money when this is set. The secret key signs every
-   * API call and every webhook, so it lives only on the server. A test key
-   * (sk_test_) never moves real money.
+   * PaySasa takes the money when the key and the business id are both set.
+   * The key is the `x-api-key` on every call, so it lives only on the
+   * server. A test key (apk_test_) never moves real money; a live key
+   * (apk_live_) needs a verified business.
+   */
+  PAYSASA_API_KEY: z.string().optional(),
+  /** The business the sessions are created under, `biz_...` in the dashboard. */
+  PAYSASA_BUSINESS_ID: z.string().optional(),
+  /**
+   * Signs every webhook. Without it webhooks are stored and dropped, and
+   * payments are still confirmed by asking PaySasa on the timer.
+   */
+  PAYSASA_WEBHOOK_SECRET: z.string().optional(),
+  /** Changed only by tests, which point it at a local fake. */
+  PAYSASA_BASE_URL: z.url().default('https://api.paysasa.com/api/v1'),
+  /**
+   * Paystack, the second implementation. Used only when PaySasa is not set.
+   * The secret key signs every API call and every webhook, so it lives only
+   * on the server. A test key (sk_test_) never moves real money.
    */
   PAYSTACK_SECRET_KEY: z.string().optional(),
   /** Only needed by a client that opens Paystack's own checkout. Not secret. */
@@ -123,12 +139,13 @@ export const envSchema = z.object({
   /** Changed only by tests, which point it at a local fake. */
   PAYSTACK_BASE_URL: z.url().default('https://api.paystack.co'),
   /**
-   * How often stuck payments are checked with Paystack, in seconds. Paystack
-   * only sends a webhook for a successful charge, so a wrong PIN or a prompt
-   * that timed out is only ever learned this way. 0 turns it off.
+   * How often stuck payments are checked with the provider, in seconds.
+   * Providers send a webhook for a successful payment and little else, so a
+   * wrong PIN or a prompt that timed out is only ever learned this way.
+   * 0 turns it off.
    */
   PAYMENT_RECONCILE_SECONDS: z.coerce.number().int().min(0).default(15),
-  /** Kept for the test scripts. Paystack wins when both are set. */
+  /** Kept for the test scripts. PaySasa and Paystack both win over it. */
   FINGO_API_KEY: z.string().optional(),
   FINGO_WEBHOOK_SECRET: z.string().optional(),
   FINGO_BASE_URL: z.url().default('https://api.fingopay.io'),
@@ -150,6 +167,8 @@ const SECRET_KEYS = [
   'SMTP_PASSWORD',
   'GEMINI_API_KEY',
   'LLM_API_KEY',
+  'PAYSASA_API_KEY',
+  'PAYSASA_WEBHOOK_SECRET',
   'PAYSTACK_SECRET_KEY',
   'FINGO_API_KEY',
   'FINGO_WEBHOOK_SECRET',

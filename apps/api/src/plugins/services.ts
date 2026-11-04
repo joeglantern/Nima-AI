@@ -28,7 +28,7 @@ export interface Services {
    * rather than inside the versioned route tree.
    */
   payments: PaymentGateway;
-  /** Confirms payments and refunds with Paystack. */
+  /** Confirms payments and refunds with the provider. */
   paymentSync: PaymentSync;
 }
 
@@ -52,16 +52,26 @@ export default fp(
     if (!payments.configured) {
       app.log.warn(
         'No payment credentials, so checkout will refuse to start. ' +
-          'Set PAYSTACK_SECRET_KEY to take money.',
+          'Set PAYSASA_API_KEY and PAYSASA_BUSINESS_ID to take money.',
       );
     }
 
     if (canVerify(payments)) {
       const production = app.env.NODE_ENV === 'production';
       if (production && !payments.live) {
-        app.log.warn('Paystack is using a TEST key in production. No real money will move.');
+        app.log.warn(
+          `${payments.name} is using a TEST key in production. No real money will move.`,
+        );
       } else if (!production && payments.live) {
-        app.log.warn('Paystack is using a LIVE key outside production. Real money will move.');
+        app.log.warn(
+          `${payments.name} is using a LIVE key outside production. Real money will move.`,
+        );
+      }
+      if (payments.name === 'PAYSASA' && !app.env.PAYSASA_WEBHOOK_SECRET) {
+        app.log.warn(
+          'PAYSASA_WEBHOOK_SECRET is not set, so PaySasa webhooks are stored and dropped. ' +
+            'Payments are still confirmed on the reconcile timer.',
+        );
       }
       startPaymentReconcile(app, paymentSync, app.env.PAYMENT_RECONCILE_SECONDS);
     }

@@ -17,6 +17,7 @@
     "test:mail": "tsx scripts/mail-test.ts",
     "test:closet": "tsx scripts/closet-test.ts",
     "test:booth": "tsx scripts/booth-test.ts",
+    "test:paysasa": "tsx scripts/paysasa-test.ts",
     "test:paystack": "tsx scripts/paystack-test.ts"
   },
   "dependencies": {

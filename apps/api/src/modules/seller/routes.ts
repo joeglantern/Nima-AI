@@ -889,7 +889,8 @@ export const sellerRoutes: FastifyPluginAsyncZod = async (app) => {
           return refund.id;
         });
 
-        // Sent now. If Paystack cannot be reached the reconcile pass sends it.
+        // Sent now. If the provider cannot be reached the reconcile pass sends
+        // it. With a provider that has no refund API it is logged for a person.
         await app.services.paymentSync.sendRefund(refundId).catch((error: unknown) => {
           app.log.error({ err: error, refundId }, 'Could not send a refund; it will be retried');
         });

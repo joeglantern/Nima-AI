@@ -142,8 +142,8 @@ export function checkoutRoutes(checkout: CheckoutService): FastifyPluginAsyncZod
       async (request) => {
         const user = request.requireUser();
 
-        // Paystack sends nothing when a PIN is wrong or a prompt times out,
-        // so a waiting screen asks Paystack itself, a few seconds apart.
+        // The provider sends nothing when a PIN is wrong or a prompt times
+        // out, so a waiting screen asks the provider itself, a few seconds apart.
         const mine = await app.prisma.checkoutGroup.findFirst({
           where: { id: request.params.id, buyerId: user.id, status: { in: ['PENDING', 'PROCESSING'] } },
           select: { id: true },

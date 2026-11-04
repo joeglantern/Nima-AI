@@ -1164,8 +1164,10 @@ model Payment {
 
 enum PaymentProvider {
   FINGO
-  /// M-Pesa through Paystack. The provider in use from November 2026.
+  /// M-Pesa through Paystack. Built in November 2026, kept as the second implementation.
   PAYSTACK
+  /// M-Pesa through PaySasa checkout sessions. The provider in use from November 2026.
+  PAYSASA
   APPLE_IAP
   GOOGLE_PLAY
   MANUAL

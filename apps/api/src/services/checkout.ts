@@ -451,6 +451,9 @@ export class CheckoutService {
     if (!('group' in placed)) return placed;
 
     // Outside the transaction: a slow network call must not hold row locks.
+    // The reference the result will arrive under. Known up front with
+    // Paystack; with PaySasa the gateway names it part way through `charge`.
+    let knownRef: string | null = this.gateway.referenceFor(idempotencyKey);
     try {
       const buyer = await app.prisma.user.findUnique({
         where: { id: input.userId },
@@ -465,6 +468,15 @@ export class CheckoutService {
         idempotencyKey,
         callbackUrl: `${app.env.API_URL}/webhooks/${this.gateway.name.toLowerCase()}`,
         email: buyer?.email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(buyer.email) ? buyer.email : null,
+        onReference: async (providerRef) => {
+          // Written before the money is asked for, so a timeout on the
+          // next call can still be matched to its result.
+          await app.prisma.payment.update({
+            where: { id: placed.paymentId },
+            data: { providerRef },
+          });
+          knownRef = providerRef;
+        },
       });
 
       // A clear no from the provider: nothing was sent to the phone.
@@ -494,7 +506,7 @@ export class CheckoutService {
       // We cannot tell whether the prompt went out. Cancelling now could
       // strand a buyer who then pays, so the payment waits as PROCESSING and
       // the reconcile pass asks the provider what really happened.
-      if (error instanceof PaymentGatewayError && error.ambiguous && this.gateway.referenceFor(idempotencyKey)) {
+      if (error instanceof PaymentGatewayError && error.ambiguous && knownRef) {
         app.log.warn(
           { err: error, checkoutId: placed.group.id },
           'The charge call had no clear answer; leaving it for reconcile',

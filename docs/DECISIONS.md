@@ -263,9 +263,13 @@ Posts are flat lays and clothes on doors, so the photograph comes first and the 
 
 The brand book names cream as the background. The owner found cream made the app feel homely rather than sharp, so the app's ground is white, with a near white for sunk areas. Printed and event material may still use cream; the two sit together without clashing.
 
-## 19. Payments go through Paystack
+## 19. Payments go through Paystack (superseded by 21)
 
 Fingo Pay is dropped before it ever took a live payment. Paystack handles M-Pesa and cards in KES. The gateway interface stays, so the rest of the system never learns the provider's name. Nothing is marked paid until the webhook is signature checked and the transaction is verified with Paystack.
+
+## 21. Payments go through PaySasa
+
+PaySasa (paysasa.com, by Airsoko) replaces Paystack before either took a live payment. It is Kenyan, settles to a PaySasa wallet and out to M-Pesa, and its API is a checkout session: name a session for an amount, push the M-Pesa prompt to a phone, read the session back. Nima keeps the same rules as before: nothing is marked paid until the session is read back from PaySasa and agrees on amount and currency, webhooks are only a prompt to look, and the reconcile timer closes or confirms whatever never got a webhook. Two things are different. The session is named before any money is asked for, so the payment row is given PaySasa's id between those two calls and a timeout on the prompt can still be matched. And PaySasa has no refund API, so a refund is recorded, logged loudly, sent by a person from the PaySasa dashboard and then marked done. Paystack stays in the code as the second implementation, used only when PaySasa is not configured. (4 November 2026)
 
 ## 20. Booth sales are their own channel
 

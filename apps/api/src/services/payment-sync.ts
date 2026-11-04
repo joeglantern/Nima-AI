@@ -1,12 +1,12 @@
 /**
- * Keeping our payments in step with Paystack.
+ * Keeping our payments in step with the provider.
  *
- * Paystack sends a webhook only when a charge succeeds. A wrong PIN, an empty
- * M-Pesa account or a prompt left to time out never arrives on its own, and a
- * success webhook can be late or lost. So every answer comes from asking
- * Paystack directly with Transaction Verify:
+ * PaySasa and Paystack send a webhook when a payment succeeds and little
+ * else. A wrong PIN, an empty M-Pesa account or a prompt left to time out
+ * never arrives on its own, and a success webhook can be late or lost. So
+ * every answer comes from reading the payment back from the provider:
  *
- *   - when a signed `charge.success` webhook says "look at this reference",
+ *   - when a signed success webhook says "look at this reference",
  *   - when the buyer's screen polls a checkout that is still waiting,
  *   - and on a timer, for anything still waiting (the reconcile pass).
  *
@@ -14,8 +14,10 @@
  * `CheckoutService.settle`, whose claim on the payment row makes a second
  * success a no-op. Running them all at once is safe.
  *
- * Refunds work the same way: sent from here, and marked done only after
- * Paystack's own refund record says processed.
+ * Refunds work the same way where the provider has a refund API (Paystack):
+ * sent from here, and marked done only after the provider's own refund
+ * record says processed. Where it has none (PaySasa) the refund is recorded,
+ * logged loudly, and sent by a person from the dashboard.
  */
 
 import type { FastifyInstance } from 'fastify';
@@ -28,10 +30,18 @@ import {
   type VerifiedPayment,
   type VerifyingGateway,
 } from './payments/index.js';
+import { maskPhone } from './payments/words.js';
+
+/**
+ * Written to `refunds.providerRef` when no API can send the refund. The
+ * timer skips rows that carry a providerRef, so the row waits for a person
+ * instead of being retried every fifteen seconds.
+ */
+export const BY_HAND = 'BY_HAND';
 
 /** M-Pesa gives a buyer 180 seconds for the PIN. A minute of grace on top. */
 const PROMPT_WINDOW_MS = 4 * 60_000;
-/** After this a payment Paystack still calls pending is closed, and refunded if it ever lands. */
+/** After this a payment the provider still calls pending is closed, and refunded if it ever lands. */
 const GIVE_UP_MS = 15 * 60_000;
 /** A charge younger than this is still being sent. */
 const SETTLING_MS = 10_000;
@@ -49,8 +59,8 @@ export class PaymentSync {
   ) {}
 
   /**
-   * Ask Paystack about one reference and act on the answer.
-   * Throws when Paystack cannot be reached; the next pass tries again.
+   * Ask the provider about one reference and act on the answer.
+   * Throws when the provider cannot be reached; the next pass tries again.
    */
   async confirm(
     reference: string,
@@ -70,8 +80,8 @@ export class PaymentSync {
       include: { checkoutGroup: { select: { id: true, buyerId: true } } },
     });
 
-    if (!payment || payment.provider !== 'PAYSTACK') {
-      app.log.warn({ reference, source }, 'Paystack named a payment we do not have');
+    if (!payment || payment.provider !== gateway.provider) {
+      app.log.warn({ reference, source }, 'The provider named a payment we do not have');
       return 'ignored';
     }
 
@@ -88,7 +98,7 @@ export class PaymentSync {
     if (verified.reference !== null && verified.reference !== reference) {
       app.log.error(
         { reference, got: verified.reference, source },
-        'PAYMENT MISMATCH: Paystack verified a different reference. Nothing was credited.',
+        'PAYMENT MISMATCH: the provider verified a different reference. Nothing was credited.',
       );
       return 'mismatch';
     }
@@ -107,7 +117,7 @@ export class PaymentSync {
             expectedCurrency: payment.currency,
             gotCurrency: verified.currency,
           },
-          'PAYMENT MISMATCH: Paystack says paid, but not the amount or currency we asked for. Nothing was credited. Check it by hand.',
+          'PAYMENT MISMATCH: the provider says paid, but not the amount or currency we asked for. Nothing was credited. Check it by hand.',
         );
         if (waiting) {
           await this.checkout.settle({
@@ -131,7 +141,7 @@ export class PaymentSync {
           amountCents: verified.amountCents,
           currency: verified.currency,
         });
-        app.log.info({ reference, source }, 'A Paystack payment was confirmed');
+        app.log.info({ reference, source, provider: gateway.name }, 'A payment was confirmed');
         return 'paid';
       }
 
@@ -183,12 +193,13 @@ export class PaymentSync {
 
   /** The buyer's screen is asking. Check now, at most every few seconds. */
   async refreshCheckout(checkoutGroupId: string): Promise<void> {
-    if (!this.verifying()) return;
+    const gateway = this.verifying();
+    if (!gateway) return;
 
     const payment = await this.app.prisma.payment.findFirst({
       where: {
         checkoutGroupId,
-        provider: 'PAYSTACK',
+        provider: gateway.provider,
         status: { in: ['PENDING', 'PROCESSING'] },
         createdAt: { lt: new Date(Date.now() - SETTLING_MS) },
       },
@@ -206,15 +217,16 @@ export class PaymentSync {
     }
   }
 
-  /** Everything still waiting, checked with Paystack. Safe to run on several nodes. */
+  /** Everything still waiting, checked with the provider. Safe to run on several nodes. */
   async reconcile(): Promise<{ checked: number; refunds: number }> {
     const { app } = this;
-    if (!this.verifying()) return { checked: 0, refunds: 0 };
+    const gateway = this.verifying();
+    if (!gateway) return { checked: 0, refunds: 0 };
 
     const now = Date.now();
     const payments = await app.prisma.payment.findMany({
       where: {
-        provider: 'PAYSTACK',
+        provider: gateway.provider,
         providerRef: { not: null },
         OR: [
           { status: 'PROCESSING', createdAt: { lt: new Date(now - SETTLING_MS) } },
@@ -238,7 +250,7 @@ export class PaymentSync {
             reference: payment.providerRef,
             stuckMinutes: Math.round(stuckFor / 60_000),
           },
-          'Could not check a waiting payment with Paystack',
+          'Could not check a waiting payment with the provider',
         );
       }
     }
@@ -248,7 +260,7 @@ export class PaymentSync {
         status: 'PENDING',
         providerRef: null,
         createdAt: { lt: new Date(now - 30_000) },
-        payment: { provider: 'PAYSTACK', status: { in: ['SUCCEEDED', 'REFUNDED'] } },
+        payment: { provider: gateway.provider, status: { in: ['SUCCEEDED', 'REFUNDED'] } },
       },
       take: 20,
       select: { id: true },
@@ -264,9 +276,14 @@ export class PaymentSync {
   }
 
   /**
-   * Send one refund to Paystack. The row is claimed first, so two callers
-   * cannot both send it. A clear refusal is marked FAILED and logged loudly
-   * for a person to finish from the Paystack dashboard.
+   * Send one refund to the provider. The row is claimed first, so two
+   * callers cannot both send it. A clear refusal is marked FAILED and logged
+   * loudly for a person to finish from the provider's dashboard.
+   *
+   * A provider with no refund API (PaySasa) never gets the call. The row is
+   * marked BY_HAND so the timer leaves it alone, and one loud log line says
+   * exactly what to send and to whom. A person sends it from the dashboard
+   * and marks the refund done.
    */
   async sendRefund(refundId: string): Promise<void> {
     const { app } = this;
@@ -285,11 +302,32 @@ export class PaymentSync {
     });
 
     const payment = refund.payment;
-    if (!payment || payment.provider !== 'PAYSTACK' || !payment.providerRef) {
-      await app.prisma.refund.update({ where: { id: refundId }, data: { status: 'PENDING' } });
+    if (!payment || payment.provider !== gateway.provider || !payment.providerRef) {
+      await app.prisma.refund.update({
+        where: { id: refundId },
+        data: { status: 'PENDING', providerRef: BY_HAND },
+      });
       app.log.error(
-        { refundId, orderReference: refund.order.reference },
-        'REFUND NOT SENT: this order was not paid through Paystack. Refund it by hand.',
+        { refundId, orderReference: refund.order.reference, amountCents: refund.amountCents },
+        'REFUND BY HAND: this order was not paid through the current provider. Send it yourself, then mark the refund done.',
+      );
+      return;
+    }
+
+    if (!gateway.canRefund) {
+      await app.prisma.refund.update({
+        where: { id: refundId },
+        data: { status: 'PENDING', providerRef: BY_HAND },
+      });
+      app.log.error(
+        {
+          refundId,
+          orderReference: refund.order.reference,
+          amountCents: refund.amountCents,
+          phone: maskPhone(payment.phone),
+          paymentRef: payment.providerRef,
+        },
+        `REFUND BY HAND: ${gateway.name} has no refund API. Send KSh ${Math.round(refund.amountCents / 100).toLocaleString('en-KE')} back to the buyer from the ${gateway.name} dashboard, then mark the refund done.`,
       );
       return;
     }
@@ -307,15 +345,15 @@ export class PaymentSync {
       });
 
       app.log.info(
-        { refundId, orderReference: refund.order.reference },
-        'A refund was sent to Paystack',
+        { refundId, orderReference: refund.order.reference, provider: gateway.name },
+        'A refund was sent to the provider',
       );
 
       if (result.state === 'PROCESSED') await this.markRefunded(refundId);
     } catch (error) {
       if (error instanceof PaymentGatewayError && error.ambiguous) {
-        // Paystack may have taken it. Left PROCESSING with no id, and linked
-        // up later from Paystack's own list rather than sent twice.
+        // The provider may have taken it. Left PROCESSING with no id, and
+        // linked up later from the provider's own list rather than sent twice.
         app.log.warn({ err: error, refundId }, 'A refund had no clear answer; will check later');
         return;
       }
@@ -328,12 +366,12 @@ export class PaymentSync {
           orderReference: refund.order.reference,
           amountCents: refund.amountCents,
         },
-        'REFUND REFUSED by Paystack. Send it from the Paystack dashboard or through support@paystack.com.',
+        `REFUND REFUSED by ${gateway.name}. Send it from the ${gateway.name} dashboard.`,
       );
     }
   }
 
-  /** A signed refund webhook: read each refund on that transaction back from Paystack. */
+  /** A signed refund webhook: read each refund on that transaction back from the provider. */
   async onRefundWebhook(reference: string): Promise<number> {
     const refunds = await this.app.prisma.refund.findMany({
       where: { status: 'PROCESSING', payment: { providerRef: reference } },
@@ -349,8 +387,11 @@ export class PaymentSync {
   }
 
   private async sweepRefunds(): Promise<void> {
+    const gateway = this.verifying();
+    if (!gateway?.canRefund) return;
+
     const refunds = await this.app.prisma.refund.findMany({
-      where: { status: 'PROCESSING', payment: { provider: 'PAYSTACK' } },
+      where: { status: 'PROCESSING', payment: { provider: gateway.provider } },
       take: 50,
       select: { id: true, providerRef: true, createdAt: true },
     });
@@ -363,13 +404,13 @@ export class PaymentSync {
       } catch (error) {
         this.app.log.warn(
           { err: error, refundId: refund.id },
-          'Could not check a refund with Paystack',
+          'Could not check a refund with the provider',
         );
       }
     }
   }
 
-  /** Paystack's record decides whether a refund is done. */
+  /** The provider's record decides whether a refund is done. */
   private async syncRefund(refundId: string, providerRef: string): Promise<void> {
     const gateway = this.verifying();
     if (!gateway) return;
@@ -386,18 +427,18 @@ export class PaymentSync {
       if (moved.count === 1) {
         this.app.log.error(
           { refundId, providerRef },
-          'REFUND FAILED at Paystack. The money is back in the Nima balance; send it by hand.',
+          `REFUND FAILED at ${gateway.name}. The money is back in the Nima balance; send it by hand.`,
         );
       }
     } else if (state.state === 'NEEDS_ATTENTION') {
       this.app.log.error(
         { refundId, providerRef },
-        'REFUND NEEDS ATTENTION in the Paystack dashboard: it wants the customer account details.',
+        `REFUND NEEDS ATTENTION in the ${gateway.name} dashboard: it wants the customer account details.`,
       );
     }
   }
 
-  /** After a timeout on create: find the refund Paystack made, or send again. */
+  /** After a timeout on create: find the refund the provider made, or send again. */
   private async recoverRefund(refundId: string): Promise<void> {
     const gateway = this.verifying();
     if (!gateway) return;
@@ -431,7 +472,7 @@ export class PaymentSync {
       });
       await this.syncRefund(refundId, match.providerRef);
     } else {
-      // Paystack never got it. Back in the queue to be sent.
+      // The provider never got it. Back in the queue to be sent.
       await this.app.prisma.refund.updateMany({
         where: { id: refundId, status: 'PROCESSING', providerRef: null },
         data: { status: 'PENDING' },

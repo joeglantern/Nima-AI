@@ -36,6 +36,9 @@ import {
   type VerifiedPayment,
   type WebhookNotice,
 } from './index.js';
+import { describeFailure } from './words.js';
+
+export { describeFailure, maskPhone, redactPayload } from './words.js';
 
 /** Paystack's ceiling for one M-Pesa payment, in cents. */
 const MPESA_MAX_CENTS = 150_000 * 100;
@@ -73,69 +76,13 @@ interface PaystackRefund {
   transaction?: { id?: number; reference?: string } | number | string;
 }
 
-/**
- * Turns whatever Paystack or the network said into something a buyer can act
- * on. The exact M-Pesa wording is not documented, so this reads the gateway
- * response code first (documented for cards) and falls back to the words.
- */
-export function describeFailure(...texts: Array<string | null | undefined>): string {
-  const said = texts.filter(Boolean).join(' ').toLowerCase();
-
-  if (/insufficient|not enough|balance/.test(said)) {
-    return 'There was not enough in that M-Pesa account. Top up or use another number, then try again.';
-  }
-  if (/pin/.test(said)) {
-    return 'The M-Pesa PIN was not accepted. Try again and enter your PIN carefully.';
-  }
-  if (/time ?out|timed out|expired|too late|abandon|no response|did not respond/.test(said)) {
-    return 'The M-Pesa prompt timed out before a PIN was entered. Try again and keep your phone close.';
-  }
-  if (/cancel/.test(said)) {
-    return 'The M-Pesa prompt was cancelled. Try again when you are ready.';
-  }
-  if (/invalid phone|phone number|unreachable|not registered|subscriber/.test(said)) {
-    return 'That number could not get an M-Pesa prompt. Check the number is on M-Pesa and try again.';
-  }
-  if (/limit|declin|not permitted|restricted/.test(said)) {
-    return 'M-Pesa declined this payment. Check your M-Pesa limits or use another number, then try again.';
-  }
-  return 'That M-Pesa payment did not go through. Try again, or use another number.';
-}
-
-/** 2547XXXXXXXX with the middle hidden, for logs. */
-export function maskPhone(phone: string | null | undefined): string | null {
-  if (!phone) return null;
-  const digits = phone.replace(/\D/g, '');
-  if (digits.length < 7) return '***';
-  return `${digits.slice(0, 4)}${'*'.repeat(digits.length - 6)}${digits.slice(-2)}`;
-}
-
-/**
- * A copy of a webhook payload that is safe to keep: phone numbers masked and
- * reusable card tokens dropped. The amounts, references and statuses that a
- * support question needs are left as they were.
- */
-export function redactPayload(value: unknown): unknown {
-  if (typeof value === 'string') {
-    return value.replace(/\+?254\d{9}\b|\b0[17]\d{8}\b/g, (match) => maskPhone(match) ?? '***');
-  }
-  if (Array.isArray(value)) return value.map(redactPayload);
-  if (value && typeof value === 'object') {
-    const out: Record<string, unknown> = {};
-    for (const [key, entry] of Object.entries(value)) {
-      if (key === 'authorization_code' || key === 'signature') continue;
-      out[key] = redactPayload(entry);
-    }
-    return out;
-  }
-  return value;
-}
-
 export class PaystackGateway implements PaymentGateway {
   readonly name = 'PAYSTACK' as const;
   readonly provider = 'PAYSTACK' as const;
   readonly webhookPath = '/webhooks/paystack';
   readonly signatureHeader = 'x-paystack-signature';
+  readonly webhookProvider = 'paystack';
+  readonly canRefund = true;
   readonly configured = true;
 
   constructor(
