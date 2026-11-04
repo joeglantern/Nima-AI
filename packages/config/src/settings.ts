@@ -51,6 +51,8 @@ export const settingsSchema = z.object({
   freeWeeklyCredits: z.number().int().min(0).default(5),
   /** Extra credits on first sign up, so the first try-on feels free. */
   signupBonusCredits: z.number().int().min(0).default(3),
+  /** Ghost mannequin shots a shop gets when it opens, so the rail is never empty. */
+  sellerWelcomeShots: z.number().int().min(0).default(5),
 
   /** What Nima keeps from each order, in basis points. 700 = 7 percent. */
   platformFeeBps: z.number().int().min(0).max(5000).default(700),
@@ -106,6 +108,7 @@ export const DEFAULT_SETTINGS: Settings = settingsSchema.parse({
   ],
   freeWeeklyCredits: 5,
   signupBonusCredits: 3,
+  sellerWelcomeShots: 5,
   platformFeeBps: 700,
   payoutHoldDays: 3,
   delivery: { pickupPointCents: 20_000, doorstepCents: 35_000, freeOverCents: 0 },

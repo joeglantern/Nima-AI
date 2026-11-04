@@ -77,6 +77,7 @@ interface ProductRow {
     originalKey: string;
     width: number | null;
     height: number | null;
+    processing?: string;
   }>;
 }
 
@@ -100,6 +101,7 @@ export function productCard(
     inStock: product.inStock,
     promoted: options.promoted ?? false,
     savedByMe: options.savedByMe ?? false,
+    hanging: first?.processing === 'GHOST_MANNEQUIN',
   };
 }
 

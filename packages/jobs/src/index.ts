@@ -57,6 +57,18 @@ export const mediaJobDataSchema = z.object({
     id: z.string(),
   }),
   userId: z.string().nullable(),
+  /**
+   * Ghost mannequin shots are paid for by the shop. The worker gives these
+   * back when the image cannot be made.
+   */
+  creditsCharged: z.number().int().min(0).optional(),
+  /** What the photo showed before, put back if the shot cannot be made. */
+  restore: z
+    .object({
+      processing: z.enum(['NONE', 'PENDING', 'BACKGROUND_REMOVED', 'GHOST_MANNEQUIN']),
+      processedKey: z.string().nullable(),
+    })
+    .optional(),
 });
 
 export type MediaJobData = z.infer<typeof mediaJobDataSchema>;

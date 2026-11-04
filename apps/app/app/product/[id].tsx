@@ -12,8 +12,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { PageTitle } from '../../src/lib/page-title';
-import { back } from '../../src/lib/routes';
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, useWindowDimensions, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
@@ -24,6 +22,9 @@ import { Body, BodyStrong, Caption, Micro, Price, Title } from '../../src/compon
 import { TryOnResultSheet, useTryOn, useTryOnAvailable } from '../../src/components/try-on';
 import { ApiError, api } from '../../src/lib/api';
 import { sized } from '../../src/lib/media';
+import { PageTitle } from '../../src/lib/page-title';
+import { back } from '../../src/lib/routes';
+import { slotFor, sortBySize } from '../../src/lib/slots';
 import { useTheme } from '../../src/theme/index';
 
 export default function ProductScreen() {
@@ -191,7 +192,7 @@ export default function ProductScreen() {
               <View style={{ gap: 10 }}>
                 <BodyStrong>Size</BodyStrong>
                 <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                  {item.variants.map((variant) => {
+                  {sortBySize(item.variants).map((variant) => {
                     const active = variant.id === variantId;
 
                     return (
@@ -306,28 +307,4 @@ export default function ProductScreen() {
       <TryOnResultSheet tryOn={tryOn} label={item.title} />
     </>
   );
-}
-
-/** Which part of the body a category belongs to. */
-function slotFor(category: string | undefined): string {
-  switch (category) {
-    case 'BOTTOM':
-      return 'BOTTOM';
-    case 'DRESS':
-      return 'FULL_BODY';
-    case 'OUTERWEAR':
-      return 'OUTERWEAR';
-    case 'SHOES':
-      return 'SHOES';
-    case 'BAG':
-      return 'BAG';
-    case 'JEWELLERY':
-      return 'JEWELLERY';
-    case 'EYEWEAR':
-      return 'EYEWEAR';
-    case 'HEADWEAR':
-      return 'HEADWEAR';
-    default:
-      return 'TOP';
-  }
 }

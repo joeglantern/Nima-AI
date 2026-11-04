@@ -208,3 +208,16 @@ slice very easy and all three have already happened here:
 
 Nothing is stretched. Every piece is fitted inside its target size with its
 own proportions kept.
+
+## Ghost shots for the sample shops
+
+`packages/db/prisma/seed-assets/ghost/<slug>.jpg` is a ghost mannequin shot of
+the piece photographed in `seed-assets/pieces/<slug>.jpg`: the same garment,
+shaped as if worn by an invisible person, hanging from a beech hanger with a
+brass hook at the top centre, on a flat `#F4F3F1` wall, 1200 by 1600. They were
+made with an image model from the piece photo using the same words the media
+worker sends for a real seller's photo (`apps/worker/src/prompts.ts`,
+`buildGhostMannequinPrompt`), then the wall was settled to the exact colour the
+way the worker does it (`settleOnTheWall`). Where one exists the seed marks the
+piece's cover as `GHOST_MANNEQUIN`, which is what puts it on the shop's rail.
+Pieces without one keep the plain photo and stay in the grid.

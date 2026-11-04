@@ -8,7 +8,6 @@
 
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { PageTitle } from '../../src/lib/page-title';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, View } from 'react-native';
 import { useAuthGate } from '../../src/components/auth-gate';
@@ -16,9 +15,12 @@ import { Button } from '../../src/components/button';
 import { ProductCard } from '../../src/components/cards';
 import { EmptyState } from '../../src/components/empty-state';
 import { Avatar } from '../../src/components/feed-post';
+import { Rail } from '../../src/components/rail';
 import { ScreenHeader } from '../../src/components/screen-header';
-import { Body, Caption, Title } from '../../src/components/text';
+import { Body, Caption, Eyebrow, Title } from '../../src/components/text';
+import { TryOnResultSheet, useTryOn, useTryOnAvailable } from '../../src/components/try-on';
 import { ApiError, api } from '../../src/lib/api';
+import { PageTitle } from '../../src/lib/page-title';
 import { SELL_HOME } from '../../src/lib/routes';
 import { useSignedIn } from '../../src/lib/social';
 import { useTheme } from '../../src/theme/index';
@@ -58,6 +60,19 @@ export default function ShopFront() {
     getNextPageParam: (last) => last.nextCursor,
     enabled: Boolean(store?.id),
   });
+
+  // The rail: every piece with a ghost mannequin shot, newest first.
+  const rail = useQuery({
+    queryKey: ['store-rail', store?.id],
+    queryFn: () => api.products({ storeId: store?.id, hanging: true, limit: 30, sort: 'newest' }),
+    enabled: Boolean(store?.id),
+  });
+  const hanging = rail.data?.items ?? [];
+
+  const bootstrap = useQuery({ queryKey: ['bootstrap'], queryFn: api.bootstrap });
+  const canTryOn = useTryOnAvailable();
+  const tryOn = useTryOn('Create an account to see this on yourself');
+  const [wearing, setWearing] = useState<string>('this piece');
 
   const [following, setFollowing] = useState(false);
   useEffect(() => setFollowing(Boolean(store?.isFollowing)), [store?.isFollowing]);
@@ -169,6 +184,52 @@ export default function ShopFront() {
                     {`Returns: ${store.returnPolicy}`}
                   </Caption>
                 ) : null}
+
+                {hanging.length > 0 ? (
+                  <View
+                    style={{
+                      // On a phone the rail runs wall to wall; on a desk it
+                      // sits in the column with the grid.
+                      alignSelf: 'stretch',
+                      marginHorizontal: isWide ? 0 : -gutter,
+                      marginTop: 22,
+                      gap: 10,
+                    }}
+                  >
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'baseline',
+                        justifyContent: 'space-between',
+                        paddingHorizontal: isWide ? 4 : gutter,
+                      }}
+                    >
+                      <Eyebrow>On the rail</Eyebrow>
+                      <Caption>
+                        {tryOn.progress ??
+                          `${hanging.length} ${hanging.length === 1 ? 'piece' : 'pieces'}`}
+                      </Caption>
+                    </View>
+                    <Rail
+                      items={hanging}
+                      storeName={store.name}
+                      canTryOn={canTryOn}
+                      checkout={Boolean(bootstrap.data?.features.checkout)}
+                      onTryOn={(request) => {
+                        const picked = hanging.find(
+                          (item) => item.id === request.items[0]?.productId,
+                        );
+                        setWearing(picked?.title ?? 'this piece');
+                        tryOn.start(request);
+                      }}
+                    />
+                    {tryOn.problem ? (
+                      <Body tone="critical" align="center" style={{ paddingHorizontal: gutter }}>
+                        {tryOn.problem}
+                      </Body>
+                    ) : null}
+                  </View>
+                ) : null}
               </View>
             ) : (
               <ActivityIndicator color={colors.primary} style={{ marginTop: 40 }} />
@@ -193,6 +254,7 @@ export default function ShopFront() {
           }
         />
       </View>
+      <TryOnResultSheet tryOn={tryOn} label={wearing} />
     </>
   );
 }

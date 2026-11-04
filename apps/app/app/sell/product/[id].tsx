@@ -10,8 +10,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { back } from '../../../src/lib/routes';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -26,6 +25,7 @@ import { Chips, Field, TextField } from '../../../src/components/form';
 import { ScreenHeader } from '../../../src/components/screen-header';
 import { Body, BodyStrong, Caption, Micro } from '../../../src/components/text';
 import { ApiError, api, type ProductInput } from '../../../src/lib/api';
+import { back } from '../../../src/lib/routes';
 import { uploadImage } from '../../../src/lib/upload';
 import { useTheme } from '../../../src/theme/index';
 
@@ -88,7 +88,23 @@ export default function ProductEditor() {
     queryKey: ['seller-product', id],
     queryFn: () => api.sellerProduct(String(id)),
     enabled: !isNew,
+    // While a ghost shot is being made, keep asking until it lands.
+    refetchInterval: (query) =>
+      query.state.data?.images.some((img) => img.processing) ? 4000 : false,
   });
+
+  const bootstrap = useQuery({ queryKey: ['bootstrap'], queryFn: api.bootstrap });
+  const shop = useQuery({ queryKey: ['seller-store'], queryFn: api.sellerStore });
+  const ghostOn = Boolean(bootstrap.data?.features.ghostMannequin);
+  const shotsLeft = shop.data?.store?.ghostShots ?? 0;
+  const ghostByKey = new Map((existing.data?.images ?? []).map((img) => [img.storageKey, img]));
+  const ghostFailed = [...ghostByKey.values()].some((img) => img.ghost === 'failed');
+
+  // When a shot finishes, one way or the other, the shop's count has moved.
+  const making = [...ghostByKey.values()].some((img) => img.processing);
+  useEffect(() => {
+    if (!making) void queryClient.invalidateQueries({ queryKey: ['seller-store'] });
+  }, [making, queryClient]);
 
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [title, setTitle] = useState('');
@@ -101,9 +117,13 @@ export default function ProductEditor() {
   const [description, setDescription] = useState('');
   const [problem, setProblem] = useState<string | null>(null);
 
+  // Fill the form once per piece. The query refreshes while a ghost shot is
+  // being made, and a refresh must not wipe what is being typed.
+  const hydrated = useRef<string | null>(null);
   useEffect(() => {
     const p = existing.data;
-    if (!p) return;
+    if (!p || hydrated.current === p.id) return;
+    hydrated.current = p.id;
     setPhotos(
       p.images.map((img) => ({
         id: img.storageKey,
@@ -164,6 +184,17 @@ export default function ProductEditor() {
       }),
     );
   };
+
+  const ghost = useMutation({
+    mutationFn: (imageId: string) => api.requestGhostShot(String(id), imageId),
+    onSuccess: (data) => {
+      queryClient.setQueryData(['seller-product', id], data.product);
+      void queryClient.invalidateQueries({ queryKey: ['seller-store'] });
+      setProblem(null);
+    },
+    onError: (error) =>
+      setProblem(error instanceof Error ? error.message : 'That shot could not be started'),
+  });
 
   const sizesChosen = Object.keys(stock);
   const priceCents = Math.round(Number(price.replace(/[^\d.]/g, '')) * 100);
@@ -250,76 +281,91 @@ export default function ProductEditor() {
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={{ gap: 10 }}
             >
-              {photos.map((photo, index) => (
-                <View key={photo.id} style={{ width: 104, height: 130 }}>
-                  <Image
-                    source={{ uri: photo.url }}
-                    style={{
-                      width: '100%',
-                      height: '100%',
-                      borderRadius: 12,
-                      backgroundColor: colors.sunk,
-                    }}
-                    contentFit="cover"
-                  />
-                  {index === 0 ? (
-                    <View
-                      style={{
-                        position: 'absolute',
-                        left: 6,
-                        bottom: 6,
-                        paddingHorizontal: 8,
-                        paddingVertical: 2,
-                        borderRadius: radius.pill,
-                        backgroundColor: colors.scrim,
-                      }}
-                    >
-                      <Micro style={{ color: '#fff' }}>Cover</Micro>
+              {photos.map((photo, index) => {
+                const saved = photo.storageKey ? ghostByKey.get(photo.storageKey) : undefined;
+                return (
+                  <View key={photo.id} style={{ width: 104, gap: 6 }}>
+                    <View style={{ width: 104, height: 130 }}>
+                      <Image
+                        source={{ uri: saved?.image.url ?? photo.url }}
+                        style={{
+                          width: '100%',
+                          height: '100%',
+                          borderRadius: 12,
+                          backgroundColor: colors.sunk,
+                        }}
+                        contentFit="cover"
+                      />
+                      {index === 0 ? (
+                        <View
+                          style={{
+                            position: 'absolute',
+                            left: 6,
+                            bottom: 6,
+                            paddingHorizontal: 8,
+                            paddingVertical: 2,
+                            borderRadius: radius.pill,
+                            backgroundColor: colors.scrim,
+                          }}
+                        >
+                          <Micro style={{ color: '#fff' }}>Cover</Micro>
+                        </View>
+                      ) : null}
+                      {photo.uploading ? (
+                        <View
+                          style={{
+                            position: 'absolute',
+                            inset: 0,
+                            borderRadius: 12,
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            backgroundColor: colors.scrim,
+                          }}
+                        >
+                          <ActivityIndicator color="#fff" />
+                        </View>
+                      ) : (
+                        <Pressable
+                          onPress={() =>
+                            setPhotos((current) => current.filter((_, i) => i !== index))
+                          }
+                          accessibilityRole="button"
+                          accessibilityLabel="Remove photo"
+                          hitSlop={6}
+                          style={{
+                            position: 'absolute',
+                            top: 6,
+                            right: 6,
+                            width: 26,
+                            height: 26,
+                            borderRadius: 13,
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            backgroundColor: colors.scrim,
+                          }}
+                        >
+                          <Svg width={12} height={12} viewBox="0 0 24 24">
+                            <Path
+                              d="M6 6l12 12M18 6 6 18"
+                              stroke="#fff"
+                              strokeWidth={2.6}
+                              strokeLinecap="round"
+                            />
+                          </Svg>
+                        </Pressable>
+                      )}
                     </View>
-                  ) : null}
-                  {photo.uploading ? (
-                    <View
-                      style={{
-                        position: 'absolute',
-                        inset: 0,
-                        borderRadius: 12,
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        backgroundColor: colors.scrim,
-                      }}
-                    >
-                      <ActivityIndicator color="#fff" />
-                    </View>
-                  ) : (
-                    <Pressable
-                      onPress={() => setPhotos((current) => current.filter((_, i) => i !== index))}
-                      accessibilityRole="button"
-                      accessibilityLabel="Remove photo"
-                      hitSlop={6}
-                      style={{
-                        position: 'absolute',
-                        top: 6,
-                        right: 6,
-                        width: 26,
-                        height: 26,
-                        borderRadius: 13,
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        backgroundColor: colors.scrim,
-                      }}
-                    >
-                      <Svg width={12} height={12} viewBox="0 0 24 24">
-                        <Path
-                          d="M6 6l12 12M18 6 6 18"
-                          stroke="#fff"
-                          strokeWidth={2.6}
-                          strokeLinecap="round"
-                        />
-                      </Svg>
-                    </Pressable>
-                  )}
-                </View>
-              ))}
+                    {ghostOn && saved ? (
+                      <GhostPill
+                        state={saved.ghost}
+                        busy={ghost.isPending && ghost.variables === saved.id}
+                        left={shotsLeft}
+                        onPress={() => ghost.mutate(saved.id)}
+                      />
+                    ) : null}
+                  </View>
+                );
+              })}
               {photos.length < MAX_PHOTOS ? (
                 <Pressable
                   onPress={() => void addPhotos()}
@@ -353,6 +399,20 @@ export default function ProductEditor() {
             <Caption>
               Daylight, a plain wall, the whole piece in frame. Nima evens out the light for you.
             </Caption>
+            {ghostOn ? (
+              <Caption>
+                {isNew
+                  ? 'Save it, then turn any photo into a ghost shot: the piece as if worn, on a hanger, ready for your rail.'
+                  : shotsLeft > 0
+                    ? `A ghost shot redoes a photo as if worn, on a hanger, for your rail. ${shotsLeft} ${shotsLeft === 1 ? 'shot' : 'shots'} left.`
+                    : 'Your shop has used its ghost shots. More come with seller plans.'}
+              </Caption>
+            ) : null}
+            {ghostFailed ? (
+              <Caption tone="critical">
+                A ghost shot could not be made. It went back to your shop, so you can try again.
+              </Caption>
+            ) : null}
           </Field>
 
           <Field label="Name">
@@ -546,5 +606,58 @@ function Stepper({
       <BodyStrong style={{ minWidth: 24, textAlign: 'center' }}>{String(value)}</BodyStrong>
       {button('plus', Math.min(999, value + 1), value >= 999)}
     </View>
+  );
+}
+
+/** The ghost shot control under a saved photo: ask for one, wait, or do it again. */
+function GhostPill({
+  state,
+  busy,
+  left,
+  onPress,
+}: {
+  state: 'none' | 'making' | 'done' | 'failed';
+  busy: boolean;
+  left: number;
+  onPress: () => void;
+}) {
+  const { colors, radius } = useTheme();
+  const making = state === 'making' || busy;
+  const done = state === 'done' && !making;
+  const label = making
+    ? 'Making it'
+    : done
+      ? 'On the hanger'
+      : state === 'failed'
+        ? 'Try again'
+        : 'Ghost shot';
+  const can = !making && left > 0;
+
+  return (
+    <Pressable
+      onPress={onPress}
+      disabled={!can}
+      accessibilityRole="button"
+      accessibilityLabel={done ? 'Redo the ghost shot' : label}
+      accessibilityState={{ disabled: !can, busy: making }}
+      style={({ pressed }) => ({
+        height: 28,
+        borderRadius: radius.pill,
+        paddingHorizontal: 10,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 6,
+        borderWidth: 1,
+        borderColor: done ? colors.primarySoft : colors.line,
+        backgroundColor: done ? colors.primarySoft : pressed ? colors.sunk : colors.surface,
+        opacity: can || making || done ? 1 : 0.5,
+      })}
+    >
+      {making ? <ActivityIndicator size="small" color={colors.primary} /> : null}
+      <Micro tone={done ? 'primary' : 'muted'} numberOfLines={1}>
+        {label}
+      </Micro>
+    </Pressable>
   );
 }

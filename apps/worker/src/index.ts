@@ -18,13 +18,16 @@ async function main(): Promise<void> {
   const context = createContext();
   const workers: Worker[] = [];
 
-  workers.push(startMediaWorker(context));
+  // Without a key the other queues still run, so uploads and notifications
+  // keep working while image generation is switched off. A ghost shot
+  // queued without one fails at once and the shop gets it back.
+  const provider = context.env.GEMINI_API_KEY ? createGeminiProvider(context.env) : null;
+
+  workers.push(startMediaWorker(context, provider));
   workers.push(startNotificationWorker(context));
 
-  // Without a key the other queues still run, so uploads and notifications
-  // keep working while image generation is switched off.
-  if (context.env.GEMINI_API_KEY) {
-    workers.push(startTryOnWorker(context, createGeminiProvider(context.env)));
+  if (provider) {
+    workers.push(startTryOnWorker(context, provider));
   } else {
     context.log.warn(
       'GEMINI_API_KEY is not set, so try-on jobs will queue up and wait. Set it to enable images.',

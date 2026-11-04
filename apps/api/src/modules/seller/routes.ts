@@ -134,6 +134,7 @@ export const sellerRoutes: FastifyPluginAsyncZod = async (app) => {
       whatsapp: store.whatsapp,
       returnPolicy: store.returnPolicy,
       plan: store.plan,
+      ghostShots: store.tryOnCredits,
       stats: {
         activeProducts: active,
         draftProducts: drafts,
@@ -187,6 +188,9 @@ export const sellerRoutes: FastifyPluginAsyncZod = async (app) => {
         throw errors.conflict('That shop address is taken');
       }
 
+      // A few ghost shots on the house, so the first rail is never empty.
+      const settings = await app.services.settings.get();
+
       const store = await app.prisma.store.create({
         data: {
           ownerId: user.id,
@@ -196,6 +200,7 @@ export const sellerRoutes: FastifyPluginAsyncZod = async (app) => {
           county: body.county ?? null,
           whatsapp: body.whatsapp ?? null,
           returnPolicy: body.returnPolicy ?? null,
+          tryOnCredits: settings.sellerWelcomeShots,
         },
       });
 
@@ -349,22 +354,130 @@ export const sellerRoutes: FastifyPluginAsyncZod = async (app) => {
         stock: v.stock,
         isActive: v.isActive,
       })),
-      images: product.images.map((img) => ({
-        storageKey: img.originalKey,
-        image: publicImage(
-          app.storage,
-          img.processedKey ?? img.originalKey,
-          img.width,
-          img.height,
-        ) ?? {
-          url: '',
-          width: null,
-          height: null,
-        },
-        processing: img.processing === 'PENDING',
-      })),
+      images: product.images.map((img) => {
+        const blank = { url: '', width: null, height: null };
+        return {
+          id: img.id,
+          storageKey: img.originalKey,
+          image:
+            publicImage(app.storage, img.processedKey ?? img.originalKey, img.width, img.height) ??
+            blank,
+          original: publicImage(app.storage, img.originalKey) ?? blank,
+          processing: img.processing === 'PENDING',
+          // A failure is reported first, even over an older shot still on
+          // show: the seller asked for something and should hear it did not
+          // happen and that the shot came back.
+          ghost:
+            img.processing === 'PENDING'
+              ? ('making' as const)
+              : img.processingError
+                ? ('failed' as const)
+                : img.processing === 'GHOST_MANNEQUIN'
+                  ? ('done' as const)
+                  : ('none' as const),
+          ghostError: img.processingError,
+        };
+      }),
     };
   }
+
+  /**
+   * A ghost shot: the seller's photo redone as if worn by an invisible
+   * person, on Nima's hanger. Paid for by the shop, and paying and marking
+   * the photo happen together, so a shot is never made for free and never
+   * charged twice. The worker gives the shot back if the image fails.
+   */
+  app.post(
+    '/seller/products/:id/images/:imageId/ghost',
+    {
+      preHandler: app.requireAccount,
+      schema: {
+        tags: ['seller'],
+        summary: 'Make a ghost mannequin shot from one of my photos',
+        params: z.object({ id: z.string(), imageId: z.string() }),
+        response: {
+          202: z.object({ product: sellerProductDetailSchema, ghostShots: z.number().int() }),
+        },
+      },
+    },
+    async (request, reply) => {
+      const user = request.requireUser();
+      const store = await myStore(user.id);
+      const settings = await app.services.settings.get();
+
+      if (!settings.features.ghostMannequin || !app.env.GEMINI_API_KEY) {
+        throw errors.providerUnavailable(
+          'Ghost shots are not switched on yet. They are coming soon.',
+        );
+      }
+
+      const product = await ownedProduct(store.id, request.params.id);
+      const image = product.images.find((img) => img.id === request.params.imageId);
+      if (!image) throw errors.notFound('That photo');
+      if (image.processing === 'PENDING') {
+        throw errors.conflict('That photo is still being worked on. Give it a moment.');
+      }
+
+      const cost = settings.creditCosts.ghostMannequin;
+
+      const left = await app.prisma.$transaction(async (tx) => {
+        const charged = await tx.store.updateMany({
+          where: { id: store.id, tryOnCredits: { gte: cost } },
+          data: { tryOnCredits: { decrement: cost } },
+        });
+        if (charged.count === 0) return null;
+
+        await tx.productImage.update({
+          where: { id: image.id },
+          data: { processing: 'PENDING', processingError: null },
+        });
+
+        const after = await tx.store.findUniqueOrThrow({
+          where: { id: store.id },
+          select: { tryOnCredits: true },
+        });
+        return after.tryOnCredits;
+      });
+
+      if (left === null) {
+        throw errors.conflict(
+          'Your shop has used all its ghost shots. More come with seller plans.',
+        );
+      }
+
+      try {
+        await app.queues.media.add('ghost-shot', {
+          kind: 'GHOST_MANNEQUIN',
+          storageKey: image.originalKey,
+          target: { type: 'productImage', id: image.id },
+          userId: user.id,
+          creditsCharged: cost,
+          // A redo that fails must not cost the shop the shot it already had.
+          restore: { processing: image.processing, processedKey: image.processedKey },
+        });
+      } catch (error) {
+        // The queue is down. Put everything back rather than leave the shop
+        // paying for a shot that will never be made.
+        await app.prisma.$transaction([
+          app.prisma.store.update({
+            where: { id: store.id },
+            data: { tryOnCredits: { increment: cost } },
+          }),
+          app.prisma.productImage.update({
+            where: { id: image.id },
+            data: { processing: image.processing, processingError: image.processingError },
+          }),
+        ]);
+        request.log.error({ err: error }, 'Could not queue a ghost shot');
+        throw errors.providerUnavailable('Nima cannot make shots right now. Nothing was taken.');
+      }
+
+      return reply.status(202).send({
+        product: presentDetail(await ownedProduct(store.id, product.id)),
+        ghostShots: left,
+      });
+    },
+  );
 
   app.get(
     '/seller/products/:id',

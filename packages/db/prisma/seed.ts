@@ -176,16 +176,24 @@ async function seedLooks(force: boolean): Promise<void> {
 
       const pictureKey = `seed/pieces/${piece.slug}.jpg`;
       await upload(pictureKey, await readFile(join(assets, 'pieces', `${piece.slug}.jpg`)));
+
+      // Where a ghost shot exists (seed-assets/ghost, made with the words
+      // the media worker uses), the piece hangs on the shop's rail.
+      const ghostKey = `seed/ghost/${piece.slug}.jpg`;
+      const ghost = await readFile(join(assets, 'ghost', `${piece.slug}.jpg`)).catch(() => null);
+      if (ghost) await upload(ghostKey, ghost);
+
       await prisma.productImage.deleteMany({ where: { productId: product.id } });
       await prisma.productImage.create({
         data: {
           productId: product.id,
           originalKey: pictureKey,
-          processedKey: pictureKey,
+          processedKey: ghost ? ghostKey : pictureKey,
+          processing: ghost ? 'GHOST_MANNEQUIN' : 'NONE',
           isPrimary: true,
           position: 0,
-          width: 1080,
-          height: 1350,
+          width: ghost ? 1200 : 1080,
+          height: ghost ? 1600 : 1350,
         },
       });
     }

@@ -54,7 +54,12 @@ export const sessionRoutes: FastifyPluginAsyncZod = async (app) => {
     async (request) => {
       const settings = await app.services.settings.get();
 
-      const features = { ...settings.features, tryOn: Boolean(app.env.GEMINI_API_KEY) };
+      // Both image features need the provider, whatever the switch says.
+      const features = {
+        ...settings.features,
+        tryOn: Boolean(app.env.GEMINI_API_KEY),
+        ghostMannequin: settings.features.ghostMannequin && Boolean(app.env.GEMINI_API_KEY),
+      };
 
       const signIn = {
         google: Boolean(app.env.GOOGLE_CLIENT_ID && app.env.GOOGLE_CLIENT_SECRET),

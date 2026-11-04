@@ -44,6 +44,8 @@ export const productCardSchema = z.object({
   /** Set when the card is a paid placement. Always shown as such. */
   promoted: z.boolean().default(false),
   savedByMe: z.boolean().default(false),
+  /** The cover is a ghost mannequin shot, so the piece can hang on a rail. */
+  hanging: z.boolean().default(false),
 });
 
 export const productDetailSchema = productCardSchema.extend({
@@ -78,6 +80,8 @@ export const productListQuerySchema = paginationQuerySchema.extend({
   maxCents: z.coerce.number().int().min(0).optional(),
   occasion: z.string().max(40).optional(),
   inStockOnly: z.coerce.boolean().default(true),
+  /** Only pieces with a ghost mannequin cover: what a shop's rail shows. */
+  hanging: z.coerce.boolean().optional(),
   sort: z.enum(['relevance', 'newest', 'price_asc', 'price_desc', 'popular']).default('relevance'),
 });
 

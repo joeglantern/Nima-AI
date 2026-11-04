@@ -24,6 +24,7 @@ import {
 } from 'react-native';
 import { api } from '../lib/api';
 import { sized } from '../lib/media';
+import { useReducedMotion } from '../lib/motion';
 import { useTheme } from '../theme/index';
 
 const GAP = 6;
@@ -74,22 +75,6 @@ function Fade({
   );
 }
 
-function useReducedMotion(): boolean {
-  const [reduced, setReduced] = useState(false);
-
-  useEffect(() => {
-    let live = true;
-    void AccessibilityInfo.isReduceMotionEnabled().then((on) => live && setReduced(on));
-    const sub = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduced);
-    return () => {
-      live = false;
-      sub.remove();
-    };
-  }, []);
-
-  return reduced;
-}
-
 function Column({
   urls,
   width,
@@ -124,7 +109,10 @@ function Column({
 
   // Odd columns start half a tile lower, so the rows do not line up.
   const offset = index % 2 === 1 ? -tile * 0.45 : 0;
-  const translateY = drift.interpolate({ inputRange: [0, 1], outputRange: [offset, offset - span] });
+  const translateY = drift.interpolate({
+    inputRange: [0, 1],
+    outputRange: [offset, offset - span],
+  });
 
   // Drawn twice, end to end, so the loop has something to scroll into.
   const sequence = [...urls, ...urls];
@@ -195,7 +183,12 @@ export function WelcomeWall({ hidden = false }: { hidden?: boolean }) {
   }, [columns, height, tileWidth, urls]);
 
   if (hidden || urls.length === 0) {
-    return <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: colors.espresso }]} />;
+    return (
+      <View
+        pointerEvents="none"
+        style={[StyleSheet.absoluteFill, { backgroundColor: colors.espresso }]}
+      />
+    );
   }
 
   return (

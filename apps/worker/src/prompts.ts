@@ -96,12 +96,62 @@ export function buildSimplePrompt(data: TryOnJobData): string {
   ].join(' ');
 }
 
-/** Seller feature: a flat lay becomes a clean catalogue shot. */
-export function buildGhostMannequinPrompt(description: string): string {
+/** What a ghost shot is made of: the words for the garment and what kind it is. */
+export interface GhostSubject {
+  description: string;
+  category: string;
+}
+
+/** The wall every ghost shot hangs on. The app paints its rail the same colour. */
+export const GHOST_WALL_HEX = '#F4F3F1';
+
+/** How a piece hangs. Shoes, bags and jewellery do not hang at all. */
+function hangPhrase(category: string): string {
+  switch (category) {
+    case 'BOTTOM':
+      return 'It hangs by its waistband from a slim clothes hanger of pale natural beech wood fitted with two small brass clips, the legs or skirt falling straight with the natural volume of a body inside.';
+    case 'TOP':
+    case 'DRESS':
+    case 'OUTERWEAR':
+      return 'Shoulders filled out, chest with natural volume, sleeves falling naturally, the neckline open so the inside back of the collar is visible. It hangs by its shoulders from a slim clothes hanger of pale natural beech wood with a thin brushed brass hook.';
+    default:
+      return 'It is placed alone and centred, shown from its best angle, with no hanger and no stand.';
+  }
+}
+
+function hangs(category: string): boolean {
+  return ['TOP', 'DRESS', 'OUTERWEAR', 'BOTTOM'].includes(category);
+}
+
+/**
+ * Seller feature: a phone photo becomes a catalogue shot, the garment shaped
+ * as if worn by an invisible person and hung on Nima's own wooden hanger.
+ * The same words produced the sample shop's shots, so a real seller's piece
+ * sits on the rail next to them without looking like a different shop.
+ */
+export function buildGhostMannequinPrompt(subject: GhostSubject): string {
   return [
-    `Turn this photograph of ${description} into a clean catalogue image.`,
-    'Show the garment as if worn by an invisible person: natural shape, open neckline, visible inner back.',
-    'Pure white background. Even studio lighting. Soft contact shadow.',
-    'Do not change the colour, pattern or cut of the garment.',
+    `Studio catalogue photograph of the exact same garment as in the reference photograph: ${subject.description}.`,
+    'Same colour, same fabric texture, same cut, same buttons, collar, pockets, seams, stitching and any print, stripe or logo. Nothing about the garment changes. Only how it is presented changes.',
+    `Ghost mannequin: the garment is shown as if worn by an invisible person. ${hangPhrase(subject.category)} No person, no mannequin, no hands, no body parts.`,
+    hangs(subject.category)
+      ? 'The hook is at the very top centre of the frame, its tip touching the top edge. The whole hanger is visible.'
+      : '',
+    'Portrait frame, 3:4. The subject fills about 85 percent of the frame height, centred.',
+    `Background: a perfectly flat, even, warm off white, exactly ${GHOST_WALL_HEX}, from edge to edge. No floor line, no gradient, no vignette, no props, no text, no shadow on the background other than a very faint soft contact shadow directly behind the garment.`,
+    'Soft, even studio light from the front. True to life colour. Photographic, with visible fabric detail. Not a render, not an illustration.',
+  ]
+    .filter(Boolean)
+    .join(' ');
+}
+
+/** The shorter second attempt, for when the model returns nothing. */
+export function buildSimpleGhostPrompt(subject: GhostSubject): string {
+  return [
+    `Catalogue photo of ${subject.description} from the reference image, unchanged, as if worn by an invisible person`,
+    hangs(subject.category)
+      ? 'on a wooden hanger with the hook at the top centre.'
+      : 'with nothing else in frame.',
+    `Flat ${GHOST_WALL_HEX} background, soft studio light, portrait 3:4.`,
   ].join(' ');
 }

@@ -314,6 +314,8 @@ export const api = {
     sort?: string;
     storeId?: string;
     inStockOnly?: boolean;
+    /** Only pieces with a ghost mannequin shot: a shop's rail. */
+    hanging?: boolean;
   }) => request<Page<ProductCard>>('/v1/products', { query: params }),
 
   product: (id: string) => request<ProductDetail>(`/v1/products/${id}`),
@@ -626,6 +628,12 @@ export const api = {
 
   saveProduct: (id: string, body: ProductInput) =>
     request<SellerProductDetail>(`/v1/seller/products/${id}`, { method: 'PUT', body }),
+
+  requestGhostShot: (productId: string, imageId: string) =>
+    request<{ product: SellerProductDetail; ghostShots: number }>(
+      `/v1/seller/products/${productId}/images/${imageId}/ghost`,
+      { method: 'POST' },
+    ),
 
   setProductStatus: (id: string, status: 'DRAFT' | 'ACTIVE' | 'ARCHIVED') =>
     request<{ status: string }>(`/v1/seller/products/${id}/status`, {

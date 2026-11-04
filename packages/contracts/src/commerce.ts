@@ -218,6 +218,8 @@ export const sellerStoreSchema = storeCardSchema.extend({
   whatsapp: z.string().nullable(),
   returnPolicy: z.string().nullable(),
   plan: z.string(),
+  /** Ghost mannequin shots the shop can still make. */
+  ghostShots: z.number().int(),
   stats: z.object({
     activeProducts: z.number().int(),
     draftProducts: z.number().int(),
@@ -260,7 +262,17 @@ export const sellerProductDetailSchema = z.object({
     }),
   ),
   images: z.array(
-    z.object({ storageKey: z.string(), image: imageSchema, processing: z.boolean() }),
+    z.object({
+      id: idSchema,
+      storageKey: z.string(),
+      /** What shows in the shop: the ghost shot or the cleaned photo. */
+      image: imageSchema,
+      /** What the seller uploaded, kept so they can compare. */
+      original: imageSchema,
+      processing: z.boolean(),
+      ghost: z.enum(['none', 'making', 'done', 'failed']),
+      ghostError: z.string().nullable(),
+    }),
   ),
 });
 

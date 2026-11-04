@@ -56,6 +56,13 @@ export const shopRoutes: FastifyPluginAsyncZod = async (app) => {
         ...(q.gender ? { gender: q.gender } : {}),
         ...(q.colour ? { colours: { has: q.colour } } : {}),
         ...(q.occasion ? { occasions: { has: q.occasion } } : {}),
+        // Shoes and bags get clean shots too, but they do not hang.
+        ...(q.hanging
+          ? {
+              category: { in: ['TOP', 'BOTTOM', 'DRESS', 'OUTERWEAR'] },
+              images: { some: { position: 0, processing: 'GHOST_MANNEQUIN' } },
+            }
+          : {}),
         ...(q.minCents !== undefined || q.maxCents !== undefined
           ? {
               priceFromCents: {
