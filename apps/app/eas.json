@@ -1,0 +1,34 @@
+{
+  "cli": {
+    "version": ">= 27.0.0",
+    "appVersionSource": "remote",
+    "promptToConfigurePushNotifications": false
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "ios": { "simulator": false }
+    },
+    "preview": {
+      "distribution": "internal",
+      "channel": "preview"
+    },
+    "production": {
+      "autoIncrement": true,
+      "channel": "production",
+      "env": {
+        "EXPO_PUBLIC_DEVICE_API_URL": "https://marion-min-carrying-nickname.trycloudflare.com"
+      }
+    }
+  },
+  "submit": {
+    "production": {
+      "ios": {
+        "ascApiKeyPath": "./credentials/asc-key.p8",
+        "ascApiKeyId": "ASC_KEY_ID",
+        "ascApiKeyIssuerId": "ASC_ISSUER_ID"
+      }
+    }
+  }
+}

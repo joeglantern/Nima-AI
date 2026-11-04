@@ -40,3 +40,6 @@ apps/app/.expo/
 .garment-sheet.png
 .shots/
 .look-candidates/
+
+# Apple keys for EAS submit, never committed
+apps/app/credentials/
