@@ -20,6 +20,7 @@ import { type Job, UnrecoverableError, Worker } from 'bullmq';
 import sharp from 'sharp';
 import type { WorkerContext } from '../context.js';
 import {
+  buildGhostBackPrompt,
   buildGhostMannequinPrompt,
   buildSimpleGhostPrompt,
   GHOST_WALL_HEX,
@@ -196,13 +197,34 @@ async function makeGhostShot(
   // A fresh key every time: a redo must not overwrite the shot still on show,
   // and caches keyed on the old address keep serving it otherwise.
   const stamp = Date.now().toString(36);
-  const processedKey = `${data.storageKey.replace(/\.[a-z0-9]+$/i, '')}-ghost-${stamp}.jpg`;
+  const base = data.storageKey.replace(/\.[a-z0-9]+$/i, '');
+  const processedKey = `${base}-ghost-${stamp}.jpg`;
   await context.putObject(processedKey, finished.data, 'image/jpeg');
+
+  // The back, made from the front so the two agree. A shot without a back
+  // is still a shot: the piece hangs, it just does not turn.
+  let backKey: string | null = null;
+  try {
+    const behind = await provider.generate({
+      prompt: buildGhostBackPrompt(subject),
+      references: [
+        { data: finished.data, mimeType: 'image/jpeg', label: `${subject.description}, front` },
+      ],
+      quality: 'high',
+      aspectRatio: '3:4',
+    });
+    const settled = await settleOnTheWall(behind.data);
+    backKey = `${base}-ghost-${stamp}-back.jpg`;
+    await context.putObject(backKey, settled.data, 'image/jpeg');
+  } catch (error) {
+    log.warn({ err: error }, 'No back view this time');
+  }
 
   await context.prisma.productImage.update({
     where: { id: image.id },
     data: {
       processedKey,
+      backKey,
       processing: 'GHOST_MANNEQUIN',
       processingError: null,
       width: finished.width,

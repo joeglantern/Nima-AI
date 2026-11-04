@@ -155,3 +155,18 @@ export function buildSimpleGhostPrompt(subject: GhostSubject): string {
     `Flat ${GHOST_WALL_HEX} background, soft studio light, portrait 3:4.`,
   ].join(' ');
 }
+
+/**
+ * The same shot from behind, made from the front shot so the two agree on
+ * size, hanger and light. This is what lets a piece turn round on the rail.
+ */
+export function buildGhostBackPrompt(subject: GhostSubject): string {
+  return [
+    `The reference image is a ghost mannequin catalogue shot of ${subject.description} seen from the front. Make the very same shot from directly behind, as if the invisible wearer had turned their back to the camera.`,
+    'Same garment, same colour, fabric, cut, print and pattern, same size in the frame, same position, same hanger with the hook at the very top centre touching the top edge, same wall, same soft front light. Portrait 3:4.',
+    hangs(subject.category)
+      ? 'From behind we see the back of the collar or neckline, the back yoke and seams, the backs of the sleeves or the back of the waistband, and none of the front details: no front placket, no front pockets, no front print unless the real garment has one on the back. Continue the real texture and pattern naturally across the back.'
+      : 'Show the back of the item with its real details continued naturally.',
+    'Photographic, with visible fabric detail. Not a render.',
+  ].join(' ');
+}

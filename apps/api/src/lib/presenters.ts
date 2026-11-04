@@ -78,6 +78,7 @@ interface ProductRow {
     width: number | null;
     height: number | null;
     processing?: string;
+    backKey?: string | null;
   }>;
 }
 
@@ -102,6 +103,10 @@ export function productCard(
     promoted: options.promoted ?? false,
     savedByMe: options.savedByMe ?? false,
     hanging: first?.processing === 'GHOST_MANNEQUIN',
+    back:
+      first?.processing === 'GHOST_MANNEQUIN' && first.backKey
+        ? publicImage(storage, first.backKey, first.width, first.height)
+        : null,
   };
 }
 

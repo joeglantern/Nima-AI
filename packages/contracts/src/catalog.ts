@@ -46,6 +46,8 @@ export const productCardSchema = z.object({
   savedByMe: z.boolean().default(false),
   /** The cover is a ghost mannequin shot, so the piece can hang on a rail. */
   hanging: z.boolean().default(false),
+  /** The same shot from behind, when there is one, so the piece can turn. */
+  back: imageSchema.nullable().default(null),
 });
 
 export const productDetailSchema = productCardSchema.extend({

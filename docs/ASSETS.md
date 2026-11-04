@@ -221,3 +221,8 @@ worker sends for a real seller's photo (`apps/worker/src/prompts.ts`,
 way the worker does it (`settleOnTheWall`). Where one exists the seed marks the
 piece's cover as `GHOST_MANNEQUIN`, which is what puts it on the shop's rail.
 Pieces without one keep the plain photo and stay in the grid.
+
+`seed-assets/ghost-back/<slug>.jpg` is the same ghost shot from directly
+behind, made from the front shot with `buildGhostBackPrompt`, so the piece
+can turn round when it is pulled forward off the rail. The worker makes the
+back the same way for a seller's piece, in the same job as the front.

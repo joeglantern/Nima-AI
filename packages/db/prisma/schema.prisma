@@ -424,6 +424,8 @@ model ProductImage {
   originalKey  String
   /// Result of background removal or ghost mannequin, when it has run.
   processedKey String?
+  /// The ghost mannequin shot from behind, so the piece can turn round.
+  backKey      String?
   processing   ImageProcessing @default(NONE)
   processingError String?
 

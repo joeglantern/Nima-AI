@@ -182,6 +182,11 @@ async function seedLooks(force: boolean): Promise<void> {
       const ghostKey = `seed/ghost/${piece.slug}.jpg`;
       const ghost = await readFile(join(assets, 'ghost', `${piece.slug}.jpg`)).catch(() => null);
       if (ghost) await upload(ghostKey, ghost);
+      const backKey = `seed/ghost-back/${piece.slug}.jpg`;
+      const back = ghost
+        ? await readFile(join(assets, 'ghost-back', `${piece.slug}.jpg`)).catch(() => null)
+        : null;
+      if (back) await upload(backKey, back);
 
       await prisma.productImage.deleteMany({ where: { productId: product.id } });
       await prisma.productImage.create({
@@ -189,6 +194,7 @@ async function seedLooks(force: boolean): Promise<void> {
           productId: product.id,
           originalKey: pictureKey,
           processedKey: ghost ? ghostKey : pictureKey,
+          backKey: back ? backKey : null,
           processing: ghost ? 'GHOST_MANNEQUIN' : 'NONE',
           isPrimary: true,
           position: 0,
@@ -251,16 +257,26 @@ async function hangGhostShots(): Promise<void> {
       if (!product) continue;
 
       const ghostKey = `seed/ghost/${piece.slug}.jpg`;
-      const stale = await prisma.productImage.count({
-        where: { productId: product.id, position: 0, NOT: { processedKey: ghostKey } },
+      const back = await readFile(join(assets, 'ghost-back', `${piece.slug}.jpg`)).catch(
+        () => null,
+      );
+      const backKey = back ? `seed/ghost-back/${piece.slug}.jpg` : null;
+      // Compared here rather than in the query: a NOT on a nullable column
+      // never matches the rows that are still null, which are the ones that
+      // need the work.
+      const current = await prisma.productImage.findFirst({
+        where: { productId: product.id, position: 0 },
+        select: { processedKey: true, backKey: true },
       });
-      if (stale === 0) continue;
+      if (!current || (current.processedKey === ghostKey && current.backKey === backKey)) continue;
 
       await upload(ghostKey, ghost);
+      if (back && backKey) await upload(backKey, back);
       const result = await prisma.productImage.updateMany({
         where: { productId: product.id, position: 0 },
         data: {
           processedKey: ghostKey,
+          backKey,
           processing: 'GHOST_MANNEQUIN',
           processingError: null,
           width: 1200,

@@ -372,7 +372,7 @@ function Forward({
   const piece = shown.current;
 
   const [variantId, setVariantId] = useState<string | null>(null);
-  const [side, setSide] = useState(0);
+  const [turned, setTurned] = useState(false);
   const [added, setAdded] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
 
@@ -384,10 +384,14 @@ function Forward({
 
   // The swing in. Spring, not a timing curve: it is a thing on a hook.
   const arrive = useRef(new Animated.Value(0)).current;
+  // The turn: 0 is the front, 1 is the back. Two faces, each hiding its own
+  // reverse, so it works the same on the web and on a phone.
+  const turn = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     if (!open) return;
     setVariantId(null);
-    setSide(0);
+    setTurned(false);
+    turn.setValue(0);
     setAdded(false);
     setProblem(null);
     arrive.setValue(still ? 1 : 0);
@@ -397,7 +401,7 @@ function Forward({
       friction: 5.2,
       tension: 54,
     }).start();
-  }, [open, still, arrive]);
+  }, [open, still, arrive, turn]);
 
   // Escape closes it on the web, which people expect from a dialog.
   useEffect(() => {
@@ -437,8 +441,20 @@ function Forward({
   }, [open, onClose]);
 
   const info: ProductDetail | undefined = detail.data;
-  const images = info?.images?.length ? info.images : piece?.image ? [piece.image] : [];
-  const image = images[Math.min(side, Math.max(0, images.length - 1))];
+  const front = piece?.image ?? null;
+  const back = info?.back ?? piece?.back ?? null;
+
+  const flip = () => {
+    if (!back) return;
+    const to = turned ? 0 : 1;
+    setTurned(!turned);
+    Animated.spring(turn, {
+      toValue: to,
+      useNativeDriver: true,
+      friction: still ? 20 : 8,
+      tension: 30,
+    }).start();
+  };
   const variants = sortBySize(info?.variants ?? []);
   const chosen =
     variants.find((variant) => variant.id === variantId) ??
@@ -523,7 +539,7 @@ function Forward({
               backgroundColor: RAIL_WALL,
               alignItems: 'center',
               paddingTop: BAR_TOP + 1,
-              paddingBottom: images.length > 1 ? 54 : 22,
+              paddingBottom: back ? 58 : 22,
               width: isCompact ? '100%' : 460,
             }}
           >
@@ -543,16 +559,71 @@ function Forward({
                 ],
               }}
             >
-              {image ? (
-                <Image
-                  source={{ uri: sized(image.url, 1080) }}
-                  placeholder={piece.image ? { uri: sized(piece.image.url, 480) } : undefined}
-                  contentFit="contain"
-                  transition={160}
-                  style={{ width: imageWidth, height: imageHeight }}
-                  accessibilityLabel={piece.title}
-                />
-              ) : null}
+              <Pressable
+                onPress={flip}
+                disabled={!back}
+                accessibilityRole={back ? 'button' : 'image'}
+                accessibilityLabel={
+                  back
+                    ? turned
+                      ? `${piece.title}, from behind. Turn it to the front`
+                      : `${piece.title}. Turn it round`
+                    : piece.title
+                }
+                style={{ width: imageWidth, height: imageHeight }}
+              >
+                <Animated.View
+                  style={{
+                    position: 'absolute',
+                    inset: 0,
+                    backfaceVisibility: 'hidden',
+                    transform: [
+                      { perspective: 1400 },
+                      {
+                        rotateY: turn.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: ['0deg', '180deg'],
+                        }),
+                      },
+                    ],
+                  }}
+                >
+                  {front ? (
+                    <Image
+                      source={{ uri: sized(front.url, 1080) }}
+                      placeholder={{ uri: sized(front.url, 480) }}
+                      contentFit="contain"
+                      transition={160}
+                      style={{ width: imageWidth, height: imageHeight }}
+                    />
+                  ) : null}
+                </Animated.View>
+                {back ? (
+                  <Animated.View
+                    style={{
+                      position: 'absolute',
+                      inset: 0,
+                      backfaceVisibility: 'hidden',
+                      transform: [
+                        { perspective: 1400 },
+                        {
+                          rotateY: turn.interpolate({
+                            inputRange: [0, 1],
+                            outputRange: ['180deg', '360deg'],
+                          }),
+                        },
+                      ],
+                    }}
+                  >
+                    <Image
+                      source={{ uri: sized(back.url, 1080) }}
+                      contentFit="contain"
+                      transition={160}
+                      style={{ width: imageWidth, height: imageHeight }}
+                    />
+                  </Animated.View>
+                ) : null}
+              </Pressable>
             </Animated.View>
 
             {/* The bar, so it is still hanging while you look at it. */}
@@ -579,34 +650,36 @@ function Forward({
               }}
             />
 
-            {images.length > 1 ? (
-              <View
-                style={{
+            {back ? (
+              <Pressable
+                onPress={flip}
+                accessibilityRole="button"
+                accessibilityLabel={turned ? 'Turn it to the front' : 'Turn it round'}
+                hitSlop={8}
+                style={({ pressed }) => ({
                   position: 'absolute',
                   bottom: 16,
                   flexDirection: 'row',
-                  gap: 22,
-                }}
+                  alignItems: 'center',
+                  gap: 7,
+                  height: 30,
+                  paddingHorizontal: 12,
+                  borderRadius: 15,
+                  backgroundColor: pressed ? '#E8E5E0' : '#FFFFFF',
+                })}
               >
-                {images.slice(0, 2).map((_, index) => (
-                  <Pressable
-                    key={index === 0 ? 'front' : 'back'}
-                    onPress={() => setSide(index)}
-                    accessibilityRole="button"
-                    accessibilityState={{ selected: side === index }}
-                    hitSlop={8}
-                    style={{
-                      paddingBottom: 4,
-                      borderBottomWidth: 1.5,
-                      borderBottomColor: side === index ? '#2D2926' : 'transparent',
-                    }}
-                  >
-                    <Micro style={{ color: side === index ? '#2D2926' : '#6E655E' }}>
-                      {index === 0 ? 'Front' : 'Back'}
-                    </Micro>
-                  </Pressable>
-                ))}
-              </View>
+                <Svg width={14} height={14} viewBox="0 0 24 24">
+                  <Path
+                    d="M4 12a8 8 0 0 1 13.7-5.6M20 12a8 8 0 0 1-13.7 5.6M17 3v4h-4M7 21v-4h4"
+                    stroke="#2D2926"
+                    strokeWidth={1.8}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    fill="none"
+                  />
+                </Svg>
+                <Micro style={{ color: '#2D2926' }}>{turned ? 'The front' : 'Turn it round'}</Micro>
+              </Pressable>
             ) : null}
 
             <Pressable
