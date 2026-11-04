@@ -228,6 +228,52 @@ async function seedLooks(force: boolean): Promise<void> {
   console.info(`Looks: ${SEED_LOOKS.length} curated looks, each with its own pieces`);
 }
 
+/**
+ * Hang the ghost shots on sample pieces that already exist.
+ *
+ * An ordinary seed leaves the looks alone, so loves and comments on them
+ * survive. This only swaps each piece's cover for its ghost shot where one
+ * has been made, which is enough to put it on the shop's rail.
+ */
+async function hangGhostShots(): Promise<void> {
+  const assets = join(dirname(fileURLToPath(import.meta.url)), 'seed-assets');
+  let hung = 0;
+
+  for (const look of SEED_LOOKS) {
+    for (const piece of look.pieces) {
+      const ghost = await readFile(join(assets, 'ghost', `${piece.slug}.jpg`)).catch(() => null);
+      if (!ghost) continue;
+
+      const product = await prisma.product.findUnique({
+        where: { slug: piece.slug },
+        select: { id: true },
+      });
+      if (!product) continue;
+
+      const ghostKey = `seed/ghost/${piece.slug}.jpg`;
+      const stale = await prisma.productImage.count({
+        where: { productId: product.id, position: 0, NOT: { processedKey: ghostKey } },
+      });
+      if (stale === 0) continue;
+
+      await upload(ghostKey, ghost);
+      const result = await prisma.productImage.updateMany({
+        where: { productId: product.id, position: 0 },
+        data: {
+          processedKey: ghostKey,
+          processing: 'GHOST_MANNEQUIN',
+          processingError: null,
+          width: 1200,
+          height: 1600,
+        },
+      });
+      hung += result.count;
+    }
+  }
+
+  if (hung > 0) console.info(`Ghost shots: ${hung} pieces now hang on the rail`);
+}
+
 async function main(): Promise<void> {
   console.info('Seeding Nima sample data');
 
@@ -300,6 +346,7 @@ async function main(): Promise<void> {
   }
 
   await seedLooks(replacing || process.argv.includes('--replace-looks'));
+  await hangGhostShots();
 
   console.info('Done:', {
     users: await prisma.user.count(),
