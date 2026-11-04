@@ -14,10 +14,13 @@
  *     published addresses. It cannot be trusted on its own, so the callback
  *     URL carries a secret token and the callback is only a prompt to look.
  *   - The truth is `POST /mpesa/stkpushquery/v1/query`: ResultCode 0 is paid,
- *     anything else is a reason, and "The transaction is being processed"
- *     (HTTP 500, errorCode 500.001.1001) means wait. The query does not say
- *     the amount. It does not need to: a CheckoutRequestID is bound to the
- *     amount it was pushed with, and M-Pesa takes exactly that.
+ *     4999 ("still under processing") means wait, so does HTTP 500 with
+ *     errorCode 500.001.1001, and anything else is a reason. The query does
+ *     not say the amount. It does not need to: a CheckoutRequestID is bound
+ *     to the amount it was pushed with, and M-Pesa takes exactly that.
+ *   - The query is rate limited: 30 a minute, bursts of 3, then HTTP 429
+ *     "Spike arrest violation". Queries are spaced here so a busy evening
+ *     never trips it, and a 429 is simply "ask again on the next pass".
  *   - There is no idempotency key. A push that times out may still have
  *     reached the phone, and its id is unknown, so the checkout is unwound
  *     and the buyer is told not to enter a PIN. Money that lands anyway
@@ -50,6 +53,8 @@ const MPESA_MAX_CENTS = 250_000 * 100;
 const KES_MIN_CENTS = 1 * 100;
 /** Callback details are kept this long for the query that follows. */
 const REMEMBER_MS = 60 * 60_000;
+/** Safaricom allows 30 queries a minute. Stay under it with room for retries. */
+const QUERIES_PER_MINUTE = 24;
 
 export interface MpesaOptions {
   consumerKey: string;
@@ -133,6 +138,7 @@ export class MpesaGateway implements PaymentGateway {
   private token: { value: string; expiresAt: number } | null = null;
   private tokenRequest: Promise<string> | null = null;
   private readonly callbacks = new Map<string, CallbackDetails>();
+  private queryTimes: number[] = [];
 
   constructor(options: MpesaOptions) {
     this.options = { ...options, baseUrl: options.baseUrl.replace(/\/+$/, '') };
@@ -254,6 +260,15 @@ export class MpesaGateway implements PaymentGateway {
   }
 
   async verify(reference: string): Promise<VerifiedPayment> {
+    // Stay under Safaricom's rate. A payment skipped now is asked about on
+    // the next pass, a few seconds later.
+    const now = Date.now();
+    this.queryTimes = this.queryTimes.filter((at) => at > now - 60_000);
+    if (this.queryTimes.length >= QUERIES_PER_MINUTE) {
+      throw new PaymentGatewayError('M-Pesa queries are being spaced out', true, true);
+    }
+    this.queryTimes.push(now);
+
     const timestamp = nairobiTimestamp();
     const { status, body } = await this.call('/mpesa/stkpushquery/v1/query', {
       BusinessShortCode: this.options.shortcode,
@@ -284,8 +299,10 @@ export class MpesaGateway implements PaymentGateway {
     }
 
     const code = String(body.ResultCode ?? '');
+    const stillOpen =
+      code === '4999' || /still under processing|being processed/i.test(body.ResultDesc ?? '');
     const state: VerifiedPayment['state'] =
-      code === '0' ? 'SUCCEEDED' : code ? 'FAILED' : 'PENDING';
+      code === '0' ? 'SUCCEEDED' : stillOpen || !code ? 'PENDING' : 'FAILED';
 
     return {
       state,

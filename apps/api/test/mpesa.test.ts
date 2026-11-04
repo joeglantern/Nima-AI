@@ -353,6 +353,42 @@ describe('verify', () => {
     else expect(verified.failureReason).toBeNull();
   });
 
+  it('ResultCode 4999, still under processing, is PENDING', async () => {
+    fakeFetch([
+      token,
+      {
+        status: 200,
+        body: {
+          ResponseCode: '0',
+          CheckoutRequestID: 'ws_CO_9',
+          ResultCode: '4999',
+          ResultDesc: 'The transaction is still under processing',
+        },
+      },
+    ]);
+    const verified = await make().verify('ws_CO_9');
+    expect(verified.state).toBe('PENDING');
+    expect(verified.failureReason).toBeNull();
+  });
+
+  it("spaces queries out under Safaricom's rate limit", async () => {
+    const calls = fakeFetch(
+      Array.from({ length: 40 }, (_, i) =>
+        i === 0
+          ? token
+          : {
+              status: 200,
+              body: { ResponseCode: '0', CheckoutRequestID: 'ws_CO_9', ResultCode: '4999' },
+            },
+      ),
+    );
+    const gateway = make();
+    for (let i = 0; i < 24; i += 1) await gateway.verify('ws_CO_9');
+    await expect(gateway.verify('ws_CO_9')).rejects.toBeInstanceOf(PaymentGatewayError);
+    // One sign in and twenty four queries; the twenty fifth never left.
+    expect(calls).toHaveLength(25);
+  });
+
   it('still being processed is PENDING, not an error', async () => {
     fakeFetch([
       token,
