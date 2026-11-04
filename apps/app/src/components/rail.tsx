@@ -22,6 +22,7 @@ import {
   Platform,
   Pressable,
   ScrollView,
+  type ScrollViewInstance,
   useWindowDimensions,
   View,
 } from 'react-native';
@@ -62,7 +63,7 @@ export function Rail({ items, storeName, canTryOn, checkout, onTryOn }: RailProp
   const { colors, gutter, isCompact, radius } = useTheme();
   const { width } = useWindowDimensions();
   const [forward, setForward] = useState<ProductCard | null>(null);
-  const scroller = useRef<ScrollView>(null);
+  const scroller = useRef<ScrollViewInstance>(null);
   const offset = useRef(0);
 
   const height = isCompact ? 300 : 360;

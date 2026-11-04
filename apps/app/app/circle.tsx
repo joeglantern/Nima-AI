@@ -52,7 +52,7 @@ export default function CircleScreen() {
                 <Caption style={{ paddingHorizontal: 20, paddingBottom: 8 }}>
                   The people whose looks you follow. Only you see this list.
                 </Caption>
-              ) : null
+              ) : undefined
             }
             onEndReachedThreshold={0.5}
             onEndReached={() => {

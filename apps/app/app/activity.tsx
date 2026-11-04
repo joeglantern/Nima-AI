@@ -120,7 +120,7 @@ export default function ActivityScreen() {
             ListFooterComponent={
               activity.isFetchingNextPage ? (
                 <ActivityIndicator color={colors.primary} style={{ marginVertical: 20 }} />
-              ) : null
+              ) : undefined
             }
           />
         )}

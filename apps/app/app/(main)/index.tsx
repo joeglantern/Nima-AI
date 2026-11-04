@@ -397,7 +397,7 @@ export default function ForYouScreen() {
               <BodyStrong style={{ fontSize: 14 }}>You are all caught up</BodyStrong>
               <Caption>New looks land here every day</Caption>
             </View>
-          ) : null
+          ) : undefined
         }
       />
 

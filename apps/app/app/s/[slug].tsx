@@ -245,12 +245,12 @@ export default function ShopFront() {
                     : 'Nothing on the rail right now.'
                 }
               />
-            ) : null
+            ) : undefined
           }
           ListFooterComponent={
             pieces.isFetchingNextPage ? (
               <ActivityIndicator color={colors.primary} style={{ marginVertical: 20 }} />
-            ) : null
+            ) : undefined
           }
         />
       </View>

@@ -11,7 +11,6 @@
 
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { back } from '../src/lib/routes';
 import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -19,6 +18,7 @@ import {
   Platform,
   Pressable,
   ScrollView,
+  type ScrollViewInstance,
   TextInput,
   View,
 } from 'react-native';
@@ -29,6 +29,7 @@ import { Mascot } from '../src/components/mascot';
 import { Body, Caption, Eyebrow, Title } from '../src/components/text';
 import { ApiError, api, type ProductCard as ProductCardData } from '../src/lib/api';
 import { useServerFrame } from '../src/lib/realtime';
+import { back } from '../src/lib/routes';
 import { useTheme } from '../src/theme/index';
 
 interface Turn {
@@ -46,7 +47,7 @@ export default function AskScreen() {
   const { colors, gutter, radius, isWide } = useTheme();
   const { requireAccount } = useAuthGate();
   const router = useRouter();
-  const scroller = useRef<ScrollView>(null);
+  const scroller = useRef<ScrollViewInstance>(null);
 
   const [threadId, setThreadId] = useState<string | undefined>();
   const [draft, setDraft] = useState('');

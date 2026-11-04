@@ -217,7 +217,7 @@ export default function ShopScreen() {
           <View style={{ paddingVertical: 28, alignItems: 'center' }}>
             <Caption>That is everything for now</Caption>
           </View>
-        ) : null
+        ) : undefined
       }
     />
   );

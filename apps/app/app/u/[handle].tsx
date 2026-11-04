@@ -309,12 +309,12 @@ export default function PersonScreen() {
                 art="hanger"
                 message={isMe ? 'Looks you share will appear here' : 'Nothing shared yet'}
               />
-            ) : null
+            ) : undefined
           }
           ListFooterComponent={
             looks.isFetchingNextPage ? (
               <ActivityIndicator color={colors.primary} style={{ marginVertical: 20 }} />
-            ) : null
+            ) : undefined
           }
         />
       </View>

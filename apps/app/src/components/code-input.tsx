@@ -15,7 +15,14 @@
  */
 
 import { useEffect, useRef, useState } from 'react';
-import { Keyboard, Platform, Pressable, TextInput, View } from 'react-native';
+import {
+  Keyboard,
+  Platform,
+  Pressable,
+  TextInput,
+  type TextInputInstance,
+  View,
+} from 'react-native';
 import { useTheme } from '../theme/index';
 import { Title } from './text';
 
@@ -39,7 +46,7 @@ export function CodeInput({
   autoFocus = true,
 }: CodeInputProps) {
   const { colors, radius } = useTheme();
-  const field = useRef<TextInput>(null);
+  const field = useRef<TextInputInstance>(null);
   const [focused, setFocused] = useState(false);
 
   // Only once per complete code. Without this guard a failed check that
