@@ -295,7 +295,11 @@ export class MpesaGateway implements PaymentGateway {
       if (/invalid checkoutrequestid|not found|does not exist/i.test(said)) {
         return { ...empty, state: 'NOT_FOUND' };
       }
-      throw new PaymentGatewayError('Could not check the payment with M-Pesa', true, true);
+      throw new PaymentGatewayError(
+        `Could not check the payment with M-Pesa (${status}${body.errorCode ? ` ${body.errorCode}` : ''}${status === 429 ? ', rate limited' : ''})`,
+        true,
+        true,
+      );
     }
 
     const code = String(body.ResultCode ?? '');
