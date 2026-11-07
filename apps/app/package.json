@@ -12,7 +12,9 @@
     "typecheck": "tsc --noEmit",
     "lint": "expo lint",
     "assets": "node scripts/make-placeholder-assets.mjs",
-    "dev:tunnel": "expo start --tunnel"
+    "dev:tunnel": "expo start --tunnel",
+    "store:shots": "node scripts/store-shots.mjs",
+    "apple:signing": "node scripts/apple-signing.mjs"
   },
   "dependencies": {
     "@better-auth/expo": "^1.7.7",
@@ -54,6 +56,7 @@
   },
   "devDependencies": {
     "@types/react": "~19.3.0",
+    "puppeteer-core": "^24.43.1",
     "sharp": "^0.35.5",
     "typescript": "^6.0.3"
   }
