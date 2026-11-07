@@ -14,7 +14,8 @@
     "assets": "node scripts/make-placeholder-assets.mjs",
     "dev:tunnel": "expo start --tunnel",
     "store:shots": "node scripts/store-shots.mjs",
-    "apple:signing": "node scripts/apple-signing.mjs"
+    "apple:signing": "node scripts/apple-signing.mjs",
+    "eas-build-post-install": "pnpm --filter @nima/contracts build"
   },
   "dependencies": {
     "@better-auth/expo": "^1.7.7",
