@@ -23,7 +23,7 @@ are Apple's. Everything is plain and true: no claims the app does not keep.
 
 | Field | Value |
 |---|---|
-| Subtitle (30) | Outfits, shops, try it on |
+| Subtitle (30) | Outfits from Nairobi's shops |
 | Primary category | Shopping |
 | Secondary category | Lifestyle |
 | Content rights | Does not contain, show, or access third-party content |
@@ -38,21 +38,18 @@ are Apple's. Everything is plain and true: no claims the app does not keep.
 ## Version information
 
 **Promotional text (170)**
-See how a piece looks on you before you buy it. Nima is where Nairobi's
-independent shops hang their rails.
+Nairobi's independent shops hang their rails in Nima. Pull a piece forward,
+check the size, pay by M-Pesa and collect near you.
 
 **Description (4000)**
 Nima is a fashion app for Kenya. Independent shops hang their pieces on a
-rail, you pull one forward, turn it round, pick your size and see it on
-yourself before you buy.
+rail, you pull one forward, turn it round, pick your size and pay by M-Pesa.
 
 What you can do
 
 - Browse outfits and flat lays from people and shops you like.
 - Pull a piece off a shop's rail, see the front and the back, and check the
   sizes that are in stock.
-- Try it on: put a photo of yourself in, and Nima shows the piece on you.
-  It is a picture to help you decide, not a fitting.
 - Put outfits together from several shops and save the ones you love.
 - Ask Nima for ideas when you have an occasion and nothing to wear.
 - Pay by M-Pesa, with an M-Pesa prompt on your phone, and collect from a
@@ -64,17 +61,16 @@ For shops
 - Turn an ordinary photo into a catalogue shot that hangs on your rail.
 - Sell at events by letting people scan your booth's code and pay on the spot.
 
-Try-ons are included with your account. Nothing in the app is sold except
-the clothes.
+Nothing in the app is sold except the clothes.
 
 Nima is built in Nairobi for people who dress well on a real budget.
 
 **Keywords (100)**
-fashion,outfits,thrift,nairobi,kenya,mpesa,try on,clothes,shops,style,mitumba,boutique
+fashion,outfits,thrift,nairobi,kenya,mpesa,clothes,shops,style,mitumba,boutique,dresses
 
 **What's new (4000)** (first version)
-The first release of Nima: the feed, shop rails, try on, saved outfits and
-M-Pesa checkout.
+The first release of Nima: the feed, shop rails, saved outfits and M-Pesa
+checkout.
 
 **Copyright**
 2026 Nima AI Inc
@@ -87,7 +83,7 @@ M-Pesa checkout.
 | Demo account | Set `REVIEW_SIGN_IN_EMAIL` and `REVIEW_SIGN_IN_CODE` (six digits) in `.env.prod` and restart the API. Put that email in the Username box and the code in the Password box, and say in the notes: "Sign in with email, enter the address, then enter the code shown as the password. No email is sent." Create the account once yourself (sign in with it) so the reviewer lands on a profile with a few saved looks. Clear both variables after approval. |
 | Contact | The account holder's name, the team phone (+254 796 205 375) and dev@shopnima.ai |
 | Release | Manually release this version |
-| Notes | Nima is a shopping app for Kenya. Independent shops list clothes, people see a piece on themselves with a photo, and pay by M-Pesa for physical clothing collected at a pickup point. iPhone only. / Sign in: tap Continue with email, enter the user name above, then enter the password above as the six digit code. No email is sent for this account. / Payments: the only thing sold is physical clothing, paid through M-Pesa (Safaricom mobile money), which needs a Kenyan number. This build points at the M-Pesa sandbox, so nothing is charged and the checkout can be walked through to the payment prompt. There is no digital content for sale, no in-app purchase and no credits to buy. Try-ons are included free with every account as a weekly allowance, which is what the try-ons counter shows. / Try on: open a piece, tap Try it on, pick any full length photo of a person. The result arrives in under a minute and stays private to the account. / Safety: every look has Report this look, every profile has Block and Report, and Delete my account is in Settings. / The contact above reaches the team directly. |
+| Notes | Nima is a shopping app for Kenya. Independent shops list clothes, people see a piece on themselves with a photo, and pay by M-Pesa for physical clothing collected at a pickup point. iPhone only. / Sign in: tap Continue with email, enter the user name above, then enter the password above as the six digit code. No email is sent for this account. / Payments: the only thing sold is physical clothing, paid through M-Pesa (Safaricom mobile money), which needs a Kenyan number. This build points at the M-Pesa sandbox, so nothing is charged and the checkout can be walked through to the payment prompt. There is no digital content for sale, no in-app purchase and no credits to buy. / See it on me: this version does not include the photo try-on. The buttons are marked Soon and open a short notice saying it is coming in a later update; nothing else depends on them. The description does not mention it. / Safety: every look has Report this look, every profile has Block and Report, and Delete my account is in Settings. / The contact above reaches the team directly. |
 
 **Why these notes.** The July 2026 rejection of 1.1.0 cited 3.1.1 (a credit
 balance with no in app purchase) and 2.1(a) (an error after "Upload a photo"
@@ -148,3 +144,22 @@ handles the payment), browsing history, search history outside the app.
 4. In App Store Connect, open the version, remove the old build from the Build table, Add Build, pick the new one, Save, then "Update Review" (a resubmission) or "Add for Review" (a first submission).
 
 Done this way on 7 November 2026: build 1.2.0 (5) is attached to version 1.2.0, which reads "Prepare for Submission". TestFlight's internal group "Team (Expo)" already has the build.
+
+## Try-on in this version
+
+Decided 7 November 2026: ship with try-on off. The Gemini image models have
+no free quota, so the feature needs prepaid billing on the Google project
+before the flag goes on. In the app the See it on me buttons stay in place
+with a Soon tag and open the coming soon sheet (`TryOnSoonSheet` in
+`apps/app/src/components/try-on.tsx`); the try-on counters are hidden while
+the flag is off. The listing does not mention try-on, because Apple does not
+allow metadata to describe features that are not in the build. When billing
+is on: set `GEMINI_API_KEY` in `.env.prod` (done), flip `features.tryOn` in
+the `platform` row of `app_settings`, publish `nima:settings:changed`, put
+the try-on bullet back in the description and reshoot the product and look
+screenshots.
+
+## Icon
+
+The App Store icon is the mascot on white, as the earlier Nima app used,
+made at 1024 px from `reference/Nima-Native/assets/clean-mascott.png`.
