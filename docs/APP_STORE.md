@@ -31,6 +31,9 @@ are Apple's. Everything is plain and true: no claims the app does not keep.
 | Privacy policy URL | https://www.shopnima.ai/privacyPolicy (public today). Switch to the API's `/privacy` once the API has a real hostname; the marketing site's `/privacy`, `/terms` and `/help` redirect to a sign in page, which Apple rejects |
 | Support URL | https://www.shopnima.ai/support |
 | Marketing URL | https://www.shopnima.ai |
+| Availability | Kenya only (set 7 Nov 2026). Widen it per country when deliveries exist there; staying out of the EU also keeps the Digital Services Act trader form out of the way |
+| App privacy labels | Eight data types, all linked to identity, none for tracking: name, email, phone, photos, other user content, user ID, purchase history, product interaction. Mirrors `ios.privacyManifests` in app.json |
+| Age rating | Left as Apple computed it from the earlier questionnaire (16+ in most countries, 17+ on older iOS). The policy says 18 and over, so this is consistent |
 
 ## Version information
 
