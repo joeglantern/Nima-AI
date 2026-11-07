@@ -12,7 +12,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
-import { usePageTitle } from '../../src/lib/page-title';
 import { useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 import Svg, { Circle, Path } from 'react-native-svg';
@@ -25,9 +24,9 @@ import { Sheet } from '../../src/components/sheet';
 import { Body, BodyStrong, Caption, Eyebrow, Micro, Price, Title } from '../../src/components/text';
 import { WardrobeTab } from '../../src/components/wardrobe-tab';
 import { api, type SessionUser, type TryOnJob } from '../../src/lib/api';
-import { SELL_HOME } from '../../src/lib/routes';
+import { usePageTitle } from '../../src/lib/page-title';
+import { SAVED, SELL_HOME } from '../../src/lib/routes';
 import { elevation } from '../../src/theme/elevation';
-import { SAVED } from '../../src/lib/routes';
 import { useTheme } from '../../src/theme/index';
 
 const TABS = [
@@ -106,6 +105,7 @@ export default function StoreScreen() {
           <ProfileCard
             user={isGuest ? null : (user ?? null)}
             credits={bootstrap.data?.credits.balance ?? 0}
+            tryOnCost={bootstrap.data?.costs.tryOnSingleItem ?? 1}
             onSettings={() => router.push('/settings')}
             onEdit={() => router.push('/profile')}
             onSignIn={() => requireAccount('Create an account to keep everything you make')}
@@ -263,7 +263,7 @@ export default function StoreScreen() {
                       {job.status === 'DONE'
                         ? 'Ready'
                         : job.status === 'FAILED'
-                          ? 'Did not work, credits returned'
+                          ? 'Did not work, nothing was used'
                           : 'Nima is dressing you'}
                     </Body>
                     <Caption>{new Date(job.createdAt).toLocaleDateString('en-KE')}</Caption>
@@ -348,6 +348,7 @@ export default function StoreScreen() {
 function ProfileCard({
   user,
   credits,
+  tryOnCost,
   onSettings,
   onEdit,
   onSignIn,
@@ -355,6 +356,7 @@ function ProfileCard({
   /** Null for a guest. */
   user: SessionUser | null;
   credits: number;
+  tryOnCost: number;
   onSettings: () => void;
   onEdit: () => void;
   onSignIn: () => void;
@@ -556,7 +558,7 @@ function ProfileCard({
         >
           {user ? (
             <>
-              <CreditPill credits={credits} />
+              <TryOnPill credits={credits} tryOnCost={tryOnCost} />
               <Pressable
                 onPress={onEdit}
                 accessibilityRole="button"
@@ -619,14 +621,17 @@ function OrderBadge({ status }: { status: string }) {
 }
 
 /**
- * The credit balance.
+ * How many try-ons the balance buys.
  *
+ * Said as try-ons, not credits: a try-on is the thing a person actually gets,
+ * and nothing in the app is sold for money, so there is no currency to name.
  * Green, as the screens draw it. A balance is a quantity you hold, not brand
  * furniture, so it takes the semantic positive colour rather than the
  * burgundy, and stays legible next to a name set in the brand serif.
  */
-function CreditPill({ credits }: { credits: number }) {
+function TryOnPill({ credits, tryOnCost }: { credits: number; tryOnCost: number }) {
   const { colors, radius } = useTheme();
+  const left = Math.floor(credits / Math.max(1, tryOnCost));
 
   return (
     <View
@@ -646,7 +651,7 @@ function CreditPill({ credits }: { credits: number }) {
         <Path d="M13 2 4 14h7l-1 8 9-12h-7l1-8Z" fill={colors.positive} />
       </Svg>
       <BodyStrong style={{ fontSize: 14, color: colors.positive }}>
-        {`${credits.toLocaleString('en-KE')} credits`}
+        {`${left.toLocaleString('en-KE')} ${left === 1 ? 'try-on' : 'try-ons'} left`}
       </BodyStrong>
     </View>
   );

@@ -10,8 +10,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Constants from 'expo-constants';
 import { Stack, useRouter } from 'expo-router';
-import { usePageTitle } from '../src/lib/page-title';
-import { back } from '../src/lib/routes';
 import { useState } from 'react';
 import { Alert, Platform, Pressable, ScrollView, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
@@ -21,6 +19,8 @@ import { Sheet } from '../src/components/sheet';
 import { Body, BodyStrong, Micro, Title } from '../src/components/text';
 import { api } from '../src/lib/api';
 import { signOut } from '../src/lib/auth';
+import { usePageTitle } from '../src/lib/page-title';
+import { back } from '../src/lib/routes';
 import { useSetupProgress } from '../src/lib/setup';
 import { useTheme } from '../src/theme/index';
 
@@ -160,7 +160,15 @@ export default function SettingsScreen() {
               <>
                 <Field label="Signed in as" value={user?.email ?? user?.name ?? 'You'} />
                 {user?.handle ? <Field label="Handle" value={`@${user.handle}`} /> : null}
-                <Field label="Credits" value={String(bootstrap.data?.credits.balance ?? 0)} />
+                <Field
+                  label="Try-ons left"
+                  value={String(
+                    Math.floor(
+                      (bootstrap.data?.credits.balance ?? 0) /
+                        Math.max(1, bootstrap.data?.costs.tryOnSingleItem ?? 1),
+                    ),
+                  )}
+                />
 
                 <Row
                   label="Your profile"

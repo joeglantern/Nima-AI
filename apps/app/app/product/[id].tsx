@@ -275,7 +275,8 @@ export default function ProductScreen() {
                 {(() => {
                   const balance = bootstrap.data.credits.balance;
                   const cost = bootstrap.data.costs.tryOnSingleItem ?? 1;
-                  return `${balance} ${balance === 1 ? 'credit' : 'credits'} left, ${cost === 1 ? 'one' : cost} per try-on`;
+                  const left = Math.floor(balance / Math.max(1, cost));
+                  return `${left} ${left === 1 ? 'try-on' : 'try-ons'} left this week`;
                 })()}
               </Caption>
             ) : null}

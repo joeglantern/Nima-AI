@@ -2,14 +2,14 @@
   "expo": {
     "name": "Nima",
     "slug": "nima",
-    "version": "0.1.0",
+    "version": "1.2.0",
     "orientation": "portrait",
     "scheme": "nima",
     "userInterfaceStyle": "automatic",
     "icon": "./assets/icon.png",
     "ios": {
-      "supportsTablet": true,
-      "bundleIdentifier": "app.nima.client",
+      "supportsTablet": false,
+      "bundleIdentifier": "ai.shopnima.app",
       "usesAppleSignIn": true,
       "infoPlist": {
         "NSPhotoLibraryUsageDescription": "Nima needs your photos so you can see clothes on yourself.",
