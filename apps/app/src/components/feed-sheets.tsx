@@ -20,7 +20,7 @@ import { Button } from './button';
 import { Avatar } from './feed-post';
 import { Sheet } from './sheet';
 import { Body, BodyStrong, Caption, Price } from './text';
-import { useTryOnAvailable } from './try-on';
+import { SOON, useTryOnAvailable } from './try-on';
 
 const SLOT_NAMES: Record<string, string> = {
   TOP: 'Top',
@@ -174,9 +174,11 @@ export function PiecesSheet({
           ) : null}
 
           <View style={{ gap: 10, marginTop: 4 }}>
-            {item.canRecreate && canTryOn ? (
+            {item.canRecreate ? (
               <Button
                 label="Try it on me"
+                variant={canTryOn ? 'primary' : 'quiet'}
+                tag={canTryOn ? undefined : SOON}
                 onPress={() => {
                   onClose();
                   onTryOn(item.id);

@@ -17,6 +17,7 @@ import { useAuthGate } from '../src/components/auth-gate';
 import { Button } from '../src/components/button';
 import { Sheet } from '../src/components/sheet';
 import { Body, BodyStrong, Micro, Title } from '../src/components/text';
+import { useTryOnAvailable } from '../src/components/try-on';
 import { api } from '../src/lib/api';
 import { signOut } from '../src/lib/auth';
 import { usePageTitle } from '../src/lib/page-title';
@@ -27,6 +28,7 @@ import { useTheme } from '../src/theme/index';
 export default function SettingsScreen() {
   usePageTitle('Settings');
   const { colors, gutter, radius, isWide } = useTheme();
+  const canTryOn = useTryOnAvailable();
   const { requireAccount } = useAuthGate();
   const queryClient = useQueryClient();
   const router = useRouter();
@@ -160,15 +162,17 @@ export default function SettingsScreen() {
               <>
                 <Field label="Signed in as" value={user?.email ?? user?.name ?? 'You'} />
                 {user?.handle ? <Field label="Handle" value={`@${user.handle}`} /> : null}
-                <Field
-                  label="Try-ons left"
-                  value={String(
-                    Math.floor(
-                      (bootstrap.data?.credits.balance ?? 0) /
-                        Math.max(1, bootstrap.data?.costs.tryOnSingleItem ?? 1),
-                    ),
-                  )}
-                />
+                {canTryOn ? (
+                  <Field
+                    label="Try-ons left"
+                    value={String(
+                      Math.floor(
+                        (bootstrap.data?.credits.balance ?? 0) /
+                          Math.max(1, bootstrap.data?.costs.tryOnSingleItem ?? 1),
+                      ),
+                    )}
+                  />
+                ) : null}
 
                 <Row
                   label="Your profile"

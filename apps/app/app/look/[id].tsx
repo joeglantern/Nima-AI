@@ -18,7 +18,13 @@ import { CommentsSheet } from '../../src/components/feed-sheets';
 import { ReportSheet } from '../../src/components/report-sheet';
 import { SendSheet } from '../../src/components/send-sheet';
 import { Body, BodyStrong, Caption, Eyebrow, Micro, Price, Title } from '../../src/components/text';
-import { TryOnResultSheet, useTryOn, useTryOnAvailable } from '../../src/components/try-on';
+import {
+  SOON,
+  TryOnResultSheet,
+  TryOnSoonSheet,
+  useTryOn,
+  useTryOnAvailable,
+} from '../../src/components/try-on';
 import { api } from '../../src/lib/api';
 import { sized } from '../../src/lib/media';
 import { PageTitle } from '../../src/lib/page-title';
@@ -40,6 +46,7 @@ export default function LookScreen() {
 
   const tryOn = useTryOn('Create an account to wear this yourself');
   const canTryOn = useTryOnAvailable();
+  const [soon, setSoon] = useState(false);
 
   const [sending, setSending] = useState(false);
   const [asking, setAsking] = useState(false);
@@ -144,16 +151,15 @@ export default function LookScreen() {
               </View>
             ) : null}
 
-            {item.canRecreate && !canTryOn ? (
-              <Caption align="center">
-                Seeing looks on yourself is switched off in this preview. It is back soon.
-              </Caption>
-            ) : null}
-            {item.canRecreate && canTryOn ? (
+            {item.canRecreate ? (
               <Button
                 label={tryOn.busy ? 'Nima is dressing you' : 'See this on me'}
                 loading={tryOn.busy}
-                onPress={() => tryOn.start({ kind: 'RECREATE', lookId: item.id })}
+                variant={canTryOn ? 'primary' : 'quiet'}
+                tag={canTryOn ? undefined : SOON}
+                onPress={() =>
+                  canTryOn ? tryOn.start({ kind: 'RECREATE', lookId: item.id }) : setSoon(true)
+                }
               />
             ) : null}
             {tryOn.progress ? <Caption align="center">{tryOn.progress}</Caption> : null}
@@ -269,6 +275,7 @@ export default function LookScreen() {
         </View>
       </ScrollView>
 
+      <TryOnSoonSheet open={soon} onClose={() => setSoon(false)} />
       <TryOnResultSheet tryOn={tryOn} label={item.title ?? 'this look'} />
       <ReportSheet
         target={reporting ? { kind: 'look', id: item.id } : null}

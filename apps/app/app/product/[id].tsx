@@ -19,7 +19,13 @@ import { useAuthGate } from '../../src/components/auth-gate';
 import { Button } from '../../src/components/button';
 import { LovePiece } from '../../src/components/love-piece';
 import { Body, BodyStrong, Caption, Micro, Price, Title } from '../../src/components/text';
-import { TryOnResultSheet, useTryOn, useTryOnAvailable } from '../../src/components/try-on';
+import {
+  SOON,
+  TryOnResultSheet,
+  TryOnSoonSheet,
+  useTryOn,
+  useTryOnAvailable,
+} from '../../src/components/try-on';
 import { ApiError, api } from '../../src/lib/api';
 import { sized } from '../../src/lib/media';
 import { PageTitle } from '../../src/lib/page-title';
@@ -73,6 +79,7 @@ export default function ProductScreen() {
 
   const tryOn = useTryOn();
   const canTryOn = useTryOnAvailable();
+  const [soon, setSoon] = useState(false);
 
   if (product.isLoading) {
     return (
@@ -222,30 +229,31 @@ export default function ProductScreen() {
               </View>
             ) : null}
 
-            {canTryOn ? null : (
-              <Caption align="center">Try-on is off for now. It will be back soon.</Caption>
-            )}
             {bootstrap.data && !bootstrap.data.features.checkout ? (
               <Caption align="center">Buying opens soon. Love it to keep it for then.</Caption>
             ) : null}
-            {canTryOn ? (
-              <Button
-                label={tryOn.busy ? 'Nima is dressing you' : 'See it on me'}
-                loading={tryOn.busy}
-                onPress={() =>
-                  tryOn.start({
-                    kind: 'SINGLE_ITEM',
-                    items: [
-                      {
-                        slot: slotFor(item.category),
-                        productId: item.id,
-                        ...(variantId ? { variantId } : {}),
-                      },
-                    ],
-                  })
+            <Button
+              label={tryOn.busy ? 'Nima is dressing you' : 'See it on me'}
+              loading={tryOn.busy}
+              variant={canTryOn ? 'primary' : 'quiet'}
+              tag={canTryOn ? undefined : SOON}
+              onPress={() => {
+                if (!canTryOn) {
+                  setSoon(true);
+                  return;
                 }
-              />
-            ) : null}
+                tryOn.start({
+                  kind: 'SINGLE_ITEM',
+                  items: [
+                    {
+                      slot: slotFor(item.category),
+                      productId: item.id,
+                      ...(variantId ? { variantId } : {}),
+                    },
+                  ],
+                });
+              }}
+            />
 
             {/*
               Buying comes second, under the try-on, because seeing it on
@@ -305,6 +313,7 @@ export default function ProductScreen() {
         </View>
       </ScrollView>
 
+      <TryOnSoonSheet open={soon} onClose={() => setSoon(false)} />
       <TryOnResultSheet tryOn={tryOn} label={item.title} />
     </>
   );

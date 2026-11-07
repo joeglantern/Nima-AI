@@ -22,6 +22,7 @@ import { Avatar } from '../../src/components/feed-post';
 import { LookbooksTab } from '../../src/components/lookbooks-tab';
 import { Sheet } from '../../src/components/sheet';
 import { Body, BodyStrong, Caption, Eyebrow, Micro, Price, Title } from '../../src/components/text';
+import { useTryOnAvailable } from '../../src/components/try-on';
 import { WardrobeTab } from '../../src/components/wardrobe-tab';
 import { api, type SessionUser, type TryOnJob } from '../../src/lib/api';
 import { usePageTitle } from '../../src/lib/page-title';
@@ -54,6 +55,7 @@ const TABS = [
 export default function StoreScreen() {
   usePageTitle('My Store');
   const { colors, gutter, radius, width, floatingClearance } = useTheme();
+  const canTryOn = useTryOnAvailable();
   const { requireAccount } = useAuthGate();
   const queryClient = useQueryClient();
   const router = useRouter();
@@ -106,6 +108,7 @@ export default function StoreScreen() {
             user={isGuest ? null : (user ?? null)}
             credits={bootstrap.data?.credits.balance ?? 0}
             tryOnCost={bootstrap.data?.costs.tryOnSingleItem ?? 1}
+            showTryOns={canTryOn}
             onSettings={() => router.push('/settings')}
             onEdit={() => router.push('/profile')}
             onSignIn={() => requireAccount('Create an account to keep everything you make')}
@@ -349,6 +352,7 @@ function ProfileCard({
   user,
   credits,
   tryOnCost,
+  showTryOns,
   onSettings,
   onEdit,
   onSignIn,
@@ -357,6 +361,8 @@ function ProfileCard({
   user: SessionUser | null;
   credits: number;
   tryOnCost: number;
+  /** False while try-on is switched off, so no count is shown for it. */
+  showTryOns: boolean;
   onSettings: () => void;
   onEdit: () => void;
   onSignIn: () => void;
@@ -558,7 +564,7 @@ function ProfileCard({
         >
           {user ? (
             <>
-              <TryOnPill credits={credits} tryOnCost={tryOnCost} />
+              {showTryOns ? <TryOnPill credits={credits} tryOnCost={tryOnCost} /> : null}
               <Pressable
                 onPress={onEdit}
                 accessibilityRole="button"

@@ -16,7 +16,7 @@ import {
 } from 'react-native';
 import { elevation } from '../theme/elevation';
 import { useTheme } from '../theme/index';
-import { BodyStrong } from './text';
+import { BodyStrong, Micro } from './text';
 
 type Variant = 'primary' | 'quiet' | 'provider';
 
@@ -34,6 +34,11 @@ export interface ButtonProps extends Omit<PressableProps, 'style' | 'children'> 
    * would otherwise use is all but invisible.
    */
   labelColor?: string;
+  /**
+   * A small word after the label, such as "Soon" on something announced
+   * but not yet on. Sentence case, one word.
+   */
+  tag?: string;
 }
 
 export function Button({
@@ -46,6 +51,7 @@ export function Button({
   onPress,
   style,
   labelColor,
+  tag,
   ...props
 }: ButtonProps) {
   const { colors, radius } = useTheme();
@@ -118,6 +124,18 @@ export function Button({
         <>
           {icon ? <View>{icon}</View> : null}
           <BodyStrong style={{ color: foreground }}>{label}</BodyStrong>
+          {tag ? (
+            <View
+              style={{
+                paddingHorizontal: 8,
+                paddingVertical: 2,
+                borderRadius: radius.pill,
+                backgroundColor: variant === 'primary' ? 'rgba(255,255,255,0.18)' : colors.surface,
+              }}
+            >
+              <Micro style={{ color: foreground }}>{tag}</Micro>
+            </View>
+          ) : null}
         </>
       )}
     </Pressable>

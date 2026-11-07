@@ -17,8 +17,9 @@ import { useServerFrame } from '../lib/realtime';
 import { useTheme } from '../theme/index';
 import { useAuthGate } from './auth-gate';
 import { Button } from './button';
+import { Mascot } from './mascot';
 import { Sheet } from './sheet';
-import { Caption, Eyebrow } from './text';
+import { Body, Caption, Eyebrow, Title } from './text';
 
 type StartBody = Parameters<typeof api.startTryOn>[0];
 
@@ -34,6 +35,37 @@ export function useTryOnAvailable(): boolean {
   const bootstrap = useQuery({ queryKey: ['bootstrap'], queryFn: api.bootstrap });
   return bootstrap.data?.features.tryOn !== false;
 }
+
+/**
+ * What the app says while try-on is switched off.
+ *
+ * The button stays where it belongs, marked Soon, and a tap opens this
+ * rather than doing nothing: one line on what is coming, one on what to do
+ * meanwhile, one button. The same sheet shows when the image budget runs
+ * out, so the words never promise a date.
+ */
+export function TryOnSoonSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
+  return (
+    <Sheet open={open} onClose={onClose}>
+      <View style={{ alignItems: 'center', gap: 6, paddingTop: 4 }}>
+        <Mascot size={120} mood="peek" />
+        <Eyebrow>Coming soon</Eyebrow>
+        <Title align="center">See it on you</Title>
+        <Body align="center">
+          Nima will put any piece on a photo of you, so you can decide before you buy. It is nearly
+          ready.
+        </Body>
+        <Caption align="center">
+          Love the pieces you want to try first. They will be waiting.
+        </Caption>
+        <Button label="Got it" onPress={onClose} style={{ marginTop: 14 }} />
+      </View>
+    </Sheet>
+  );
+}
+
+/** The Soon tag on a try-on button while try-on is off. */
+export const SOON = 'Soon';
 
 export interface TryOn {
   start: (body: StartBody) => void;

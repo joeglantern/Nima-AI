@@ -36,6 +36,7 @@ import { useTheme } from '../theme/index';
 import { useAuthGate } from './auth-gate';
 import { Button } from './button';
 import { Body, Caption, Micro, Price, Title } from './text';
+import { SOON, TryOnSoonSheet } from './try-on';
 
 /** The wall behind every ghost shot. The worker paints the same colour. */
 export const RAIL_WALL = '#F4F3F1';
@@ -63,6 +64,7 @@ export function Rail({ items, storeName, canTryOn, checkout, onTryOn }: RailProp
   const { colors, gutter, isCompact, radius } = useTheme();
   const { width } = useWindowDimensions();
   const [forward, setForward] = useState<ProductCard | null>(null);
+  const [soon, setSoon] = useState(false);
   const scroller = useRef<ScrollViewInstance>(null);
   const offset = useRef(0);
 
@@ -163,10 +165,12 @@ export function Rail({ items, storeName, canTryOn, checkout, onTryOn }: RailProp
         item={forward}
         storeName={storeName}
         canTryOn={canTryOn}
+        onSoon={() => setSoon(true)}
         checkout={checkout}
         onTryOn={onTryOn}
         onClose={() => setForward(null)}
       />
+      <TryOnSoonSheet open={soon} onClose={() => setSoon(false)} />
     </View>
   );
 }
@@ -347,6 +351,7 @@ function Forward({
   item,
   storeName,
   canTryOn,
+  onSoon,
   checkout,
   onTryOn,
   onClose,
@@ -354,6 +359,8 @@ function Forward({
   item: ProductCard | null;
   storeName: string;
   canTryOn: boolean;
+  /** Opens the coming soon sheet while try-on is off. */
+  onSoon: () => void;
   checkout: boolean;
   onTryOn: (request: TryOnRequest) => void;
   onClose: () => void;
@@ -790,13 +797,12 @@ function Forward({
             {!piece.inStock ? <Caption tone="critical">Sold out</Caption> : null}
 
             <View style={{ gap: 10, marginTop: 4 }}>
-              {canTryOn ? (
-                <Button label="See it on me" onPress={tryOn} />
-              ) : (
-                <Caption align="center">
-                  Seeing it on yourself is switched off in this preview. It is back soon.
-                </Caption>
-              )}
+              <Button
+                label="See it on me"
+                variant={canTryOn ? 'primary' : 'quiet'}
+                tag={canTryOn ? undefined : SOON}
+                onPress={canTryOn ? tryOn : onSoon}
+              />
               {checkout ? (
                 <Button
                   label={added ? 'In your basket' : 'Add to basket'}
