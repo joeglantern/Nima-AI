@@ -33,6 +33,17 @@ export const publicProfileSchema = z.object({
   bio: z.string().nullable(),
   link: z.string().nullable(),
   avatar: imageSchema.nullable(),
+  /** The picture across the top of the profile, if they set one. */
+  banner: imageSchema.nullable().default(null),
+  /** What there is to see: never followers, which Nima does not count out loud. */
+  stats: z
+    .object({
+      /** Looks the viewer is allowed to see. */
+      looks: z.number().int().min(0),
+      /** Loves received across those looks. */
+      loved: z.number().int().min(0),
+    })
+    .default({ looks: 0, loved: 0 }),
   isPrivate: z.boolean(),
   /** Whether the signed in viewer follows this person. Null for guests. */
   isFollowing: z.boolean().nullable(),
@@ -68,6 +79,8 @@ export const updateProfileSchema = z.object({
   wardrobePublic: z.boolean().optional(),
   /** A key from an AVATAR upload. Must belong to the caller. */
   avatarKey: z.string().min(1).max(300).optional(),
+  /** A key from a PROFILE_BANNER upload, or null to take the banner down. */
+  bannerKey: z.string().min(1).max(300).nullable().optional(),
 });
 
 export const handleAvailabilitySchema = z.object({
@@ -148,6 +161,7 @@ export const createUploadSchema = z.object({
     'WARDROBE_ITEM',
     'PRODUCT_IMAGE',
     'AVATAR',
+    'PROFILE_BANNER',
     'STORE_LOGO',
     'STORE_BANNER',
     'QUICK_TRY_ON',

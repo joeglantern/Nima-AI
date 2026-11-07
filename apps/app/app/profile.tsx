@@ -48,7 +48,9 @@ export default function ProfileScreen() {
   const [wardrobePublic, setWardrobePublic] = useState(false);
   const [avatarKey, setAvatarKey] = useState<string | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
-  const [uploading, setUploading] = useState(false);
+  const [bannerKey, setBannerKey] = useState<string | null>(null);
+  const [bannerPreview, setBannerPreview] = useState<string | null>(null);
+  const [uploading, setUploading] = useState<'avatar' | 'banner' | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
 
   // Fill the form once, from what is there. Later refetches must not undo
@@ -64,6 +66,7 @@ export default function ProfileScreen() {
     setIsPrivate(current.isPrivate);
     setWardrobePublic(current.wardrobePublic);
     setAvatarPreview(current.avatar?.url ?? null);
+    setBannerPreview(current.banner?.url ?? null);
   }, [profile.data]);
 
   const handleState = useHandleAvailability(handle, profile.data?.handle);
@@ -83,7 +86,8 @@ export default function ProfileScreen() {
     },
   });
 
-  async function pickAvatar() {
+  /** The picture and the banner go through the same door; only the crop differs. */
+  async function pick(which: 'avatar' | 'banner') {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
       setProblem('Nima needs access to your photos to set a picture.');
@@ -94,24 +98,32 @@ export default function ProfileScreen() {
       mediaTypes: ['images'],
       quality: 0.85,
       allowsEditing: true,
-      aspect: [1, 1],
+      aspect: which === 'avatar' ? [1, 1] : [16, 7],
       exif: false,
     });
 
     const asset = picked.assets?.[0];
     if (picked.canceled || !asset) return;
 
-    setUploading(true);
+    setUploading(which);
     setProblem(null);
 
     try {
-      const { storageKey } = await uploadImage(asset, 'AVATAR');
-      setAvatarKey(storageKey);
-      setAvatarPreview(asset.uri);
+      const { storageKey } = await uploadImage(
+        asset,
+        which === 'avatar' ? 'AVATAR' : 'PROFILE_BANNER',
+      );
+      if (which === 'avatar') {
+        setAvatarKey(storageKey);
+        setAvatarPreview(asset.uri);
+      } else {
+        setBannerKey(storageKey);
+        setBannerPreview(asset.uri);
+      }
     } catch (error) {
       setProblem(error instanceof Error ? error.message : 'That picture did not upload');
     } finally {
-      setUploading(false);
+      setUploading(null);
     }
   }
 
@@ -136,6 +148,7 @@ export default function ProfileScreen() {
     };
     if (wanted && wanted !== profile.data?.handle) body.handle = wanted;
     if (avatarKey) body.avatarKey = avatarKey;
+    if (bannerKey) body.bannerKey = bannerKey;
 
     save.mutate(body);
   }
@@ -235,13 +248,85 @@ export default function ProfileScreen() {
             <ActivityIndicator color={colors.primary} style={{ marginTop: 24 }} />
           ) : (
             <>
-              {/* The picture */}
-              <View style={{ alignItems: 'center', gap: 10 }}>
+              {/* The banner, then the picture hanging off it, as on the profile */}
+              <View style={{ alignItems: 'center' }}>
                 <Pressable
-                  onPress={() => void pickAvatar()}
+                  onPress={() => void pick('banner')}
+                  accessibilityRole="button"
+                  accessibilityLabel={bannerPreview ? 'Change your banner' : 'Add a banner'}
+                  disabled={uploading !== null}
+                  style={({ pressed }) => ({
+                    width: '100%',
+                    aspectRatio: 16 / 7,
+                    borderRadius: radius.card,
+                    overflow: 'hidden',
+                    backgroundColor: colors.espresso,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    opacity: pressed ? 0.9 : 1,
+                  })}
+                >
+                  {bannerPreview ? (
+                    <Image
+                      source={{ uri: bannerPreview }}
+                      style={{ width: '100%', height: '100%' }}
+                      contentFit="cover"
+                    />
+                  ) : (
+                    <>
+                      <View
+                        style={{
+                          position: 'absolute',
+                          right: -40,
+                          top: -90,
+                          width: 220,
+                          height: 220,
+                          borderRadius: 999,
+                          backgroundColor: colors.accent,
+                          opacity: 0.26,
+                        }}
+                      />
+                      <Caption style={{ color: colors.onEspresso }}>Add a banner</Caption>
+                    </>
+                  )}
+                  {uploading === 'banner' ? (
+                    <View
+                      style={{
+                        position: 'absolute',
+                        inset: 0,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        backgroundColor: 'rgba(0,0,0,0.35)',
+                      }}
+                    >
+                      <ActivityIndicator color="#fff" />
+                    </View>
+                  ) : null}
+                  <View
+                    style={{
+                      position: 'absolute',
+                      right: 10,
+                      bottom: 10,
+                      width: 32,
+                      height: 32,
+                      borderRadius: 999,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      backgroundColor: 'rgba(0,0,0,0.45)',
+                    }}
+                  >
+                    <CameraMark color="#FFFFFF" />
+                  </View>
+                </Pressable>
+              </View>
+
+              {/* The picture */}
+              <View style={{ alignItems: 'center', gap: 10, marginTop: -64 }}>
+                <Pressable
+                  onPress={() => void pick('avatar')}
                   accessibilityRole="button"
                   accessibilityLabel={avatarPreview ? 'Change your picture' : 'Add a picture'}
-                  disabled={uploading}
+                  disabled={uploading !== null}
                   style={({ pressed }) => ({
                     width: 120,
                     height: 120,
@@ -258,7 +343,7 @@ export default function ProfileScreen() {
                       justifyContent: 'center',
                       backgroundColor: colors.primarySoft,
                       borderWidth: 4,
-                      borderColor: colors.surface,
+                      borderColor: colors.ground,
                     }}
                   >
                     {avatarPreview ? (
@@ -272,7 +357,7 @@ export default function ProfileScreen() {
                         {initials}
                       </Title>
                     )}
-                    {uploading ? (
+                    {uploading === 'avatar' ? (
                       <View
                         style={{
                           position: 'absolute',
@@ -397,7 +482,7 @@ export default function ProfileScreen() {
               <Button
                 label={firstTime ? 'Done' : 'Save'}
                 loading={save.isPending}
-                disabled={uploading || handleState.kind === 'checking'}
+                disabled={uploading !== null || handleState.kind === 'checking'}
                 onPress={submit}
               />
             </>

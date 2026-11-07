@@ -1,11 +1,12 @@
 /**
- * My Store: the profile screen from the design.
+ * My Store: your own profile.
  *
- * A card with the person on it, then the tabs: Looks, Lookbooks, Wardrobe,
- * Orders. Each tab gets the line drawing empty state until there is
- * something to show.
+ * The same header a visitor sees on anyone's page (banner, picture, name,
+ * numbers, bio, one action and one quiet one), then the tabs: Looks,
+ * Lookbooks, Wardrobe, Orders. Each tab gets the line drawing empty state
+ * until there is something to show.
  *
- * A visitor sees the same card with an invitation instead of their name,
+ * A guest sees the same header with an invitation instead of a name,
  * because an empty profile that explains itself is better than a wall.
  */
 
@@ -14,20 +15,20 @@ import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
-import Svg, { Circle, Path } from 'react-native-svg';
+import Svg, { Path } from 'react-native-svg';
 import { useAuthGate } from '../../src/components/auth-gate';
 import { Button } from '../../src/components/button';
 import { type EmptyArt, EmptyState } from '../../src/components/empty-state';
-import { Avatar } from '../../src/components/feed-post';
 import { LookbooksTab } from '../../src/components/lookbooks-tab';
+import { Chip, ProfileHeader, UnderlineTabs } from '../../src/components/profile-header';
 import { Sheet } from '../../src/components/sheet';
-import { Body, BodyStrong, Caption, Eyebrow, Micro, Price, Title } from '../../src/components/text';
+import { Body, BodyStrong, Caption, Eyebrow, Micro, Price } from '../../src/components/text';
 import { useTryOnAvailable } from '../../src/components/try-on';
 import { WardrobeTab } from '../../src/components/wardrobe-tab';
-import { api, type SessionUser, type TryOnJob } from '../../src/lib/api';
+import { api, type TryOnJob } from '../../src/lib/api';
 import { usePageTitle } from '../../src/lib/page-title';
 import { SAVED, SELL_HOME } from '../../src/lib/routes';
-import { elevation } from '../../src/theme/elevation';
+import { shareProfile } from '../../src/lib/share';
 import { useTheme } from '../../src/theme/index';
 
 const TABS = [
@@ -54,7 +55,7 @@ const TABS = [
 
 export default function StoreScreen() {
   usePageTitle('My Store');
-  const { colors, gutter, radius, width, floatingClearance } = useTheme();
+  const { colors, gutter, radius, floatingClearance } = useTheme();
   const canTryOn = useTryOnAvailable();
   const { requireAccount } = useAuthGate();
   const queryClient = useQueryClient();
@@ -66,6 +67,22 @@ export default function StoreScreen() {
   const bootstrap = useQuery({ queryKey: ['bootstrap'], queryFn: api.bootstrap });
   const user = bootstrap.data?.user;
   const isGuest = !user || user.isAnonymous;
+
+  // Banner and numbers come from the profile; the session carries the rest.
+  const profile = useQuery({ queryKey: ['profile'], queryFn: api.myProfile, enabled: !isGuest });
+
+  // Faces of the people you follow, never a count. Nima shows no follower
+  // or following totals to anyone, you included.
+  const circle = useQuery({
+    queryKey: ['circle'],
+    queryFn: () => api.circle(),
+    enabled: !isGuest,
+    staleTime: 60_000,
+  });
+  const faces = circle.data?.items.slice(0, 4) ?? [];
+
+  const name = isGuest ? 'Your Nima' : user?.name?.trim() || 'You';
+  const handle = user?.handle ?? null;
 
   const tryOns = useQuery({
     queryKey: ['tryons'],
@@ -103,17 +120,57 @@ export default function StoreScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: floatingClearance, width: '100%' }}
       >
-        <View style={{ paddingHorizontal: gutter, paddingTop: 8, gap: 16 }}>
-          <ProfileCard
-            user={isGuest ? null : (user ?? null)}
-            credits={bootstrap.data?.credits.balance ?? 0}
-            tryOnCost={bootstrap.data?.costs.tryOnSingleItem ?? 1}
-            showTryOns={canTryOn}
-            onSettings={() => router.push('/settings')}
-            onEdit={() => router.push('/profile')}
-            onSignIn={() => requireAccount('Create an account to keep everything you make')}
-          />
+        <ProfileHeader
+          banner={profile.data?.banner?.url ?? null}
+          avatar={user?.avatarUrl ?? null}
+          name={name}
+          handle={handle}
+          line={
+            isGuest
+              ? 'Sign in to keep your looks, wardrobe and orders, or to open a shop of your own'
+              : (user?.email ?? null)
+          }
+          bio={profile.data?.bio ?? null}
+          stats={profile.data?.stats ?? { looks: 0, loved: 0 }}
+          onStat={() => setTab('looks')}
+          faces={
+            faces.length
+              ? {
+                  people: faces.map((person) => ({
+                    key: person.id,
+                    url: person.avatar?.url,
+                    name: person.displayName,
+                  })),
+                  label: 'Your circle',
+                  onPress: () => router.push('/circle'),
+                }
+              : null
+          }
+          primary={
+            isGuest
+              ? {
+                  label: 'Create an account',
+                  onPress: () => requireAccount('Create an account to keep everything you make'),
+                }
+              : { label: 'Edit profile', onPress: () => router.push('/profile') }
+          }
+          secondary={
+            !isGuest && handle
+              ? { label: 'Share', onPress: () => void shareProfile(handle, name) }
+              : undefined
+          }
+          onSettings={() => router.push('/settings')}
+        >
+          {!isGuest && canTryOn ? (
+            <TryOnPill
+              credits={bootstrap.data?.credits.balance ?? 0}
+              tryOnCost={bootstrap.data?.costs.tryOnSingleItem ?? 1}
+            />
+          ) : null}
+          {!isGuest ? <Chip label="Hung up" onPress={() => router.push(SAVED)} /> : null}
+        </ProfileHeader>
 
+        <View style={{ paddingHorizontal: gutter, paddingTop: 16, gap: 12 }}>
           {!isGuest ? <ShopCard /> : null}
 
           {!isGuest && (user?.styleProfileCompletion ?? 0) < 100 ? (
@@ -132,53 +189,8 @@ export default function StoreScreen() {
               <Body>Answer a few more and Nima gets sharper at picking for you.</Body>
             </Pressable>
           ) : null}
-        </View>
 
-        {/* Tabs */}
-        <View
-          style={{
-            flexDirection: 'row',
-            gap: 6,
-            marginTop: 20,
-            marginHorizontal: gutter,
-            padding: 5,
-            borderRadius: radius.pill,
-            // White, so the row reads as a control sitting on the page rather
-            // than a dent in it.
-            backgroundColor: colors.surface,
-            ...elevation('raised'),
-          }}
-          accessibilityRole="tablist"
-        >
-          {TABS.map((entry) => {
-            const selected = entry.key === tab;
-
-            return (
-              <Pressable
-                key={entry.key}
-                onPress={() => setTab(entry.key)}
-                accessibilityRole="tab"
-                accessibilityState={{ selected }}
-                style={{
-                  flex: 1,
-                  paddingVertical: 10,
-                  borderRadius: radius.pill,
-                  alignItems: 'center',
-                  backgroundColor: selected ? colors.primary : 'transparent',
-                }}
-              >
-                <BodyStrong
-                  style={{
-                    fontSize: width < 400 ? 12.5 : 14,
-                    color: selected ? colors.onPrimary : colors.ink,
-                  }}
-                  numberOfLines={1}
-                >
-                  {entry.label}
-                </BodyStrong>
-              </Pressable>
-            );
-          })}
+          <UnderlineTabs tabs={TABS} selected={tab} onSelect={setTab} />
         </View>
 
         {isGuest ? (
@@ -341,255 +353,6 @@ export default function StoreScreen() {
 }
 
 /**
- * The person at the top of the page.
- *
- * A deep band with the picture hanging off its lower edge, the way a
- * profile reads on paper: the picture first, then the name under it, then
- * what they hold. The settings gear sits in the band's corner where a
- * label cannot wrap, which is what the old one did on a narrow phone.
- */
-function ProfileCard({
-  user,
-  credits,
-  tryOnCost,
-  showTryOns,
-  onSettings,
-  onEdit,
-  onSignIn,
-}: {
-  /** Null for a guest. */
-  user: SessionUser | null;
-  credits: number;
-  tryOnCost: number;
-  /** False while try-on is switched off, so no count is shown for it. */
-  showTryOns: boolean;
-  onSettings: () => void;
-  onEdit: () => void;
-  onSignIn: () => void;
-}) {
-  const { colors, radius, width } = useTheme();
-  const size = width < 400 ? 84 : 96;
-  const name = user ? user.name?.trim() || 'You' : 'Your Nima';
-  const initial = name.trim().charAt(0).toUpperCase() || 'N';
-  const router = useRouter();
-
-  // Faces of the people you follow, never a count. Nima shows no follower
-  // or following totals to anyone, you included.
-  const circle = useQuery({
-    queryKey: ['circle'],
-    queryFn: () => api.circle(),
-    enabled: Boolean(user && !user.isAnonymous),
-    staleTime: 60_000,
-  });
-  const faces = circle.data?.items.slice(0, 5) ?? [];
-
-  return (
-    <View
-      style={{
-        borderRadius: radius.card,
-        backgroundColor: colors.surface,
-        overflow: 'hidden',
-        ...elevation('raised'),
-      }}
-    >
-      {/* The band, with the warm note from the opening screen in it */}
-      <View style={{ height: 88, backgroundColor: colors.espresso, overflow: 'hidden' }}>
-        <View
-          style={{
-            position: 'absolute',
-            right: -36,
-            top: -64,
-            width: 172,
-            height: 172,
-            borderRadius: 999,
-            backgroundColor: colors.accent,
-            opacity: 0.28,
-          }}
-        />
-        <View
-          style={{
-            position: 'absolute',
-            left: -24,
-            bottom: -84,
-            width: 132,
-            height: 132,
-            borderRadius: 999,
-            backgroundColor: colors.onEspresso,
-            opacity: 0.08,
-          }}
-        />
-
-        <Pressable
-          onPress={onSettings}
-          accessibilityRole="button"
-          accessibilityLabel="Settings"
-          hitSlop={8}
-          style={({ pressed }) => ({
-            position: 'absolute',
-            top: 12,
-            right: 12,
-            width: 36,
-            height: 36,
-            borderRadius: 999,
-            alignItems: 'center',
-            justifyContent: 'center',
-            backgroundColor: colors.accent,
-            opacity: pressed ? 0.7 : 1,
-          })}
-        >
-          <GearMark color={colors.onAccent} hole={colors.accent} />
-        </Pressable>
-      </View>
-
-      {/* The person, hanging off the band */}
-      <View
-        style={{
-          alignItems: 'center',
-          marginTop: -(size / 2),
-          paddingHorizontal: 20,
-          paddingBottom: 20,
-        }}
-      >
-        <View
-          style={{
-            width: size + 8,
-            height: size + 8,
-            borderRadius: 999,
-            backgroundColor: colors.surface,
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <View
-            style={{
-              width: size,
-              height: size,
-              borderRadius: 999,
-              overflow: 'hidden',
-              backgroundColor: colors.primarySoft,
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            {user?.avatarUrl ? (
-              <Image
-                source={{ uri: user.avatarUrl }}
-                style={{ width: '100%', height: '100%' }}
-                contentFit="cover"
-                accessibilityLabel="Your photo"
-              />
-            ) : (
-              // An empty circle reads as a picture that failed to load. An
-              // initial reads as a person who has not added one yet.
-              <Title style={{ fontSize: 38, lineHeight: 44, color: colors.primary }}>
-                {initial}
-              </Title>
-            )}
-          </View>
-        </View>
-
-        <Title numberOfLines={1} align="center" style={{ marginTop: 8 }}>
-          {name}
-        </Title>
-
-        {user ? (
-          <Caption numberOfLines={1} align="center">
-            {user.handle ? `@${user.handle}` : (user.email ?? '')}
-          </Caption>
-        ) : (
-          <Caption align="center">
-            Sign in to keep your looks, wardrobe and orders, or to open a shop of your own
-          </Caption>
-        )}
-
-        {faces.length ? (
-          <Pressable
-            onPress={() => router.push('/circle')}
-            accessibilityRole="button"
-            accessibilityLabel="Your circle, the people you follow"
-            style={({ pressed }) => ({
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: 10,
-              marginTop: 10,
-              opacity: pressed ? 0.7 : 1,
-            })}
-          >
-            <View style={{ flexDirection: 'row' }}>
-              {faces.map((person, index) => (
-                <View
-                  key={person.id}
-                  style={{
-                    marginLeft: index === 0 ? 0 : -8,
-                    borderRadius: 999,
-                    borderWidth: 2,
-                    borderColor: colors.surface,
-                  }}
-                >
-                  <Avatar url={person.avatar?.url} name={person.displayName} size={26} />
-                </View>
-              ))}
-            </View>
-            <Caption tone="ink">Your circle</Caption>
-          </Pressable>
-        ) : null}
-
-        {user ? (
-          <Pressable
-            onPress={() => router.push(SAVED)}
-            accessibilityRole="button"
-            accessibilityLabel="Hung up, the looks and pieces you kept"
-            style={({ pressed }) => ({
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: 6,
-              marginTop: 8,
-              opacity: pressed ? 0.7 : 1,
-            })}
-          >
-            <Caption tone="ink">Hung up</Caption>
-            <Caption>the looks and pieces you kept</Caption>
-          </Pressable>
-        ) : null}
-
-        <View
-          style={{
-            flexDirection: 'row',
-            flexWrap: 'wrap',
-            justifyContent: 'center',
-            alignItems: 'center',
-            gap: 8,
-            marginTop: 14,
-          }}
-        >
-          {user ? (
-            <>
-              {showTryOns ? <TryOnPill credits={credits} tryOnCost={tryOnCost} /> : null}
-              <Pressable
-                onPress={onEdit}
-                accessibilityRole="button"
-                style={({ pressed }) => ({
-                  paddingHorizontal: 14,
-                  paddingVertical: 7,
-                  borderRadius: radius.pill,
-                  borderWidth: 1,
-                  borderColor: colors.line,
-                  backgroundColor: pressed ? colors.sunk : 'transparent',
-                })}
-              >
-                <BodyStrong style={{ fontSize: 14, color: colors.ink }}>Edit profile</BodyStrong>
-              </Pressable>
-            </>
-          ) : (
-            <Button label="Create an account" full={false} onPress={onSignIn} />
-          )}
-        </View>
-      </View>
-    </View>
-  );
-}
-
-/**
  * Where an order has got to.
  *
  * Plain words rather than the enum. Nobody outside this codebase knows what
@@ -674,18 +437,6 @@ function Chevron({ color }: { color: string }) {
         strokeLinejoin="round"
         fill="none"
       />
-    </Svg>
-  );
-}
-
-function GearMark({ color, hole }: { color: string; hole: string }) {
-  return (
-    <Svg width={17} height={17} viewBox="0 0 24 24">
-      <Path
-        fill={color}
-        d="M10.4 2h3.2l.4 2.2c.6.2 1.1.5 1.6.8l2-1.1 2.3 2.3-1.1 2c.3.5.6 1 .8 1.6l2.2.4v3.2l-2.2.4c-.2.6-.5 1.1-.8 1.6l1.1 2-2.3 2.3-2-1.1c-.5.3-1 .6-1.6.8L13.6 22h-3.2l-.4-2.2a7 7 0 0 1-1.6-.8l-2 1.1-2.3-2.3 1.1-2c-.3-.5-.6-1-.8-1.6L2.2 13.6v-3.2l2.2-.4c.2-.6.5-1.1.8-1.6l-1.1-2 2.3-2.3 2 1.1c.5-.3 1-.6 1.6-.8L10.4 2Z"
-      />
-      <Circle cx={12} cy={12} r={3.2} fill={hole} />
     </Svg>
   );
 }

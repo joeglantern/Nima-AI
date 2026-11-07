@@ -21,7 +21,7 @@ import {
   uploadTicketSchema,
   userPhotoSchema,
 } from '@nima/contracts';
-import type { Visibility } from '@nima/db';
+import type { Prisma, PrismaClient, Visibility } from '@nima/db';
 import { APIError } from 'better-auth/api';
 import { fromNodeHeaders } from 'better-auth/node';
 import type { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
@@ -125,6 +125,18 @@ export const profileRoutes: FastifyPluginAsyncZod = async (app) => {
         bio: profile.bio,
         link: profile.link,
         avatar: publicImage(app.storage, profile.avatarKey),
+        banner: publicImage(app.storage, profile.bannerKey),
+        stats: await lookStats(app.prisma, {
+          ownerId: profile.user.id,
+          // Only what this viewer may open: the owner sees all of theirs, a
+          // follower sees followers-only looks too, a stranger sees public.
+          visibility:
+            viewer?.id === profile.user.id
+              ? undefined
+              : (profile.user.followers?.length ?? 0) > 0
+                ? { in: ['PUBLIC', 'FOLLOWERS'] }
+                : 'PUBLIC',
+        }),
         isPrivate: profile.isPrivate,
         isFollowing: viewer ? (profile.user.followers?.length ?? 0) > 0 : null,
         store: profile.user.store
@@ -186,6 +198,8 @@ export const profileRoutes: FastifyPluginAsyncZod = async (app) => {
             bio: z.string().nullable(),
             link: z.string().nullable(),
             avatar: z.object({ url: z.string() }).nullable(),
+            banner: z.object({ url: z.string() }).nullable(),
+            stats: z.object({ looks: z.number().int(), loved: z.number().int() }),
             isPrivate: z.boolean(),
             wardrobePublic: z.boolean(),
             email: z.string().nullable(),
@@ -197,9 +211,10 @@ export const profileRoutes: FastifyPluginAsyncZod = async (app) => {
     },
     async (request) => {
       const user = request.requireUser();
-      const [profile, credentials] = await Promise.all([
+      const [profile, credentials, stats] = await Promise.all([
         app.prisma.profile.findUnique({ where: { userId: user.id } }),
         app.prisma.account.count({ where: { userId: user.id, providerId: 'credential' } }),
+        lookStats(app.prisma, { ownerId: user.id }),
       ]);
 
       // An email sign up arrives with no name, so the suggestion comes from
@@ -212,6 +227,8 @@ export const profileRoutes: FastifyPluginAsyncZod = async (app) => {
         bio: profile?.bio ?? null,
         link: profile?.link ?? null,
         avatar: profile?.avatarKey ? { url: app.storage.publicUrl(profile.avatarKey) } : null,
+        banner: profile?.bannerKey ? { url: app.storage.publicUrl(profile.bannerKey) } : null,
+        stats,
         isPrivate: profile?.isPrivate ?? false,
         wardrobePublic: profile?.wardrobePublic ?? false,
         email: user.email,
@@ -466,6 +483,12 @@ export const profileRoutes: FastifyPluginAsyncZod = async (app) => {
           throw errors.notFound('That photo');
         }
       }
+      if (body.bannerKey) {
+        const owned = body.bannerKey.startsWith(`users/${user.id}/banner/`);
+        if (!owned || !(await app.storage.exists(body.bannerKey))) {
+          throw errors.notFound('That picture');
+        }
+      }
 
       const profile = await app.prisma.profile.upsert({
         where: { userId: user.id },
@@ -480,6 +503,7 @@ export const profileRoutes: FastifyPluginAsyncZod = async (app) => {
           isPrivate: body.isPrivate ?? false,
           wardrobePublic: body.wardrobePublic ?? false,
           avatarKey: body.avatarKey ?? null,
+          bannerKey: body.bannerKey ?? null,
         },
         update: {
           ...(body.handle !== undefined ? { handle: body.handle } : {}),
@@ -489,6 +513,7 @@ export const profileRoutes: FastifyPluginAsyncZod = async (app) => {
           ...(body.isPrivate !== undefined ? { isPrivate: body.isPrivate } : {}),
           ...(body.wardrobePublic !== undefined ? { wardrobePublic: body.wardrobePublic } : {}),
           ...(body.avatarKey !== undefined ? { avatarKey: body.avatarKey } : {}),
+          ...(body.bannerKey !== undefined ? { bannerKey: body.bannerKey } : {}),
         },
         include: { user: { include: { store: true } } },
       });
@@ -500,6 +525,8 @@ export const profileRoutes: FastifyPluginAsyncZod = async (app) => {
         bio: profile.bio,
         link: profile.link,
         avatar: publicImage(app.storage, profile.avatarKey),
+        banner: publicImage(app.storage, profile.bannerKey),
+        stats: await lookStats(app.prisma, { ownerId: user.id }),
         isPrivate: profile.isPrivate,
         isFollowing: null,
         knownFollowers: null,
@@ -883,3 +910,21 @@ const uploadBytes: FastifyPluginAsyncZod = async (scope) => {
     },
   );
 };
+
+/**
+ * How much there is to see on a profile: looks, and the loves they drew.
+ *
+ * Counts of looks, never of people. Followers are not a number anywhere in
+ * Nima, so the profile shows what someone made rather than who watches.
+ */
+async function lookStats(
+  prisma: PrismaClient,
+  where: Prisma.LookWhereInput,
+): Promise<{ looks: number; loved: number }> {
+  const scoped: Prisma.LookWhereInput = { ...where, publishedAt: { not: null } };
+  const [looks, loved] = await Promise.all([
+    prisma.look.count({ where: scoped }),
+    prisma.look.aggregate({ where: scoped, _sum: { likeCount: true } }),
+  ]);
+  return { looks, loved: loved._sum.likeCount ?? 0 };
+}

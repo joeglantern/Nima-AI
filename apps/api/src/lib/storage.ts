@@ -31,6 +31,7 @@ export type UploadPurpose =
   | 'WARDROBE_ITEM'
   | 'PRODUCT_IMAGE'
   | 'AVATAR'
+  | 'PROFILE_BANNER'
   | 'STORE_LOGO'
   | 'STORE_BANNER'
   | 'QUICK_TRY_ON'
@@ -42,6 +43,7 @@ const SIZE_LIMITS: Record<UploadPurpose, number> = {
   WARDROBE_ITEM: 12 * 1024 * 1024,
   PRODUCT_IMAGE: 15 * 1024 * 1024,
   AVATAR: 6 * 1024 * 1024,
+  PROFILE_BANNER: 10 * 1024 * 1024,
   STORE_LOGO: 6 * 1024 * 1024,
   STORE_BANNER: 10 * 1024 * 1024,
   QUICK_TRY_ON: 12 * 1024 * 1024,
@@ -112,6 +114,8 @@ function keyFor(input: PresignInput): string {
       return `users/${input.ownerId}/quick/${id}.${extension}`;
     case 'AVATAR':
       return `users/${input.ownerId}/avatar/${id}.${extension}`;
+    case 'PROFILE_BANNER':
+      return `users/${input.ownerId}/banner/${id}.${extension}`;
     case 'REVIEW':
       return `users/${input.ownerId}/reviews/${id}.${extension}`;
     case 'PRODUCT_IMAGE':

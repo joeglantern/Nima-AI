@@ -16,6 +16,7 @@ import { api } from './api';
 
 export type UploadPurpose =
   | 'AVATAR'
+  | 'PROFILE_BANNER'
   | 'USER_PHOTO'
   | 'WARDROBE_ITEM'
   | 'QUICK_TRY_ON'

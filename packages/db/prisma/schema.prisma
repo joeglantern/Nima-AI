@@ -161,6 +161,8 @@ model Profile {
   bio         String?
   link        String?
   avatarKey   String?
+  /// The picture across the top of the profile. Optional, like the avatar.
+  bannerKey   String?
 
   // When true, only accepted followers see looks marked FOLLOWERS.
   isPrivate   Boolean  @default(false)
