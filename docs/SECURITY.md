@@ -41,7 +41,7 @@ What protects people's photos, messages and money on Nima, what was checked, and
 2. **Turn on secret scanning and push protection.** Settings, Code security. Push protection blocks a leaked key before it lands.
 3. **Two factor authentication** on GitHub, Expo, Apple, Google Play, the Daraja developer portal, the M-Pesa business portal and the domain registrar, with an app or a hardware key.
 4. **A real domain** for the API and web app, with a certificate. Printed QR codes and Instagram links must never point at a temporary tunnel.
-5. **M-Pesa:** keep the consumer key, secret, passkey and callback token only in `.env.prod` on the server. Stay on the sandbox until a real KSh 10 payment has gone through end to end on production, then set `MPESA_ENV=production`. Rotate the callback token with the key pair if either is ever suspected.
+5. **M-Pesa:** keep the consumer key, secret, passkey and callback token only in `.env.prod` on the server. Stay on the sandbox until a real KSh 10 payment has gone through end to end on production, then set `MPESA_ENV=production`. The sandbox is a real paybill and its prompt takes real money, so off production the gateway pushes KSh 1 whatever the order says (a test cost the owner KSh 1,700 on 7 November 2026 before this guard existed). Rotate the callback token with the key pair if either is ever suspected.
 6. ~~Dependency updates~~ Done on 3 November 2026: `sharp` 0.35.5, `nodemailer` 10.3.1, `zod` 4.6.7. The remaining audit items are `tinypool` (test runner only, never shipped), `node-forge` and `decode-uri-component` (inside Expo's build tooling, not in the shipped app) and `deepmerge-ts` (inside Prisma's config loader). Re-check with `pnpm audit --prod` each month.
 
 ## Not yet built
