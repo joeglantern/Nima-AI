@@ -1,33 +1,52 @@
 /**
  * Settings.
  *
- * Mostly a way out of places. Signing in, signing out, seeing the opening
- * screen again, and leaving for good. A guest who got past the welcome
- * screen had no route back to it before this existed, which meant the only
- * way to sign in was to trip over a gated action.
+ * Laid out the way a large company's app lays it out: who you are at the
+ * top, then grouped lists with a heading each, every row a full width
+ * target with its label, what it is set to on the right and a chevron;
+ * the one destructive thing on its own at the bottom in the critical
+ * colour; the version in small type under everything.
+ *
+ * Every row does something real today. There are no placeholders.
  */
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Constants from 'expo-constants';
 import { Stack, useRouter } from 'expo-router';
-import { useState } from 'react';
-import { Alert, Platform, Pressable, ScrollView, View } from 'react-native';
+import * as Updates from 'expo-updates';
+import * as WebBrowser from 'expo-web-browser';
+import { type ReactNode, useState } from 'react';
+import { Alert, Linking, Platform, Pressable, ScrollView, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { useAuthGate } from '../src/components/auth-gate';
 import { Button } from '../src/components/button';
+import { Avatar } from '../src/components/feed-post';
 import { Sheet } from '../src/components/sheet';
-import { Body, BodyStrong, Micro, Title } from '../src/components/text';
+import { Body, BodyStrong, Caption, Micro, Title } from '../src/components/text';
 import { useTryOnAvailable } from '../src/components/try-on';
 import { api } from '../src/lib/api';
 import { signOut } from '../src/lib/auth';
+import { API_URL } from '../src/lib/config';
 import { usePageTitle } from '../src/lib/page-title';
-import { back } from '../src/lib/routes';
+import { back, SELL_HOME } from '../src/lib/routes';
 import { useSetupProgress } from '../src/lib/setup';
 import { useTheme } from '../src/theme/index';
 
+/** The API serves these pages itself, so they always match the running server. */
+function openPage(path: '/privacy' | '/terms' | '/help') {
+  const url = `${API_URL}${path}`;
+  if (Platform.OS === 'web') {
+    void Linking.openURL(url);
+    return;
+  }
+  void WebBrowser.openBrowserAsync(url, {
+    presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET,
+  });
+}
+
 export default function SettingsScreen() {
   usePageTitle('Settings');
-  const { colors, gutter, radius, isWide } = useTheme();
+  const { colors, gutter, isWide } = useTheme();
   const canTryOn = useTryOnAvailable();
   const { requireAccount } = useAuthGate();
   const queryClient = useQueryClient();
@@ -73,6 +92,14 @@ export default function SettingsScreen() {
     ]);
   }
 
+  const tryOnsLeft = Math.floor(
+    (bootstrap.data?.credits.balance ?? 0) /
+      Math.max(1, bootstrap.data?.costs.tryOnSingleItem ?? 1),
+  );
+  const completion = user?.styleProfileCompletion ?? 0;
+  const version = Constants.expoConfig?.version ?? '0.1.0';
+  const update = Updates.updateId ? Updates.updateId.slice(0, 8) : null;
+
   return (
     <>
       <Stack.Screen options={{ title: 'Settings' }} />
@@ -91,14 +118,15 @@ export default function SettingsScreen() {
           <Pressable
             onPress={() => back(router)}
             accessibilityLabel="Back"
-            style={{
-              width: 36,
-              height: 36,
+            accessibilityRole="button"
+            style={({ pressed }) => ({
+              width: 40,
+              height: 40,
               borderRadius: 999,
               alignItems: 'center',
               justifyContent: 'center',
-              backgroundColor: colors.sunk,
-            }}
+              backgroundColor: pressed ? colors.line : colors.sunk,
+            })}
           >
             <Svg width={18} height={18} viewBox="0 0 24 24">
               <Path
@@ -121,116 +149,147 @@ export default function SettingsScreen() {
           style={{ flex: 1, width: '100%' }}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{
-            padding: gutter,
+            paddingHorizontal: gutter,
+            paddingTop: 4,
             paddingBottom: 48,
-            gap: 28,
+            gap: 24,
             maxWidth: isWide ? 620 : undefined,
             width: '100%',
             alignSelf: 'center',
           }}
         >
+          {/* Who you are */}
+          {isGuest ? (
+            <Card>
+              <View style={{ padding: 16, gap: 10 }}>
+                <BodyStrong>You are browsing as a guest</BodyStrong>
+                <Body tone="muted">
+                  Everything you have liked and saved so far comes with you when you sign in.
+                </Body>
+                <Button
+                  label="Sign in or create an account"
+                  full={false}
+                  style={{ marginTop: 4 }}
+                  onPress={() => requireAccount('Create an account to keep all of this')}
+                />
+              </View>
+            </Card>
+          ) : (
+            <Card>
+              <Pressable
+                onPress={() => router.push('/profile')}
+                accessibilityRole="button"
+                accessibilityLabel="Edit profile"
+                style={({ pressed }) => ({
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 14,
+                  padding: 14,
+                  backgroundColor: pressed ? colors.sunk : 'transparent',
+                })}
+              >
+                <Avatar url={user?.avatarUrl} name={user?.name} size={56} />
+                <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
+                  <BodyStrong numberOfLines={1}>{user?.name?.trim() || 'You'}</BodyStrong>
+                  <Caption numberOfLines={1}>
+                    {user?.handle ? `@${user.handle}` : (user?.email ?? '')}
+                  </Caption>
+                  {user?.handle && user.email ? (
+                    <Caption numberOfLines={1}>{user.email}</Caption>
+                  ) : null}
+                </View>
+                <Chevron color={colors.muted} />
+              </Pressable>
+            </Card>
+          )}
+
           <Group title="Account">
             {isGuest ? (
-              <>
-                <View
-                  style={{
-                    padding: 16,
-                    gap: 10,
-                    borderRadius: radius.card,
-                    backgroundColor: colors.primarySoft,
-                  }}
-                >
-                  <BodyStrong>You are browsing as a guest</BodyStrong>
-                  <Body tone="muted">
-                    Everything you have liked and saved so far comes with you when you sign in.
-                  </Body>
-                  <Button
-                    label="Sign in or create an account"
-                    full={false}
-                    style={{ marginTop: 4 }}
-                    onPress={() => requireAccount('Create an account to keep all of this')}
-                  />
-                </View>
-
-                <Row
-                  label="See the opening screen again"
-                  hint="Apple, Google and email, as on first launch"
-                  onPress={() => router.push('/welcome')}
-                />
-              </>
+              <Row
+                label="See the opening screen again"
+                onPress={() => router.push('/welcome')}
+                first
+                last
+              />
             ) : (
               <>
-                <Field label="Signed in as" value={user?.email ?? user?.name ?? 'You'} />
-                {user?.handle ? <Field label="Handle" value={`@${user.handle}`} /> : null}
-                {canTryOn ? (
-                  <Field
-                    label="Try-ons left"
-                    value={String(
-                      Math.floor(
-                        (bootstrap.data?.credits.balance ?? 0) /
-                          Math.max(1, bootstrap.data?.costs.tryOnSingleItem ?? 1),
-                      ),
-                    )}
-                  />
-                ) : null}
-
                 <Row
                   label="Your profile"
-                  hint="Name, handle and photo"
+                  value="Name, handle, photo, banner"
                   onPress={() => router.push('/profile')}
+                  first
                 />
                 <Row
-                  label="Your style profile"
-                  hint={`${user?.styleProfileCompletion ?? 0} percent answered`}
+                  label="Style profile"
+                  value={completion >= 100 ? 'Complete' : `${completion} percent`}
                   onPress={() => router.push('/style')}
                 />
-                <Row
-                  label="Your photos"
-                  hint="The pictures Nima dresses"
-                  onPress={() => router.push('/photos')}
-                />
+                <Row label="Your photos" onPress={() => router.push('/photos')} />
                 <Row
                   label="Password"
-                  hint={
-                    profile.data?.hasPassword
-                      ? 'Change it'
-                      : 'Set one to sign in without waiting for a code'
-                  }
+                  value={profile.data?.hasPassword ? 'Set' : 'Not set'}
                   onPress={() => router.push('/password')}
                 />
-                {setup.complete ? null : (
-                  <Row
-                    label="Finish setting up"
-                    hint={`${setup.done} of ${setup.total} done`}
-                    onPress={() => router.push('/setup')}
-                  />
-                )}
-                <Row label="Sign out" onPress={confirmSignOut} />
+                {canTryOn ? <Row label="Try-ons left" value={String(tryOnsLeft)} /> : null}
+                <Row
+                  label={setup.complete ? 'Set up' : 'Finish setting up'}
+                  value={setup.complete ? 'Done' : `${setup.done} of ${setup.total}`}
+                  onPress={setup.complete ? undefined : () => router.push('/setup')}
+                  last
+                />
               </>
             )}
           </Group>
 
-          <Group title="About">
-            <Field label="Version" value={Constants.expoConfig?.version ?? '0.1.0'} />
-            <Body tone="muted">
-              Nima shows you how something looks, not how it will fit. Check the seller's size guide
-              before you buy.
-            </Body>
+          {!isGuest ? (
+            <Group title="Shop">
+              {user?.hasStore ? (
+                <Row
+                  label="Your shop"
+                  value="Orders, pieces, payouts"
+                  onPress={() => router.push(SELL_HOME)}
+                  first
+                  last
+                />
+              ) : (
+                <Row
+                  label="Sell on Nima"
+                  value="Open a shop"
+                  onPress={() => router.push('/sell/setup')}
+                  first
+                  last
+                />
+              )}
+            </Group>
+          ) : null}
+
+          <Group title="Privacy and legal">
+            <Row label="Privacy policy" onPress={() => openPage('/privacy')} first />
+            <Row label="Terms of use" onPress={() => openPage('/terms')} />
+            <Row label="Help and contact" onPress={() => openPage('/help')} last />
           </Group>
 
           {!isGuest ? (
-            <Group title="Leaving">
-              <Body tone="muted">
-                Your account, your looks, your photos and your wardrobe are deleted. Orders are
-                kept, because a shop has to be able to account for what it sold.
-              </Body>
-              <Button
-                label="Delete my account"
-                variant="quiet"
-                onPress={() => setConfirmingLeave(true)}
-              />
-            </Group>
+            <>
+              <Group>
+                <Row label="Sign out" onPress={confirmSignOut} first last />
+              </Group>
+
+              <Group>
+                <Row
+                  label="Delete my account"
+                  tone="critical"
+                  onPress={() => setConfirmingLeave(true)}
+                  first
+                  last
+                />
+              </Group>
+            </>
           ) : null}
+
+          <Micro align="center" style={{ marginTop: 8 }}>
+            {update ? `Nima ${version}, update ${update}` : `Nima ${version}`}
+          </Micro>
         </ScrollView>
       </View>
 
@@ -240,8 +299,8 @@ export default function SettingsScreen() {
         title="Delete your account"
       >
         <Body tone="muted">
-          This cannot be undone. Everything you have made is removed, including the photographs you
-          uploaded.
+          This cannot be undone. Your account, your looks, your photos and your wardrobe are
+          removed. Orders are kept, because a shop has to be able to account for what it sold.
         </Body>
 
         <View style={{ gap: 10, marginTop: 16 }}>
@@ -263,71 +322,98 @@ export default function SettingsScreen() {
   );
 }
 
-function Group({ title, children }: { title: string; children: React.ReactNode }) {
+/** A heading in small capitals over one rounded block of rows. */
+function Group({ title, children }: { title?: string; children: ReactNode }) {
   return (
-    <View style={{ gap: 10 }}>
-      <Micro tone="muted">{title.toUpperCase()}</Micro>
+    <View style={{ gap: 8 }}>
+      {title ? <Micro style={{ paddingHorizontal: 16 }}>{title.toUpperCase()}</Micro> : null}
+      <Card>{children}</Card>
+    </View>
+  );
+}
+
+function Card({ children }: { children: ReactNode }) {
+  const { colors, radius } = useTheme();
+  return (
+    <View
+      style={{
+        borderRadius: radius.card,
+        backgroundColor: colors.surface,
+        overflow: 'hidden',
+      }}
+    >
       {children}
     </View>
   );
 }
 
-function Field({ label, value }: { label: string; value: string }) {
-  const { colors, radius } = useTheme();
-
-  return (
-    <View
-      style={{
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        gap: 16,
-        paddingHorizontal: 16,
-        paddingVertical: 14,
-        borderRadius: radius.card,
-        backgroundColor: colors.surface,
-      }}
-    >
-      <Body tone="muted">{label}</Body>
-      <Body numberOfLines={1} style={{ flexShrink: 1, textAlign: 'right' }}>
-        {value}
-      </Body>
-    </View>
-  );
-}
-
-function Row({ label, hint, onPress }: { label: string; hint?: string; onPress: () => void }) {
-  const { colors, radius } = useTheme();
+/**
+ * One row: the label, what it is set to, a chevron when it goes somewhere.
+ *
+ * Rows sit flush in their block with a hairline between them, which is
+ * what makes a list read as a list rather than as a stack of buttons.
+ */
+function Row({
+  label,
+  value,
+  onPress,
+  tone = 'ink',
+  first = false,
+  last = false,
+}: {
+  label: string;
+  value?: string;
+  onPress?: () => void;
+  tone?: 'ink' | 'critical';
+  first?: boolean;
+  last?: boolean;
+}) {
+  const { colors } = useTheme();
+  const color = tone === 'critical' ? colors.critical : colors.ink;
 
   return (
     <Pressable
       onPress={onPress}
-      accessibilityRole="button"
+      disabled={!onPress}
+      accessibilityRole={onPress ? 'button' : undefined}
+      accessibilityLabel={value ? `${label}, ${value}` : label}
       style={({ pressed }) => ({
         flexDirection: 'row',
         alignItems: 'center',
         gap: 12,
-        paddingHorizontal: 16,
-        paddingVertical: 14,
-        borderRadius: radius.card,
-        backgroundColor: pressed ? colors.sunk : colors.surface,
+        minHeight: 52,
+        paddingLeft: 16,
+        paddingRight: onPress ? 12 : 16,
+        paddingVertical: 12,
+        borderTopWidth: first ? 0 : 1,
+        borderTopColor: colors.line,
+        backgroundColor: pressed && onPress ? colors.sunk : 'transparent',
       })}
     >
-      <View style={{ flex: 1, gap: 2 }}>
-        <Body>{label}</Body>
-        {hint ? <Micro>{hint}</Micro> : null}
-      </View>
-
-      <Svg width={18} height={18} viewBox="0 0 24 24">
-        <Path
-          d="m10 6 6 6-6 6"
-          stroke={colors.muted}
-          strokeWidth={1.8}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          fill="none"
-        />
-      </Svg>
+      <Body style={{ flex: 1, color }} numberOfLines={1}>
+        {label}
+      </Body>
+      {value ? (
+        <Caption numberOfLines={1} style={{ flexShrink: 1, maxWidth: '55%', textAlign: 'right' }}>
+          {value}
+        </Caption>
+      ) : null}
+      {onPress && tone !== 'critical' ? <Chevron color={colors.muted} /> : null}
     </Pressable>
+  );
+}
+
+function Chevron({ color }: { color: string }) {
+  return (
+    <Svg width={18} height={18} viewBox="0 0 24 24">
+      <Path
+        d="m10 6 6 6-6 6"
+        stroke={color}
+        strokeWidth={1.8}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="none"
+      />
+    </Svg>
   );
 }
