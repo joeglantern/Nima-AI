@@ -17,15 +17,15 @@ import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { memo, useEffect, useRef, useState } from 'react';
-import { Animated, Platform, Pressable, View } from 'react-native';
+import { Animated, Platform, Pressable, View, type ViewStyle } from 'react-native';
 import Svg, { Defs, G, Path, Text as SvgText, TextPath } from 'react-native-svg';
 import { ApiError, api, type LookCardData } from '../lib/api';
 import { sized } from '../lib/media';
 import { useSignedIn } from '../lib/social';
 import { timeAgo } from '../lib/time';
+import { elevation } from '../theme/elevation';
 import { useTheme } from '../theme/index';
 import { useAuthGate } from './auth-gate';
-import { Button } from './button';
 import { Body, BodyStrong, Caption, Price } from './text';
 
 const BLUR = 'L6Pj0^jE.AyE_3t7t7R**0o#DgR4';
@@ -42,6 +42,74 @@ const shillings = (cents: number) => `KSh ${Math.round(cents / 100).toLocaleStri
 
 const totalOf = (look: LookCardData) =>
   look.pieces.reduce((sum, piece) => sum + (piece.priceCents ?? 0), 0);
+
+/**
+ * The way to the pieces, with the price as the thing you read first.
+ *
+ * One pill, one line. The verb is short so the number has room, the number
+ * is set in tabular figures so it reads at a glance, and when the row is
+ * narrow the text shrinks a little rather than wrapping or clipping. Taller
+ * than the rest of the row on purpose: it is the one thing here that spends
+ * money, so the thumb finds it without looking.
+ */
+function ShopPill({
+  totalCents,
+  pieces,
+  onPress,
+  style,
+}: {
+  totalCents: number;
+  pieces: number;
+  onPress: () => void;
+  style?: ViewStyle;
+}) {
+  const { colors, radius } = useTheme();
+  const priced = totalCents > 0;
+  const label = priced ? 'Shop the look' : `See ${pieces} ${pieces === 1 ? 'piece' : 'pieces'}`;
+
+  return (
+    <Pressable
+      onPress={() => {
+        if (Platform.OS !== 'web') void Haptics.selectionAsync();
+        onPress();
+      }}
+      accessibilityRole="button"
+      accessibilityLabel={priced ? `Shop the look, ${shillings(totalCents)}` : label}
+      style={({ pressed }) => [
+        {
+          flexDirection: 'row',
+          alignItems: 'baseline',
+          justifyContent: 'center',
+          gap: 8,
+          minHeight: 44,
+          paddingHorizontal: 18,
+          paddingVertical: 10,
+          borderRadius: radius.pill,
+          backgroundColor: colors.primary,
+          transform: [{ scale: pressed ? 0.985 : 1 }],
+          ...elevation('floating', { colour: colors.primary, pressed }),
+        },
+        style,
+      ]}
+    >
+      <BodyStrong
+        numberOfLines={1}
+        style={{ color: colors.onPrimary, fontSize: 14, lineHeight: 18, flexShrink: 1 }}
+      >
+        {label}
+      </BodyStrong>
+      {priced ? (
+        <Price
+          cents={totalCents}
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={0.85}
+          style={{ color: colors.onPrimary, fontSize: 16, lineHeight: 20, flexShrink: 1 }}
+        />
+      ) : null}
+    </Pressable>
+  );
+}
 
 export function Avatar({
   url,
@@ -168,7 +236,8 @@ function placeClip(name: MarkName) {
   const objectW = (rest.right - rest.left) * size;
   const objectH = (rest.bottom - rest.top) * size;
   const objectLeft = drawn.left + (drawnW - objectW) / 2;
-  const objectTop = align === 'bottom' ? drawn.bottom - objectH : drawn.top + (drawnH - objectH) / 2;
+  const objectTop =
+    align === 'bottom' ? drawn.bottom - objectH : drawn.top + (drawnH - objectH) / 2;
   return { size, left: objectLeft - rest.left * size, top: objectTop - rest.top * size };
 }
 
@@ -205,7 +274,12 @@ function Clip({ name, source, id }: { name: MarkName; source: number; id: string
       pointerEvents="none"
       style={{ position: 'absolute', top: at.top, left: at.left, width: at.size, height: at.size }}
     >
-      <Image key={id} source={source} style={{ width: '100%', height: '100%' }} contentFit="contain" />
+      <Image
+        key={id}
+        source={source}
+        style={{ width: '100%', height: '100%' }}
+        contentFit="contain"
+      />
     </View>
   );
 }
@@ -701,19 +775,19 @@ export const FeedPost = memo(function FeedPost({
           </Pressable>
         </View>
         {!spread && look.itemCount > 0 ? (
-          <Button
-            full={false}
-            label={total > 0 ? `Shop, ${shillings(total)}` : 'See pieces'}
+          <ShopPill
+            totalCents={total}
+            pieces={look.itemCount}
             onPress={() => onPieces(look.id)}
-            style={{ height: 44, paddingHorizontal: 18 }}
+            style={{ maxWidth: '58%' }}
           />
         ) : null}
       </View>
 
       {spread && look.itemCount > 0 ? (
-        <Button
-          full={false}
-          label={total > 0 ? `Shop ${look.itemCount} pieces, ${shillings(total)}` : 'See pieces'}
+        <ShopPill
+          totalCents={total}
+          pieces={look.itemCount}
           onPress={() => onPieces(look.id)}
           style={{ marginTop: 24, alignSelf: 'flex-start' }}
         />
@@ -775,7 +849,12 @@ export const FeedPost = memo(function FeedPost({
           accessibilityRole="button"
           accessibilityLabel="Send to a friend"
         >
-          <Mark name="send" uid={`s${look.id}`} color={colors.ink} playingSince={motion.send ?? null} />
+          <Mark
+            name="send"
+            uid={`s${look.id}`}
+            color={colors.ink}
+            playingSince={motion.send ?? null}
+          />
         </Pressable>
         <Pressable
           onPress={() => {
@@ -794,7 +873,9 @@ export const FeedPost = memo(function FeedPost({
               // Turn about the top of the hook, not the middle of the mark.
               transform: [
                 { translateY: -9 },
-                { rotate: sway.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '-16deg'] }) },
+                {
+                  rotate: sway.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '-16deg'] }),
+                },
                 { translateY: 9 },
               ],
             }}
