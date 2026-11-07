@@ -33,7 +33,8 @@ export const light = {
   positiveSoft: '#E4F6EC',
   caution: '#A5621B',
   critical: '#A63C32',
-  scrim: 'rgba(45, 41, 38, 0.45)',
+  /** Warm and dark, so a photograph behind a sheet keeps its colour. */
+  scrim: 'rgba(26, 22, 20, 0.42)',
 } as const;
 
 export const dark = {
@@ -57,7 +58,7 @@ export const dark = {
   positiveSoft: '#1F3328',
   caution: '#E3AA6A',
   critical: '#EE8C80',
-  scrim: 'rgba(0, 0, 0, 0.6)',
+  scrim: 'rgba(0, 0, 0, 0.5)',
 } as const;
 
 /** The shape both palettes share. Values are plain colour strings. */
