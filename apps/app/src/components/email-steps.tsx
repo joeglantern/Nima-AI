@@ -10,11 +10,11 @@
  */
 
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Keyboard, Pressable, TextInput, View } from 'react-native';
+import { Keyboard, Pressable, TextInput, View } from 'react-native';
 import { useTheme } from '../theme/index';
 import { Button } from './button';
-import { CodeInput } from './code-input';
-import { Body, BodyStrong, Caption } from './text';
+import { CodeInput, type CodeState } from './code-input';
+import { BodyStrong, Caption } from './text';
 
 export interface EmailStepsProps {
   onSendCode: (email: string) => Promise<void>;
@@ -59,6 +59,8 @@ export function EmailSteps({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [resendIn, setResendIn] = useState(0);
+  // What the code wells show: the check is the caller's, the look is theirs.
+  const [codeState, setCodeState] = useState<CodeState>('idle');
 
   // Counts down once a code is out, so "send another" cannot be hammered.
   useEffect(() => {
@@ -118,6 +120,7 @@ export function EmailSteps({
   function resend() {
     if (resendIn > 0 || busy) return;
     setCode('');
+    setCodeState('idle');
     void run(
       () => onSendCode(email.trim()),
       () => setResendIn(RESEND_AFTER),
@@ -128,7 +131,16 @@ export function EmailSteps({
   // effect behind it does not refire on every keystroke.
   const verify = useCallback(
     (entered: string) => {
-      void run(() => onVerify(email.trim(), entered));
+      setCodeState('checking');
+      void run(async () => {
+        try {
+          await onVerify(email.trim(), entered);
+          setCodeState('success');
+        } catch (caught) {
+          setCodeState('error');
+          throw caught;
+        }
+      });
     },
     [email, onVerify, run],
   );
@@ -218,22 +230,21 @@ export function EmailSteps({
         {`We sent a six digit code to ${email}`}
       </Caption>
 
-      <CodeInput value={code} onChange={setCode} onComplete={verify} busy={busy} />
-
-      {busy ? (
-        <View
-          style={{ flexDirection: 'row', alignItems: 'center', gap: 8, justifyContent: 'center' }}
-        >
-          <ActivityIndicator size="small" color={colors.primary} />
-          <Body style={{ color: quietText }}>Signing you in</Body>
-        </View>
-      ) : null}
-
-      {error ? (
-        <Caption style={{ color: errorText }} align="center" accessibilityLiveRegion="polite">
-          {error}
-        </Caption>
-      ) : null}
+      <CodeInput
+        value={code}
+        onChange={(next) => {
+          setCode(next);
+          // A new digit after a miss is a fresh go: the why line steps aside.
+          if (codeState === 'error' && next.length > 0) {
+            setCodeState('idle');
+            setError(null);
+          }
+        }}
+        onComplete={verify}
+        state={codeState}
+        message={error ?? undefined}
+        onSurface={onSurface}
+      />
 
       {/*
         Two small actions, stacked. Side by side they were wider than a
@@ -241,7 +252,11 @@ export function EmailSteps({
       */}
       <View style={{ alignItems: 'center', marginTop: 2 }}>
         <TextLink
-          label={resendIn > 0 ? `Send a new code in ${resendIn}s` : 'Send a new code'}
+          label={
+            resendIn > 0
+              ? `Send a new code in 0:${String(resendIn).padStart(2, '0')}`
+              : 'Send a new code'
+          }
           color={quietText}
           disabled={resendIn > 0 || busy}
           onPress={resend}
@@ -281,12 +296,17 @@ function TextLink({
       accessibilityState={{ disabled }}
       hitSlop={6}
       style={({ pressed }) => ({
-        paddingVertical: 9,
+        // The whole line is the target, 44 tall: a 14 point link is a sliver.
+        minHeight: 44,
+        justifyContent: 'center',
         paddingHorizontal: 12,
         opacity: disabled ? 0.5 : pressed ? 0.6 : 1,
       })}
     >
-      <BodyStrong style={{ color, fontSize: 14, lineHeight: 20 }}>{label}</BodyStrong>
+      {/* Tabular figures, so a countdown does not jiggle as it changes. */}
+      <BodyStrong style={{ color, fontSize: 14, lineHeight: 20, fontVariant: ['tabular-nums'] }}>
+        {label}
+      </BodyStrong>
     </Pressable>
   );
 }
