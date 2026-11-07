@@ -448,6 +448,7 @@ function Header({
   onClose: () => void;
 }) {
   const { colors, gutter } = useTheme();
+  const insets = useSafeAreaInsets();
 
   return (
     <View
@@ -456,13 +457,13 @@ function Header({
         alignItems: 'center',
         gap: 12,
         paddingHorizontal: gutter,
-        paddingTop: 12,
+        paddingTop: insets.top + 12,
         paddingBottom: 8,
       }}
     >
       <Pressable
         onPress={onClose}
-        accessibilityLabel="Close"
+        accessibilityLabel="Back"
         hitSlop={6}
         style={{
           width: 40,
@@ -473,12 +474,14 @@ function Header({
           backgroundColor: colors.sunk,
         }}
       >
-        <Svg width={16} height={16} viewBox="0 0 24 24">
+        <Svg width={18} height={18} viewBox="0 0 24 24">
           <Path
-            d="m7 7 10 10M17 7 7 17"
+            d="m14 6-6 6 6 6"
             stroke={colors.ink}
             strokeWidth={1.8}
             strokeLinecap="round"
+            strokeLinejoin="round"
+            fill="none"
           />
         </Svg>
       </Pressable>
