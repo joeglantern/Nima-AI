@@ -51,6 +51,8 @@ import { describeFailure, maskPhone } from './words.js';
 const MPESA_MAX_CENTS = 250_000 * 100;
 /** The smallest M-Pesa payment, in cents. */
 const KES_MIN_CENTS = 1 * 100;
+/** What a sandbox push asks for, in shillings, whatever the order is worth. */
+const SANDBOX_SHILLINGS = 1;
 /** Callback details are kept this long for the query that follows. */
 const REMEMBER_MS = 60 * 60_000;
 /** Safaricom allows 30 queries a minute. Stay under it with room for retries. */
@@ -205,7 +207,10 @@ export class MpesaGateway implements PaymentGateway {
       Password: this.password(timestamp),
       Timestamp: timestamp,
       TransactionType: this.options.till ? 'CustomerBuyGoodsOnline' : 'CustomerPayBillOnline',
-      Amount: request.amountCents / 100,
+      // The sandbox is a real paybill and a real prompt: the PIN moves real
+      // money. So until production, the push asks for one shilling whatever
+      // the basket says. The payment row keeps the true total for the order.
+      Amount: this.live ? request.amountCents / 100 : SANDBOX_SHILLINGS,
       PartyA: msisdn,
       PartyB: this.options.till ?? this.options.shortcode,
       PhoneNumber: msisdn,
@@ -313,8 +318,10 @@ export class MpesaGateway implements PaymentGateway {
       reference: body.CheckoutRequestID ?? reference,
       // The query does not say the amount. The callback did, when it came,
       // and the push is bound to the amount it asked for either way.
-      amountCents: remembered?.amountCents ?? null,
-      currency: remembered?.amountCents != null ? 'KES' : null,
+      // Off production the push asked for one shilling, so the callback's
+      // amount says nothing about the order and must not be compared to it.
+      amountCents: this.live ? (remembered?.amountCents ?? null) : null,
+      currency: this.live && remembered?.amountCents != null ? 'KES' : null,
       failureReason: state === 'FAILED' ? wordsFor(code, body.ResultDesc ?? null) : null,
       providerId: remembered?.receipt ?? null,
       raw: {

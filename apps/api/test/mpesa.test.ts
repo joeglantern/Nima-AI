@@ -9,7 +9,7 @@ import { MpesaGateway, nairobiTimestamp } from '../src/services/payments/mpesa.j
 import { redactPayload } from '../src/services/payments/words.js';
 
 const TOKEN = 'cb_unit_token_0123456789';
-const make = () =>
+const make = (live = false) =>
   new MpesaGateway({
     consumerKey: 'ck_unit',
     consumerSecret: 'cs_unit',
@@ -18,7 +18,7 @@ const make = () =>
     passkey: 'passkey_unit',
     callbackToken: TOKEN,
     baseUrl: 'http://127.0.0.1:1/',
-    live: false,
+    live,
   });
 
 type Call = { url: string; init: RequestInit };
@@ -132,8 +132,8 @@ describe('callback parsing', () => {
     expect(items.find((i) => i.Name === 'Amount')?.Value).toBe(1500);
   });
 
-  it('carries the callback amount and receipt into the next query', async () => {
-    const gateway = make();
+  it('carries the callback amount and receipt into the next query when live', async () => {
+    const gateway = make(true);
     gateway.parseWebhook(paid);
     fakeFetch([
       token,
@@ -155,6 +155,28 @@ describe('callback parsing', () => {
     expect(verified.providerId).toBe('NLJ7RT61SV');
     expect(verified.raw).toMatchObject({ receipt: 'NLJ7RT61SV', phone: '2547******78' });
     expect(JSON.stringify(verified.raw)).not.toContain('12345678');
+  });
+
+  it('forgets the callback amount off production, where the push asked for one shilling', async () => {
+    const gateway = make();
+    gateway.parseWebhook(paid);
+    fakeFetch([
+      token,
+      {
+        status: 200,
+        body: {
+          ResponseCode: '0',
+          CheckoutRequestID: 'ws_CO_191220191020363925',
+          ResultCode: '0',
+          ResultDesc: 'The service request is processed successfully.',
+        },
+      },
+    ]);
+    const verified = await gateway.verify('ws_CO_191220191020363925');
+    expect(verified.state).toBe('SUCCEEDED');
+    expect(verified.amountCents).toBeNull();
+    expect(verified.currency).toBeNull();
+    expect(verified.providerId).toBe('NLJ7RT61SV');
   });
 });
 
@@ -203,7 +225,8 @@ describe('charge', () => {
     expect(body).toMatchObject({
       BusinessShortCode: '174379',
       TransactionType: 'CustomerBuyGoodsOnline',
-      Amount: 1500,
+      // Off production the push asks for one shilling whatever the order is.
+      Amount: 1,
       PartyA: '254712345678',
       PartyB: '5555555',
       PhoneNumber: '254712345678',
@@ -242,6 +265,8 @@ describe('charge', () => {
     const body = JSON.parse(String(calls[1]?.init.body)) as Record<string, unknown>;
     expect(body.TransactionType).toBe('CustomerPayBillOnline');
     expect(body.PartyB).toBe('600000');
+    // Live, the push carries the real amount.
+    expect(body.Amount).toBe(1500);
   });
 
   it('refuses a bad number, amount or a total that is not whole shillings before calling anyone', async () => {

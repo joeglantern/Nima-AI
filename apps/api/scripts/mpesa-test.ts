@@ -331,7 +331,7 @@ async function main(): Promise<void> {
     typeof happyPayment.providerRef === 'string' && fake.requests.has(happyPayment.providerRef),
     happyPayment.providerRef,
   );
-  check('the amount is sent in whole shillings', pushed.Amount === happy.totalCents / 100, pushed);
+  check('the sandbox push asks for one shilling, not the order total', pushed.Amount === 1, pushed);
   check(
     'it is a Buy Goods push to the Till',
     pushed.TransactionType === 'CustomerBuyGoodsOnline' && pushed.PartyB === TILL,
