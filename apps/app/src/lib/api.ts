@@ -134,6 +134,8 @@ export interface Bootstrap {
   };
   /** Only buttons for ways in that the server is set up for get shown. */
   signIn: { google: boolean; apple: boolean; email: boolean };
+  /** Where the money goes, named on the pay screen. Absent from an older server. */
+  payments?: { mpesaTill: string | null };
   fitNotice: { title: string; body: string };
 }
 
@@ -143,6 +145,9 @@ export interface OwnProfile {
   bio: string | null;
   link: string | null;
   avatar: { url: string } | null;
+  banner: { url: string } | null;
+  /** Looks you have made and the loves they gathered. */
+  stats: { looks: number; loved: number };
   isPrivate: boolean;
   wardrobePublic: boolean;
   email: string | null;
@@ -167,6 +172,8 @@ export interface ProfileUpdate {
   isPrivate?: boolean;
   wardrobePublic?: boolean;
   avatarKey?: string;
+  /** Null takes the banner down. */
+  bannerKey?: string | null;
 }
 
 export interface Page<T> {
@@ -523,6 +530,8 @@ export const api = {
     request<Cart>(`/v1/cart/items/${id}`, { method: 'PATCH', body: { quantity } }),
 
   removeFromCart: (id: string) => request<Cart>(`/v1/cart/items/${id}`, { method: 'DELETE' }),
+
+  clearCart: () => request<Cart>('/v1/cart', { method: 'DELETE' }),
 
   pickupPoints: (county?: string) =>
     request<{ items: PickupPoint[] }>('/v1/delivery/pickup-points', { query: { county } }),

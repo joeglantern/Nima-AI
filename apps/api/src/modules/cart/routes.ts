@@ -95,6 +95,20 @@ export function cartRoutes(cart: CartService): FastifyPluginAsyncZod {
       async (request) => cart.remove(request.requireUser().id, request.params.id),
     );
 
+    app.delete(
+      '/cart',
+      {
+        preHandler: app.requireAccount,
+        schema: {
+          tags: ['cart'],
+          summary: 'Empty the basket',
+          description: 'One call for the Clear basket action, so a slow connection never leaves half of it behind.',
+          response: { 200: cartSchema },
+        },
+      },
+      async (request) => cart.clear(request.requireUser().id),
+    );
+
     app.get(
       '/cart/count',
       {

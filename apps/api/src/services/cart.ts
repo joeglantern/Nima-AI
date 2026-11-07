@@ -118,9 +118,11 @@ export class CartService {
     return this.read(userId);
   }
 
-  async clear(userId: string): Promise<void> {
+  /** Everything out in one go. Answers with the basket, which is now empty. */
+  async clear(userId: string) {
     const cart = await this.prisma.cart.findUnique({ where: { userId }, select: { id: true } });
     if (cart) await this.prisma.cartItem.deleteMany({ where: { cartId: cart.id } });
+    return this.read(userId);
   }
 
   async count(userId: string): Promise<number> {
