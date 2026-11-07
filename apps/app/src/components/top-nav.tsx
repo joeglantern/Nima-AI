@@ -114,9 +114,9 @@ export function TopPills() {
 /**
  * The way to the basket.
  *
- * Absent until payments are connected and until there is something in it.
- * An empty bag icon on every screen is a permanent reminder of a thing you
- * have not done, and the screens do not have one.
+ * Always there while payments are connected, as in every shop people know,
+ * so nobody has to wonder where what they added went. The count sits on it
+ * only when there is something to count; an empty basket is just the bag.
  */
 export function BasketButton() {
   const { colors } = useTheme();
@@ -133,13 +133,15 @@ export function BasketButton() {
   });
 
   const items = count.data?.count ?? 0;
-  if (!bootstrap.data?.features.checkout || items === 0) return null;
+  if (!bootstrap.data?.features.checkout) return null;
 
   return (
     <Pressable
       onPress={() => router.push('/cart')}
       accessibilityRole="button"
-      accessibilityLabel={`Basket, ${items} ${items === 1 ? 'piece' : 'pieces'}`}
+      accessibilityLabel={
+        items === 0 ? 'Basket, empty' : `Basket, ${items} ${items === 1 ? 'piece' : 'pieces'}`
+      }
       style={{ padding: 6 }}
     >
       <Svg width={24} height={24} viewBox="0 0 24 24">
@@ -153,24 +155,26 @@ export function BasketButton() {
         />
       </Svg>
 
-      <View
-        style={{
-          position: 'absolute',
-          top: 0,
-          right: 0,
-          minWidth: 17,
-          height: 17,
-          paddingHorizontal: 4,
-          borderRadius: 999,
-          alignItems: 'center',
-          justifyContent: 'center',
-          backgroundColor: colors.accent,
-        }}
-      >
-        <Micro style={{ color: colors.onAccent, fontSize: 10, lineHeight: 13 }}>
-          {items > 9 ? '9+' : String(items)}
-        </Micro>
-      </View>
+      {items === 0 ? null : (
+        <View
+          style={{
+            position: 'absolute',
+            top: 0,
+            right: 0,
+            minWidth: 17,
+            height: 17,
+            paddingHorizontal: 4,
+            borderRadius: 999,
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: colors.accent,
+          }}
+        >
+          <Micro style={{ color: colors.onAccent, fontSize: 10, lineHeight: 13 }}>
+            {items > 9 ? '9+' : String(items)}
+          </Micro>
+        </View>
+      )}
     </Pressable>
   );
 }
