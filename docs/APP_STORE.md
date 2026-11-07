@@ -163,3 +163,17 @@ screenshots.
 
 The App Store icon is the mascot on white, as the earlier Nima app used,
 made at 1024 px from `reference/Nima-Native/assets/clean-mascott.png`.
+
+## Updates over the air
+
+expo-updates is in the build from 1.2.0 (8) onwards, channel `production`,
+runtime version policy `appVersion`. A JavaScript or asset change (copy, a
+layout fix, a colour) ships without a new App Store build:
+
+    cd apps/app
+    npx eas-cli update --channel production --message "what changed"
+
+Phones pick it up on the next cold start. Anything native (a new package
+with native code, a permission, the icon, app.json native keys) still needs
+`eas build` and a review. Keep `version` in app.json the same for an update
+to land on the installed build; bump it only with a store build.

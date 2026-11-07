@@ -51,10 +51,11 @@ export function TopPills() {
           alignItems: 'center',
           gap: tight ? 2 : 8,
           paddingVertical: 10,
-          // Room for the basket button, which is pinned to the right, so a
-          // wide active pill never slides underneath it.
-          paddingLeft: 12,
-          paddingRight: 48,
+          // The same room on both sides, so the group is centred on the
+          // screen's own centre line and not 18 px to the left of it. The
+          // basket lives in the trailing slot; on a narrow phone the pills
+          // tighten rather than slide under it.
+          paddingHorizontal: 48,
         }}
         accessibilityRole="tablist"
       >
