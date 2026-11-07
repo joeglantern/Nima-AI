@@ -43,3 +43,5 @@ apps/app/.expo/
 
 # Apple keys for EAS submit, never committed
 apps/app/credentials/
+
+apps/app/credentials.json

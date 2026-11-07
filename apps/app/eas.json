@@ -16,6 +16,7 @@
     },
     "production": {
       "autoIncrement": true,
+      "credentialsSource": "local",
       "channel": "production",
       "env": {
         "EXPO_PUBLIC_DEVICE_API_URL": "https://marion-min-carrying-nickname.trycloudflare.com"
