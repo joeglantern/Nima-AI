@@ -47,19 +47,20 @@ export function useTryOnAvailable(): boolean {
 export function TryOnSoonSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
   return (
     <Sheet open={open} onClose={onClose}>
-      <View style={{ alignItems: 'center', gap: 6, paddingTop: 4 }}>
-        <Mascot size={120} mood="peek" />
-        <Eyebrow>Coming soon</Eyebrow>
-        <Title align="center">See it on you</Title>
-        <Body align="center">
-          Nima will put any piece on a photo of you, so you can decide before you buy. It is nearly
-          ready.
-        </Body>
-        <Caption align="center">
-          Love the pieces you want to try first. They will be waiting.
-        </Caption>
-        <Button label="Got it" onPress={onClose} style={{ marginTop: 14 }} />
+      {/* On the screen's own grid: left aligned, the mascot beside the title, no dead space. */}
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+        <View style={{ flex: 1, gap: 2 }}>
+          <Eyebrow>Coming soon</Eyebrow>
+          <Title>See it on you</Title>
+        </View>
+        <Mascot size={72} mood="peek" />
       </View>
+      <Body>
+        Nima will put any piece on a photo of you, so you can decide before you buy. It is nearly
+        ready.
+      </Body>
+      <Caption>Love the pieces you want to try first. They will be waiting.</Caption>
+      <Button label="Got it" onPress={onClose} style={{ marginTop: 8 }} />
     </Sheet>
   );
 }
