@@ -83,6 +83,8 @@ export const settingsSchema = z.object({
     directMessages: z.boolean().default(true),
     ghostMannequin: z.boolean().default(false),
     promotions: z.boolean().default(false),
+    /** Seeing a piece on yourself. Also needs the image provider key. */
+    tryOn: z.boolean().default(true),
   }),
 });
 
@@ -119,6 +121,7 @@ export const DEFAULT_SETTINGS: Settings = settingsSchema.parse({
     directMessages: true,
     ghostMannequin: false,
     promotions: false,
+    tryOn: true,
   },
 });
 
