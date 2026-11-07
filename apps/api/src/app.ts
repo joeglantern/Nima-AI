@@ -16,6 +16,7 @@ import {
 import { registerErrorHandler } from './lib/errors.js';
 import { runWithRequestHost } from './lib/request-host.js';
 import { healthRoutes } from './modules/health/routes.js';
+import { legalRoutes } from './modules/legal/routes.js';
 import { webhookRoutes } from './modules/webhooks/routes.js';
 import authPlugin from './plugins/auth.js';
 import corePlugin, { type CorePluginOptions } from './plugins/core.js';
@@ -97,6 +98,10 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
   // Health sits at the root: load balancers and uptime checks should not have
   // to know about API versions.
   await app.register(healthRoutes);
+
+  // So do the privacy policy, terms and help: their addresses are quoted in
+  // the app stores and in sign in provider settings.
+  await app.register(legalRoutes());
 
   // Nor do payment providers. The webhook URL is registered with Fingo and
   // is not ours to version. It is also the one route that reads a raw body,

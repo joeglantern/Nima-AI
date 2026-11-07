@@ -52,6 +52,8 @@ Write `.env.prod` from `.env.example`, with:
   for the native build
 - SMTP pointing at the mailbox the other projects on the host use, which is
   described below
+- `SUPPORT_EMAIL` set to an inbox a person reads. It is printed on `/help`,
+  `/privacy` and `/terms`, which the API serves from `docs/legal`
 
 Then:
 

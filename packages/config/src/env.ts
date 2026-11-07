@@ -56,6 +56,8 @@ export const envSchema = z.object({
   API_URL: z.url(),
   // Zod 4 applies defaults to the parsed output, so this is already a list.
   WEB_ORIGINS: csv.default(['http://localhost:8081']),
+  /** Printed on the help, privacy and terms pages as the address people write to. */
+  SUPPORT_EMAIL: z.email().default('support@nima.africa'),
 
   // storage
   DATABASE_URL: z.string().startsWith('postgresql://'),

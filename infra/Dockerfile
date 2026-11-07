@@ -73,6 +73,8 @@ FROM build AS api
 ENV NODE_ENV=production
 COPY --from=web /app/apps/app/dist /app/web
 ENV WEB_DIR=/app/web
+# The privacy policy, terms and help pages, rendered by the API on request.
+COPY docs/legal/ /app/docs/legal/
 WORKDIR /app/apps/api
 EXPOSE 3333
 HEALTHCHECK --interval=20s --timeout=5s --start-period=40s --retries=5 \
