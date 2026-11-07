@@ -33,7 +33,7 @@ are Apple's. Everything is plain and true: no claims the app does not keep.
 | Marketing URL | https://www.shopnima.ai |
 | Availability | Kenya only (set 7 Nov 2026). Widen it per country when deliveries exist there; staying out of the EU also keeps the Digital Services Act trader form out of the way |
 | App privacy labels | Eight data types, all linked to identity, none for tracking: name, email, phone, photos, other user content, user ID, purchase history, product interaction. Mirrors `ios.privacyManifests` in app.json |
-| Age rating | Left as Apple computed it from the earlier questionnaire (16+ in most countries, 17+ on older iOS). The policy says 18 and over, so this is consistent |
+| Age rating | Questionnaire answered 7 Nov 2026: user content, social feed and messaging yes; no web browser, no mature content, no advertising. Apple computed 13+; overridden to 18+ to match the policy (19+ in Korea) |
 
 ## Version information
 
@@ -177,3 +177,7 @@ Phones pick it up on the next cold start. Anything native (a new package
 with native code, a permission, the icon, app.json native keys) still needs
 `eas build` and a review. Keep `version` in app.json the same for an update
 to land on the installed build; bump it only with a store build.
+
+## Submissions
+
+- 7 November 2026: version 1.2.0, build 8 (mascot icon, coming soon for try-on, centred header, expo-updates), resubmitted on the July submission with a reply to App Review summarising the fixes. Status Waiting for Review. Release is manual.
