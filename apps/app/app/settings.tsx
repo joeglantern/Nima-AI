@@ -17,6 +17,7 @@ import * as Updates from 'expo-updates';
 import * as WebBrowser from 'expo-web-browser';
 import { type ReactNode, useState } from 'react';
 import { Alert, Linking, Platform, Pressable, ScrollView, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 import { useAuthGate } from '../src/components/auth-gate';
 import { Button } from '../src/components/button';
@@ -47,6 +48,7 @@ function openPage(path: '/privacy' | '/terms' | '/help') {
 export default function SettingsScreen() {
   usePageTitle('Settings');
   const { colors, gutter, isWide } = useTheme();
+  const insets = useSafeAreaInsets();
   const canTryOn = useTryOnAvailable();
   const { requireAccount } = useAuthGate();
   const queryClient = useQueryClient();
@@ -111,7 +113,7 @@ export default function SettingsScreen() {
             alignItems: 'center',
             gap: 12,
             paddingHorizontal: gutter,
-            paddingTop: 12,
+            paddingTop: insets.top + 12,
             paddingBottom: 8,
           }}
         >

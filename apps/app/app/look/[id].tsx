@@ -11,6 +11,7 @@ import { Image } from 'expo-image';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, useWindowDimensions, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 import { useAuthGate } from '../../src/components/auth-gate';
 import { Button } from '../../src/components/button';
@@ -35,6 +36,7 @@ import { useTheme } from '../../src/theme/index';
 export default function LookScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { colors, gutter, radius, isWide } = useTheme();
+  const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const router = useRouter();
 
@@ -107,7 +109,7 @@ export default function LookScreen() {
               accessibilityLabel="Back"
               style={{
                 position: 'absolute',
-                top: 16,
+                top: insets.top + 16,
                 left: 16,
                 width: 40,
                 height: 40,

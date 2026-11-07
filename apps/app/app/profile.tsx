@@ -22,6 +22,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle, Path } from 'react-native-svg';
 import { Button } from '../src/components/button';
 import { Body, BodyStrong, Caption, Micro, Title } from '../src/components/text';
@@ -34,6 +35,7 @@ const HANDLE = /^[a-z0-9_.]{3,24}$/;
 
 export default function ProfileScreen() {
   const { colors, gutter, radius, isWide } = useTheme();
+  const insets = useSafeAreaInsets();
   const router = useRouter();
   const queryClient = useQueryClient();
   const { setup } = useLocalSearchParams<{ setup?: string }>();
@@ -181,7 +183,7 @@ export default function ProfileScreen() {
             alignItems: 'center',
             gap: 12,
             paddingHorizontal: gutter,
-            paddingTop: 12,
+            paddingTop: insets.top + 12,
             paddingBottom: 8,
           }}
         >

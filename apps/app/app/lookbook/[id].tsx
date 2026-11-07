@@ -9,17 +9,19 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { back } from '../../src/lib/routes';
 import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 import { EmptyState } from '../../src/components/empty-state';
 import { Body, BodyStrong, Micro, Price, Title } from '../../src/components/text';
 import { api, type LookbookEntry } from '../../src/lib/api';
+import { back } from '../../src/lib/routes';
 import { useTheme } from '../../src/theme/index';
 
 export default function LookbookScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { colors, gutter, isWide } = useTheme();
+  const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const router = useRouter();
 
@@ -72,6 +74,7 @@ export default function LookbookScreen() {
         style={{ flex: 1, width: '100%', backgroundColor: colors.ground }}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{
+          paddingTop: insets.top + 12,
           padding: gutter,
           paddingBottom: 48,
           gap: 22,

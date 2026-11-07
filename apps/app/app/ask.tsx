@@ -22,6 +22,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 import { useAuthGate } from '../src/components/auth-gate';
 import { ProductCard } from '../src/components/cards';
@@ -45,6 +46,7 @@ interface Turn {
 export default function AskScreen() {
   const params = useLocalSearchParams<{ productId?: string; occasion?: string }>();
   const { colors, gutter, radius, isWide } = useTheme();
+  const insets = useSafeAreaInsets();
   const { requireAccount } = useAuthGate();
   const router = useRouter();
   const scroller = useRef<ScrollViewInstance>(null);
@@ -184,7 +186,7 @@ export default function AskScreen() {
             alignItems: 'center',
             gap: 12,
             paddingHorizontal: gutter,
-            paddingTop: 12,
+            paddingTop: insets.top + 12,
             paddingBottom: 8,
           }}
         >

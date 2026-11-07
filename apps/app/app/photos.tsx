@@ -13,12 +13,13 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { Stack, useRouter } from 'expo-router';
-import { back } from '../src/lib/routes';
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 import { Body, BodyStrong, Caption, Micro, Title } from '../src/components/text';
 import { api } from '../src/lib/api';
+import { back } from '../src/lib/routes';
 import { uploadImage } from '../src/lib/upload';
 import { useTheme } from '../src/theme/index';
 
@@ -26,6 +27,7 @@ type PhotoKind = 'FULL_BODY' | 'UPPER_BODY';
 
 export default function PhotosScreen() {
   const { colors, gutter } = useTheme();
+  const insets = useSafeAreaInsets();
   const router = useRouter();
   const queryClient = useQueryClient();
   const [busy, setBusy] = useState<PhotoKind | null>(null);
@@ -91,6 +93,7 @@ export default function PhotosScreen() {
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{
+          paddingTop: insets.top + 12,
           padding: gutter,
           paddingBottom: 56,
           gap: 28,

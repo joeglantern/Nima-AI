@@ -19,6 +19,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 import { Button } from '../src/components/button';
 import { Body, Caption, Micro, Title } from '../src/components/text';
@@ -29,6 +30,7 @@ const MIN = 8;
 
 export default function PasswordScreen() {
   const { colors, gutter, radius, isWide } = useTheme();
+  const insets = useSafeAreaInsets();
   const router = useRouter();
   const queryClient = useQueryClient();
 
@@ -103,7 +105,7 @@ export default function PasswordScreen() {
             alignItems: 'center',
             gap: 12,
             paddingHorizontal: gutter,
-            paddingTop: 12,
+            paddingTop: insets.top + 12,
             paddingBottom: 8,
           }}
         >

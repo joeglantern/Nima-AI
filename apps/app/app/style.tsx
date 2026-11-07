@@ -8,14 +8,15 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Stack, useRouter } from 'expo-router';
-import { back } from '../src/lib/routes';
 import { useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 import { Button } from '../src/components/button';
 import { Body, BodyStrong, Caption, Eyebrow, Title } from '../src/components/text';
 import { VibeTiles } from '../src/components/vibe-tiles';
 import { api } from '../src/lib/api';
+import { back } from '../src/lib/routes';
 import { useTheme } from '../src/theme/index';
 
 const COLOURS = [
@@ -42,6 +43,7 @@ const BUDGETS = [
 
 export default function StyleScreen() {
   const { colors, gutter, radius } = useTheme();
+  const insets = useSafeAreaInsets();
   const router = useRouter();
   const queryClient = useQueryClient();
 
@@ -76,6 +78,7 @@ export default function StyleScreen() {
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{
+          paddingTop: insets.top + 12,
           padding: gutter,
           paddingBottom: 56,
           gap: 32,

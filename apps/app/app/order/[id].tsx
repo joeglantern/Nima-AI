@@ -11,6 +11,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { Redirect, Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 import { EmptyState } from '../../src/components/empty-state';
 import { Body, BodyStrong, Caption, Micro, Price, Title } from '../../src/components/text';
@@ -29,6 +30,7 @@ const STEPS: Array<{ key: string; label: string }> = [
 export default function OrderScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { colors, gutter, radius, isWide } = useTheme();
+  const insets = useSafeAreaInsets();
   const router = useRouter();
 
   const order = useQuery({
@@ -71,6 +73,7 @@ export default function OrderScreen() {
         style={{ flex: 1, width: '100%', backgroundColor: colors.ground }}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{
+          paddingTop: insets.top + 12,
           padding: gutter,
           paddingBottom: 40,
           gap: 24,

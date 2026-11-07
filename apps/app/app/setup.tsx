@@ -12,6 +12,7 @@
 
 import { Stack, useRouter } from 'expo-router';
 import { Pressable, ScrollView, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 import { Button } from '../src/components/button';
 import { Mascot } from '../src/components/mascot';
@@ -22,6 +23,7 @@ import { useTheme } from '../src/theme/index';
 
 export default function SetupScreen() {
   const { colors, gutter, isWide } = useTheme();
+  const insets = useSafeAreaInsets();
   const router = useRouter();
   const setup = useSetupProgress();
 
@@ -42,7 +44,7 @@ export default function SetupScreen() {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{
             padding: gutter,
-            paddingTop: 20,
+            paddingTop: insets.top + 20,
             paddingBottom: 48,
             gap: 18,
             maxWidth: isWide ? 620 : undefined,
