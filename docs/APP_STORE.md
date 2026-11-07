@@ -139,3 +139,12 @@ handles the payment), browsing history, search history outside the app.
 - Screenshots: 6.9" iPhone (1320 x 2868), at least three, taken from the live web app by `apps/app/scripts/store-shots.mjs` (puppeteer-core against the deployed address, viewport 440 x 956 at 3x). Run `node scripts/store-shots.mjs <https address> <out dir>` from `apps/app`.
 - Try on must be switched on in production before review (the look screen says it is off in this preview otherwise), which needs the Gemini key in `.env.prod`.
 - The Paid Apps agreement is not needed: there are no in-app purchases; M-Pesa payments for physical goods are outside Apple's IAP rules.
+
+## How a build gets to Apple
+
+1. `cd apps/app` and run `pnpm apple:signing <projectDir> <keyId> <issuerId> <p8> ai.shopnima.app` once per year, or when a certificate is revoked. It writes `credentials.json`.
+2. `npx eas-cli build -p ios --profile production --non-interactive`. The `eas-build-post-install` hook builds `@nima/contracts` on the EAS machine; without it Metro cannot resolve the package.
+3. `npx eas-cli submit -p ios --profile production --latest --non-interactive`. Apple processes the upload in five to ten minutes; `scripts` in the session scratchpad polled `GET /v1/builds` on the App Store Connect API until the state read VALID.
+4. In App Store Connect, open the version, remove the old build from the Build table, Add Build, pick the new one, Save, then "Update Review" (a resubmission) or "Add for Review" (a first submission).
+
+Done this way on 7 November 2026: build 1.2.0 (5) is attached to version 1.2.0, which reads "Prepare for Submission". TestFlight's internal group "Team (Expo)" already has the build.
