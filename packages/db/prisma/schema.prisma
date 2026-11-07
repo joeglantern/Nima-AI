@@ -70,6 +70,8 @@ model User {
   followers     Follow[]         @relation("Followed")
   blocksMade    Block[]          @relation("Blocker")
   blocksAgainst Block[]          @relation("Blocked")
+  reportsMade   Report[]         @relation("Reporter")
+  reportsAgainst Report[]        @relation("ReportedUser")
   memberships   ConversationMember[]
   messages      Message[]
   tryOnJobs     TryOnJob[]
@@ -500,6 +502,7 @@ model Look {
   tryOnJobs     TryOnJob[]
   lookbookEntries LookbookEntry[]
   promotions    Promotion[]
+  reports       Report[]
 
   @@index([ownerId, createdAt])
   @@index([visibility, publishedAt])
@@ -726,6 +729,37 @@ model Follow {
 }
 
 /// Blocks are enforced in the feed, search, profiles and messaging.
+/// Someone flagged a look or a person. One row per reporter and target, so
+/// pressing Report twice is not two reports. Staff clear them by setting
+/// resolvedAt; nothing is deleted or hidden automatically except from the
+/// reporter's own feed.
+model Report {
+  id         String       @id @default(cuid())
+  reporterId String
+  reporter   User         @relation("Reporter", fields: [reporterId], references: [id], onDelete: Cascade)
+  lookId     String?
+  look       Look?        @relation(fields: [lookId], references: [id], onDelete: Cascade)
+  userId     String?
+  user       User?        @relation("ReportedUser", fields: [userId], references: [id], onDelete: Cascade)
+  reason     ReportReason
+  note       String?
+  createdAt  DateTime     @default(now())
+  resolvedAt DateTime?
+
+  @@unique([reporterId, lookId])
+  @@unique([reporterId, userId])
+  @@index([resolvedAt, createdAt])
+  @@map("reports")
+}
+
+enum ReportReason {
+  SPAM
+  NUDITY
+  HATE
+  SCAM
+  OTHER
+}
+
 model Block {
   id        String   @id @default(cuid())
   blockerId String

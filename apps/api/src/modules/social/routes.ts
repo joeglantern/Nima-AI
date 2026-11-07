@@ -1032,6 +1032,109 @@ export const socialRoutes: FastifyPluginAsyncZod = async (app) => {
     },
   );
 
+  /*
+   * Reporting. A report is a note to staff, not an action on the target:
+   * nothing is hidden for anyone else until a person has looked. The one
+   * thing that happens at once is for the reporter, who should not keep
+   * meeting what they just flagged, so a reported look is dismissed from
+   * their feed on the spot. One report per person and target; a second
+   * press updates the reason rather than adding a row.
+   */
+  const reportSchema = z.object({
+    reason: z.enum(['SPAM', 'NUDITY', 'HATE', 'SCAM', 'OTHER']),
+    note: z.string().trim().max(500).optional(),
+  });
+
+  app.post(
+    '/looks/:id/report',
+    {
+      config: { rateLimit: { max: 10, timeWindow: '1 minute' } },
+      preHandler: app.requireAccount,
+      schema: {
+        tags: ['social'],
+        summary: 'Report a look',
+        description:
+          'Flags a look for staff. The look leaves the feed of whoever reported it at once and stays ' +
+          'visible to everyone else until a person has looked at it.',
+        params: z.object({ id: idSchema }),
+        body: reportSchema,
+        response: { 200: z.object({ reported: z.literal(true) }) },
+      },
+    },
+    async (request) => {
+      const user = request.requireUser();
+      const look = await app.prisma.look.findUnique({
+        where: { id: request.params.id },
+        select: { id: true, ownerId: true, visibility: true },
+      });
+      if (!look || !(await canView(app, look, user.id))) throw errors.notFound('That look');
+      if (look.ownerId === user.id) throw errors.badRequest('You cannot report your own look');
+
+      await app.prisma.$transaction([
+        app.prisma.report.upsert({
+          where: { reporterId_lookId: { reporterId: user.id, lookId: look.id } },
+          create: {
+            reporterId: user.id,
+            lookId: look.id,
+            reason: request.body.reason,
+            note: request.body.note || null,
+          },
+          update: {
+            reason: request.body.reason,
+            note: request.body.note || null,
+            resolvedAt: null,
+          },
+        }),
+        app.prisma.dismissal.upsert({
+          where: { userId_lookId: { userId: user.id, lookId: look.id } },
+          create: { userId: user.id, lookId: look.id, reason: 'reported' },
+          update: {},
+        }),
+      ]);
+
+      request.log.info({ lookId: look.id, reason: request.body.reason }, 'A look was reported');
+      return { reported: true as const };
+    },
+  );
+
+  app.post(
+    '/profiles/:handle/report',
+    {
+      config: { rateLimit: { max: 10, timeWindow: '1 minute' } },
+      preHandler: app.requireAccount,
+      schema: {
+        tags: ['social'],
+        summary: 'Report a person',
+        description: 'Flags a profile for staff. The person is not told.',
+        params: z.object({ handle: handleSchema }),
+        body: reportSchema,
+        response: { 200: z.object({ reported: z.literal(true) }) },
+      },
+    },
+    async (request) => {
+      const user = request.requireUser();
+      const person = await personByHandle(request.params.handle);
+      if (person.userId === user.id) throw errors.badRequest('You cannot report yourself');
+
+      await app.prisma.report.upsert({
+        where: { reporterId_userId: { reporterId: user.id, userId: person.userId } },
+        create: {
+          reporterId: user.id,
+          userId: person.userId,
+          reason: request.body.reason,
+          note: request.body.note || null,
+        },
+        update: { reason: request.body.reason, note: request.body.note || null, resolvedAt: null },
+      });
+
+      request.log.info(
+        { reportedUserId: person.userId, reason: request.body.reason },
+        'A person was reported',
+      );
+      return { reported: true as const };
+    },
+  );
+
   app.delete(
     '/profiles/:handle/block',
     {

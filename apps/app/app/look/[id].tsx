@@ -9,18 +9,21 @@
 import { useQuery } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { sized } from '../../src/lib/media';
-import { PageTitle } from '../../src/lib/page-title';
-import { back } from '../../src/lib/routes';
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, useWindowDimensions, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
+import { useAuthGate } from '../../src/components/auth-gate';
 import { Button } from '../../src/components/button';
 import { CommentsSheet } from '../../src/components/feed-sheets';
+import { ReportSheet } from '../../src/components/report-sheet';
 import { SendSheet } from '../../src/components/send-sheet';
 import { Body, BodyStrong, Caption, Eyebrow, Micro, Price, Title } from '../../src/components/text';
 import { TryOnResultSheet, useTryOn, useTryOnAvailable } from '../../src/components/try-on';
 import { api } from '../../src/lib/api';
+import { sized } from '../../src/lib/media';
+import { PageTitle } from '../../src/lib/page-title';
+import { back } from '../../src/lib/routes';
+import { useSignedIn } from '../../src/lib/social';
 import { useTheme } from '../../src/theme/index';
 
 export default function LookScreen() {
@@ -40,6 +43,9 @@ export default function LookScreen() {
 
   const [sending, setSending] = useState(false);
   const [asking, setAsking] = useState(false);
+  const [reporting, setReporting] = useState(false);
+  const signedIn = useSignedIn();
+  const { requireAccount } = useAuthGate();
 
   if (look.isLoading) {
     return (
@@ -243,11 +249,31 @@ export default function LookScreen() {
                 <Price cents={item.shopTotalCents} style={{ fontSize: 18 }} />
               </View>
             ) : null}
+
+            {/* Quiet and last, where the stores put it: a report is a last resort, not a feature. */}
+            {item.author ? (
+              <Pressable
+                onPress={() =>
+                  signedIn
+                    ? setReporting(true)
+                    : requireAccount('Create an account to report a look')
+                }
+                accessibilityRole="button"
+                hitSlop={8}
+                style={{ alignSelf: 'center', minHeight: 44, justifyContent: 'center' }}
+              >
+                <Caption>Report this look</Caption>
+              </Pressable>
+            ) : null}
           </View>
         </View>
       </ScrollView>
 
       <TryOnResultSheet tryOn={tryOn} label={item.title ?? 'this look'} />
+      <ReportSheet
+        target={reporting ? { kind: 'look', id: item.id } : null}
+        onClose={() => setReporting(false)}
+      />
       <CommentsSheet lookId={asking ? item.id : null} onClose={() => setAsking(false)} />
       <SendSheet
         target={sending ? { kind: 'LOOK', id: item.id } : null}

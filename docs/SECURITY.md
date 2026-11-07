@@ -46,7 +46,7 @@ What protects people's photos, messages and money on Nima, what was checked, and
 
 ## Not yet built
 
-- Reporting a look, comment or person, and a place for staff to act on reports. Comments can already be hidden.
+- A place for staff to act on reports. People can report a look or a person from the app (the `reports` table); comments can be hidden. Nothing yet lists open reports for staff.
 - Terms of service and a privacy policy, which the stores and Meta both require.
 - Account deletion that also removes the person's photos from storage end to end. Check `services/deletion.ts` covers every key prefix before launch.
 - Audit logging of staff actions, once there are staff.

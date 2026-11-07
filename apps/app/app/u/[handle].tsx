@@ -19,6 +19,7 @@ import { Button } from '../../src/components/button';
 import { LookCard } from '../../src/components/cards';
 import { EmptyState } from '../../src/components/empty-state';
 import { Avatar } from '../../src/components/feed-post';
+import { ReportSheet, type ReportTarget } from '../../src/components/report-sheet';
 import { Sheet } from '../../src/components/sheet';
 import { Body, BodyStrong, Caption, Micro, Title } from '../../src/components/text';
 import { ApiError, api } from '../../src/lib/api';
@@ -56,6 +57,7 @@ export default function PersonScreen() {
   const queryClient = useQueryClient();
   const [following, setFollowing] = useState(false);
   const [menu, setMenu] = useState(false);
+  const [reporting, setReporting] = useState<ReportTarget | null>(null);
 
   useEffect(() => {
     setFollowing(Boolean(person.data?.isFollowing));
@@ -330,8 +332,18 @@ export default function PersonScreen() {
           tell them.
         </Caption>
         <Button label="Block" loading={block.isPending} onPress={() => block.mutate()} />
+        <Button
+          label="Report instead"
+          variant="quiet"
+          onPress={() => {
+            setMenu(false);
+            setReporting({ kind: 'person', handle: String(handle) });
+          }}
+        />
         <Button label="Cancel" variant="quiet" onPress={() => setMenu(false)} />
       </Sheet>
+
+      <ReportSheet target={reporting} onClose={() => setReporting(null)} />
     </>
   );
 }

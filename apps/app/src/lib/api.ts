@@ -288,6 +288,12 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
 }
 
 /** Every call the app makes, named after what it does rather than its route. */
+export type ReportReason = 'SPAM' | 'NUDITY' | 'HATE' | 'SCAM' | 'OTHER';
+export interface ReportBody {
+  reason: ReportReason;
+  note?: string;
+}
+
 export const api = {
   bootstrap: () => request<Bootstrap>('/v1/session/bootstrap'),
 
@@ -567,6 +573,12 @@ export const api = {
     request<{ blocked: boolean }>(`/v1/profiles/${handle}/block`, {
       method: blocked ? 'POST' : 'DELETE',
     }),
+
+  reportLook: (id: string, body: ReportBody) =>
+    request<{ reported: true }>(`/v1/looks/${id}/report`, { method: 'POST', body }),
+
+  reportPerson: (handle: string, body: ReportBody) =>
+    request<{ reported: true }>(`/v1/profiles/${handle}/report`, { method: 'POST', body }),
 
   circle: (cursor?: string) =>
     request<Page<Peer>>('/v1/me/circle', { query: { cursor, limit: 50 } }),
