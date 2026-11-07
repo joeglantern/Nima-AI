@@ -25,6 +25,7 @@ import type { Mailer } from '../lib/mailer.js';
 import { resolveEmail } from './email.js';
 import { linkAnonymousAccount } from './link-anonymous.js';
 import { recordMailAttempt, recordMailFailure } from './mail-outcome.js';
+import { reviewSignIn } from './review-sign-in.js';
 
 export interface CreateAuthOptions {
   env: Env;
@@ -46,6 +47,9 @@ export type Auth = ReturnType<typeof createAuth>;
 
 export function createAuth({ env, prisma, mailer, otpAllowed }: CreateAuthOptions) {
   const isDevelopment = env.NODE_ENV === 'development';
+
+  // The app store reviewer's address, which gets a fixed code and no email.
+  const review = reviewSignIn(env);
 
   /**
    * Whether the session cookie is marked Secure.
@@ -237,10 +241,15 @@ export function createAuth({ env, prisma, mailer, otpAllowed }: CreateAuthOption
         expiresIn: 600,
         allowedAttempts: 5,
         sendVerificationOnSignUp: true,
+        generateOTP: ({ email }) => (review?.matches(email) ? review.code : undefined),
         async sendVerificationOTP({ email, otp, type }) {
           // Better Auth swallows whatever happens in here, so the outcome
           // is recorded against the request and the route reads it after.
           recordMailAttempt();
+
+          // The reviewer already knows the code. Sending it would only put
+          // a fixed code in a mailbox nobody reads.
+          if (review?.matches(email)) return;
 
           try {
             await mailer.sendOtp({ to: email, code: otp, purpose: type });

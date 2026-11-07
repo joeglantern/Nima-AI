@@ -75,7 +75,7 @@ M-Pesa checkout.
 | Field | Value |
 |---|---|
 | Sign-in required | Yes |
-| Demo account | A reviewer account whose email code is forwarded to a shared inbox. Set up before external testing or review, and put the email and the code route here. |
+| Demo account | Set `REVIEW_SIGN_IN_EMAIL` and `REVIEW_SIGN_IN_CODE` (six digits) in `.env.prod` and restart the API. Put that email in the Username box and the code in the Password box, and say in the notes: "Sign in with email, enter the address, then enter the code shown as the password. No email is sent." Create the account once yourself (sign in with it) so the reviewer lands on a profile with a few saved looks. Clear both variables after approval. |
 | Contact | Owner's name, phone and email |
 | Notes | Payments go through M-Pesa, which needs a Kenyan Safaricom number; the checkout can be seen up to the prompt without one. Try on sends the user's photo to an image model and keeps it private to the user. |
 

@@ -58,6 +58,18 @@ export const envSchema = z.object({
   WEB_ORIGINS: csv.default(['http://localhost:8081']),
   /** Printed on the help, privacy and terms pages as the address people write to. */
   SUPPORT_EMAIL: z.email().default('support@nima.africa'),
+  /**
+   * App store review. The one address that signs in with a fixed six digit
+   * code instead of a mailed one, and that code. Both must be set for it to
+   * exist; unset either and the reviewer's address gets a mailed code like
+   * anyone else. The code is six digits because that is what the screen
+   * takes.
+   */
+  REVIEW_SIGN_IN_EMAIL: z.email().optional(),
+  REVIEW_SIGN_IN_CODE: z
+    .string()
+    .regex(/^\d{6}$/, 'six digits')
+    .optional(),
 
   // storage
   DATABASE_URL: z.string().startsWith('postgresql://'),
@@ -202,6 +214,8 @@ const SECRET_KEYS = [
   'FINGO_API_KEY',
   'FINGO_WEBHOOK_SECRET',
   'PICKUP_MTAANI_API_KEY',
+  'REVIEW_SIGN_IN_EMAIL',
+  'REVIEW_SIGN_IN_CODE',
 ] as const satisfies readonly (keyof Env)[];
 
 let cached: Env | null = null;

@@ -227,6 +227,7 @@ t.verify().then(() => console.log('ok')).catch((e) => console.log('failed:', e.m
 | Try-on images | No image provider | `GEMINI_API_KEY`. Jobs queue and wait until there is one |
 | Ask Nima, full | No language model | `LLM_BASE_URL`. It answers from the catalogue meanwhile |
 | Google and Apple sign in | No OAuth credentials | The client id and secret pairs. Email codes work without them |
+| App Review sign in | Reviewers cannot read our email | `REVIEW_SIGN_IN_EMAIL` and `REVIEW_SIGN_IN_CODE` (six digits) in `.env.prod`, then restart the API. That one address signs in with that code and gets no email; everyone else is unchanged. Clear both once the review is over |
 
 None of these stop the rest of the app. Each one is read at boot and the
 feature reports itself unavailable rather than failing in a request.
