@@ -100,6 +100,8 @@ export const checkoutSchema = z.object({
   orderIds: z.array(idSchema),
   /** What to tell the user while the phone prompt is open. */
   instruction: z.string(),
+  /** The M-Pesa receipt number, once the money has landed. */
+  receipt: z.string().nullable().default(null),
 });
 
 // ----------------------------------------------------------------- orders ---

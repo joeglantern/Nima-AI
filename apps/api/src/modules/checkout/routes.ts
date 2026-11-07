@@ -23,6 +23,17 @@ import { order as presentOrder } from '../../lib/presenters.js';
 import { type CheckoutService, listPickupPoints, orderInclude } from '../../services/checkout.js';
 import { recordEvent } from '../../services/events.js';
 
+
+/**
+ * The receipt number the provider put in its callback, kept on the payment's
+ * raw record. Null until the money has landed.
+ */
+function receiptOf(raw: unknown): string | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const value = (raw as { receipt?: unknown }).receipt;
+  return typeof value === 'string' && value.length > 0 ? value : null;
+}
+
 export function checkoutRoutes(checkout: CheckoutService): FastifyPluginAsyncZod {
   return async (app) => {
     app.get(
@@ -175,6 +186,7 @@ export function checkoutRoutes(checkout: CheckoutService): FastifyPluginAsyncZod
               : group.status === 'PROCESSING' || group.status === 'PENDING'
                 ? 'Waiting for the M-Pesa prompt to be completed.'
                 : (payment?.failureReason ?? 'That payment did not go through.'),
+          receipt: receiptOf(payment?.raw),
         };
       },
     );

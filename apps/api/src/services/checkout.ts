@@ -47,6 +47,8 @@ export interface StartCheckoutResult {
   totalCents: number;
   orderIds: string[];
   instruction: string;
+  /** The provider's receipt number, once paid. Always null straight after a push. */
+  receipt: string | null;
 }
 
 export interface StartBoothCheckoutInput {
@@ -316,6 +318,7 @@ export class CheckoutService {
         group.status === 'FAILED' || group.status === 'CANCELLED'
           ? (payment.failureReason ?? 'That payment did not go through.')
           : promptInstruction(payment.phone),
+      receipt: null,
     };
   }
 
@@ -529,6 +532,7 @@ export class CheckoutService {
           totalCents,
           orderIds: placed.orderIds,
           instruction: promptInstruction(input.payerPhone),
+          receipt: null,
         };
       }
 
@@ -552,6 +556,7 @@ export class CheckoutService {
       totalCents,
       orderIds: placed.orderIds,
       instruction: promptInstruction(input.payerPhone),
+      receipt: null,
     };
   }
 

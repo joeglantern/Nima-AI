@@ -46,6 +46,8 @@ export const sessionRoutes: FastifyPluginAsyncZod = async (app) => {
             }),
             /** Only buttons for ways in that are set up get shown. */
             signIn: z.object({ google: z.boolean(), apple: z.boolean(), email: z.boolean() }),
+            /** Where the money goes, so the pay screen can say so. */
+            payments: z.object({ mpesaTill: z.string().nullable() }),
             fitNotice: z.object({ title: z.string(), body: z.string() }),
           }),
         },
@@ -67,6 +69,9 @@ export const sessionRoutes: FastifyPluginAsyncZod = async (app) => {
         email: true,
       };
 
+      // Named on the pay screen so people know where the money goes.
+      const payments = { mpesaTill: app.env.MPESA_TILL || null };
+
       if (!request.user) {
         return {
           user: null,
@@ -78,6 +83,7 @@ export const sessionRoutes: FastifyPluginAsyncZod = async (app) => {
           costs: settings.creditCosts as unknown as Record<string, number>,
           features,
           signIn,
+          payments,
           fitNotice,
         };
       }
@@ -114,6 +120,7 @@ export const sessionRoutes: FastifyPluginAsyncZod = async (app) => {
         costs: settings.creditCosts as unknown as Record<string, number>,
         features,
         signIn,
+        payments,
         fitNotice,
       };
     },
